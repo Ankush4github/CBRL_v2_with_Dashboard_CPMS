@@ -1,0 +1,222 @@
+{
+  "generatedAt": "2025-08-16T10:19:54.944Z",
+  "totalImages": 53,
+  "converted": 0,
+  "skipped": 53,
+  "errors": 0,
+  "totalSavings": 0,
+  "images": [
+    {
+      "path": "AlumniDP\\ag_dp.jpg",
+      "status": "skipped"
+    },
+    {
+      "path": "AlumniDP\\ao_dp.jpeg",
+      "status": "skipped"
+    },
+    {
+      "path": "AlumniDP\\ap_dp.jpg",
+      "status": "skipped"
+    },
+    {
+      "path": "AlumniDP\\as_dp.jpg",
+      "status": "skipped"
+    },
+    {
+      "path": "AlumniDP\\bs_dp.jpg",
+      "status": "skipped"
+    },
+    {
+      "path": "AlumniDP\\dds_dp.jpg",
+      "status": "skipped"
+    },
+    {
+      "path": "AlumniDP\\es_dp.jpg",
+      "status": "skipped"
+    },
+    {
+      "path": "AlumniDP\\md_dp.jpg",
+      "status": "skipped"
+    },
+    {
+      "path": "AlumniDP\\nbk_dp.jpg",
+      "status": "skipped"
+    },
+    {
+      "path": "AlumniDP\\ng_dp.jpg",
+      "status": "skipped"
+    },
+    {
+      "path": "AlumniDP\\pb_dp.jpg",
+      "status": "skipped"
+    },
+    {
+      "path": "AlumniDP\\pb_dp.png",
+      "status": "skipped"
+    },
+    {
+      "path": "AlumniDP\\pc_dp.jpg",
+      "status": "skipped"
+    },
+    {
+      "path": "AlumniDP\\rm_dp.jpeg",
+      "status": "skipped"
+    },
+    {
+      "path": "AlumniDP\\sb_dp.jpg",
+      "status": "skipped"
+    },
+    {
+      "path": "AlumniDP\\sd_dp.jpg",
+      "status": "skipped"
+    },
+    {
+      "path": "AlumniDP\\skj_dp.jpg",
+      "status": "skipped"
+    },
+    {
+      "path": "AlumniDP\\sk_dp.jpeg",
+      "status": "skipped"
+    },
+    {
+      "path": "AlumniDP\\Soumen Das_DP.jpg",
+      "status": "skipped"
+    },
+    {
+      "path": "AlumniDP\\spok_dp.jpg",
+      "status": "skipped"
+    },
+    {
+      "path": "AlumniDP\\src_dp.jpg",
+      "status": "skipped"
+    },
+    {
+      "path": "Collab\\Fortis_logo.png",
+      "status": "skipped"
+    },
+    {
+      "path": "Collab\\IPCR_logo.png",
+      "status": "skipped"
+    },
+    {
+      "path": "Collab\\IRM_logo.png",
+      "status": "skipped"
+    },
+    {
+      "path": "Collab\\shh_logo.png",
+      "status": "skipped"
+    },
+    {
+      "path": "empty_dp.jpg",
+      "status": "skipped"
+    },
+    {
+      "path": "facilities\\AFM.jpeg",
+      "status": "skipped"
+    },
+    {
+      "path": "facilities\\concentrator-plus.jpg",
+      "status": "skipped"
+    },
+    {
+      "path": "facilities\\EZ-Retriever.jpg",
+      "status": "skipped"
+    },
+    {
+      "path": "facilities\\ftir.jpg",
+      "status": "skipped"
+    },
+    {
+      "path": "facilities\\hplc.jpg",
+      "status": "skipped"
+    },
+    {
+      "path": "facilities\\ldir.jpg",
+      "status": "skipped"
+    },
+    {
+      "path": "facilities\\Milli-Q.jpg",
+      "status": "skipped"
+    },
+    {
+      "path": "facilities\\nanodrop.jpg",
+      "status": "skipped"
+    },
+    {
+      "path": "facilities\\waters-ms.jpg",
+      "status": "skipped"
+    },
+    {
+      "path": "facilities\\zetasizer.jpg",
+      "status": "skipped"
+    },
+    {
+      "path": "InternsDP\\Abhijit.jpg",
+      "status": "skipped"
+    },
+    {
+      "path": "InternsDP\\Adit.jpeg",
+      "status": "skipped"
+    },
+    {
+      "path": "InternsDP\\Swayambhik.jpg",
+      "status": "skipped"
+    },
+    {
+      "path": "MembersDP\\ab_dp.jpeg",
+      "status": "skipped"
+    },
+    {
+      "path": "MembersDP\\bs_db.jpg",
+      "status": "skipped"
+    },
+    {
+      "path": "MembersDP\\im_dp.jpeg",
+      "status": "skipped"
+    },
+    {
+      "path": "MembersDP\\pc_dp_2.png",
+      "status": "skipped"
+    },
+    {
+      "path": "MembersDP\\pd_dp.JPG",
+      "status": "skipped"
+    },
+    {
+      "path": "MembersDP\\pp_dp.jpg",
+      "status": "skipped"
+    },
+    {
+      "path": "MembersDP\\pp_dp1.jpg",
+      "status": "skipped"
+    },
+    {
+      "path": "MembersDP\\Prof. Koel Chaudhury.jpg",
+      "status": "skipped"
+    },
+    {
+      "path": "MembersDP\\sh_dp.jpg",
+      "status": "skipped"
+    },
+    {
+      "path": "MembersDP\\src_dp.jpg",
+      "status": "skipped"
+    },
+    {
+      "path": "MembersDP\\testdp1.png",
+      "status": "skipped"
+    },
+    {
+      "path": "sponsors\\dbt_logo.jpg",
+      "status": "skipped"
+    },
+    {
+      "path": "sponsors\\dhr_logo.png",
+      "status": "skipped"
+    },
+    {
+      "path": "sponsors\\serb_logo.png",
+      "status": "skipped"
+    }
+  ]
+}

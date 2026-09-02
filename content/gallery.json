@@ -1,0 +1,198 @@
+{
+  "categories": [
+    "Conferences",
+    "Awards",
+    "Lab Outings"
+  ],
+  "albums": [
+    {
+      "id": 1,
+      "title": "Metabolomics 2024, Japan",
+      "caption": "20th Annual Conference of the Metabolomics Society, 2024",
+      "date": "June 2024",
+      "category": "Conferences",
+      "image": "/images/gallery/metabolomics-2024/metabolomics-cover.webp",
+      "images": [
+        "/images/gallery/metabolomics-2024/metabolomics-photo.jpg",
+        "/images/gallery/metabolomics-2024/metabolomics-photo1.jpeg",
+        "/images/gallery/metabolomics-2024/metabolomics-photo2.webp",
+        "/images/gallery/metabolomics-2024/metabolomics-photo3.webp"
+      ],
+      "description": "Five members of our lab attended the 20th Annual Metabolomics Society Conference, 2024, in Osaka, Japan and presented our routine metabolomics work in respiratory and reproductive diseases",
+      "likes": 15,
+      "isLiked": false
+    },
+    {
+      "id": 2,
+      "title": "APT 2025, IIT Bombay",
+      "caption": "Our team presented two research posters in Advances in Proteomics Technologies (APT) 2025 conference at IIT Bombay",
+      "date": "June 2025",
+      "category": "Conferences",
+      "image": "/images/gallery/apt-2025/apt-cover.jpg",
+      "images": [
+        "/images/gallery/apt-2025/apt-photo.jpeg",
+        "/images/gallery/apt-2025/apt-photo1.jpeg",
+        "/images/gallery/apt-2025/apt-photo2.jpeg",
+        "/images/gallery/apt-2025/apt-photo3.jpeg",
+        "/images/gallery/apt-2025/apt-photo4.jpeg"
+      ],
+      "description": "Anindita Bhattacharya presented her research on lipidomics in lung cancer subtypes and received recognition for her outstanding work, earning the Best Poster Award – 2nd Runners-Up. Palash Paul showcased his comprehensive study on metabolomics in interstitial lung diseases",
+      "likes": 15,
+      "isLiked": false
+    },
+    {
+      "id": 3,
+      "title": "IEEE EMBC 2025, Denmark",
+      "caption": "",
+      "date": "July 2025",
+      "category": "Conferences",
+      "image": "/images/gallery/ieee-embc-2025/ieee-embc-cover.webp",
+      "images": [
+        "/images/gallery/ieee-embc-2025/ieee-embc-cover.webp",
+        "/images/gallery/ieee-embc-2025/ieee-embc-photo.jpg"
+      ],
+      "description": "Sumana Halder presented a poster on the effect of acoustic parameters on novel bioderived protein microbubbles at the 47th Annual International Conference of the IEEE Engineering in Medicine and Biology Society at Copenhagen, Denmark.",
+      "likes": 15,
+      "isLiked": false
+    },
+    {
+      "id": 4,
+      "title": "Pulmocon 2025, IPCR, Kolkata",
+      "caption": "First and Second Prize for Poster Presentation at the Pulmocon, a major Indian conference on respiratory diseases",
+      "date": "September 2025",
+      "category": "Conferences",
+      "image": "/images/gallery/pulmocon-2025/pulmocon-cover.webp",
+      "images": [
+        "/images/gallery/pulmocon-2025/pulmocon-photo1.jpeg",
+        "/images/gallery/pulmocon-2025/pulmocon-photo2.jpeg",
+        "/images/gallery/pulmocon-2025/pulmocon-photo3.webp"
+      ],
+      "description": "Two of our lab members, Palash Paul and Pragya Dey, presented our ongoing work on Silicosis and Interstitial Lung Diseases in Pulmocon, 2025, organized by IPCR, Kolkata. They ranked first and second in the Poster Presentation category and recieved the award from one of the top pulmonologists in India, Dr. Parthasarathi Bhattacharya.",
+      "likes": 32,
+      "isLiked": false
+    },
+    {
+      "id": 5,
+      "title": "IEEE UPWIECON 2025, NIELIT Uttarakhand",
+      "caption": "IEEE Uttar Pradesh Women in Engineering International Conference on Electrical Electronics and Computer Engineering (UPWIECON) 2025, NIELIT Dehradun",
+      "date": "October 2025",
+      "category": "Conferences",
+      "image": "/images/gallery/ieee-upwiecon-2025/ieee-upwiecon-cover.jpg",
+      "images": [
+        "/images/gallery/ieee-upwiecon-2025/ieee-upwiecon-photo1.jpeg",
+        "/images/gallery/ieee-upwiecon-2025/ieee-upwiecon-photo2.jpeg",
+        "/images/gallery/ieee-upwiecon-2025/ieee-upwiecon-photo3.jpeg"
+      ],
+      "description": "Our team presented two research posters at UPWIECON 2025 conference held at NIELIT Dehradun. Imon Mitra showcased her work on discriminating adenomyosis and endometriosis based on ATR-FTIR spectral peaks. Palash Paul presented his work on development of an advanced classification machine learning model for interstitial lung diseases.",
+      "likes": 15,
+      "isLiked": false
+    },
+    {
+      "id": 6,
+      "title": "ISSRF 2026, BHU, Varanasi",
+      "caption": "",
+      "date": "February 2026",
+      "category": "Conferences",
+      "image": "/images/gallery/issrf-2026/issrf-2026-cover.jpeg",
+      "images": [
+        "/images/gallery/issrf-2026/issrf-2026-photo-1.jpeg",
+        "/images/gallery/issrf-2026/issrf-2026-photo-2.webp"
+      ],
+      "description": "Ms. Bishnupriya Saha, has been awarded the Best Oral Presentation Award at the Global Summit on Innovations in Reproductive Biology: Emerging Frontiers and Discoveries (GSIRB) & 36th Annual Meeting of the Indian Society for the Study of Reproduction and Fertility (ISSRF 2026), organized by the Department of Zoology, Institute of Science, Banaras Hindu University, Varanasi, India, held from 20th to 22nd February 2026.",
+      "likes": 25,
+      "isLiked": true
+    },
+    {
+      "id": 7,
+      "title": "IIT Kharagpur 70th Convocation",
+      "caption": "Lab members formally awarded their doctoral degrees",
+      "date": "December 2024",
+      "category": "Awards",
+      "image": "/images/gallery/70th-convocation/convocation-cover.webp",
+      "images": [
+        "/images/gallery/70th-convocation/convocation-photo.jpg",
+        "/images/gallery/70th-convocation/convocation-photo-1.webp",
+        "/images/gallery/70th-convocation/convocation-photo-2.webp"
+      ],
+      "description": "A proud moment for our lab as six students graduated during the IIT Kharagpur 70th Convocation. The ceremony marked their hard work, dedication, and academic excellence, celebrated together with mentors and lab members as they embark on the next chapter of their careers.",
+      "likes": 45,
+      "isLiked": false
+    },
+    {
+      "id": 8,
+      "title": "Trip to Sankarpur Sea Beach",
+      "caption": "A refreshing seaside getaway with the entire team",
+      "date": "July 2025",
+      "category": "Lab Outings",
+      "image": "/images/gallery/sankarpur-trip/sankarpur-trip-cover.webp",
+      "images": [
+        "/images/gallery/sankarpur-trip/sankarpur-trip-photo.jpg",
+        "/images/gallery/sankarpur-trip/sankarpur-trip-photo-1.webp",
+        "/images/gallery/sankarpur-trip/sankarpur-trip-photo-2.jpg",
+        "/images/gallery/sankarpur-trip/sankarpur-trip-photo-3.jpg",
+        "/images/gallery/sankarpur-trip/sankarpur-trip-photo-4.jpg",
+        "/images/gallery/sankarpur-trip/sankarpur-trip-photo-5.webp"
+      ],
+      "description": "A joyful and memorable day spent at Sankarpur Sea Beach with our lab members. From enjoying the cool waves and relaxing by the shoreline to spending fun moments at the resort and poolside, the trip helped us unwind, connect, and strengthen our bond as a research family",
+      "likes": 58,
+      "isLiked": true
+    },
+    {
+      "id": 9,
+      "title": "Coffee pe Charcha",
+      "caption": "",
+      "date": "March 2024",
+      "category": "Lab Outings",
+      "image": "/images/gallery/coffee-pe-charcha/coffee-pe-charcha-cover.webp",
+      "images": [
+        "/images/gallery/coffee-pe-charcha/coffee-pe-charcha-photo.jpeg",
+        "/images/gallery/coffee-pe-charcha/coffee-pe-charcha-photo1.jpeg",
+        "/images/gallery/coffee-pe-charcha/coffee-pe-charcha-photo2.jpg",
+        "/images/gallery/coffee-pe-charcha/coffee-pe-charcha-photo3.jpeg"
+      ],
+      "description": "Brainstorming sessions and relieving stress in between experiments and analysis",
+      "likes": 24,
+      "isLiked": false
+    },
+    {
+      "id": 10,
+      "title": "Lab Picnic at Ma'am's Garden",
+      "caption": "",
+      "date": "2024-25",
+      "category": "Lab Outings",
+      "image": "/images/gallery/lab-picnic/lab-picnic-cover.webp",
+      "images": [
+        "/images/gallery/lab-picnic/lab-picnic-photo.webp",
+        "/images/gallery/lab-picnic/lab-picnic-photo1.jpeg",
+        "/images/gallery/lab-picnic/lab-picnic-photo2.webp",
+        "/images/gallery/lab-picnic/lab-picnic-photo3.webp",
+        "/images/gallery/lab-picnic/lab-picnic-photo4.jpeg"
+      ],
+      "description": "A fun-filled day with lots of laughter and good food. Bonding over banana leaf wrapped 'Bhetki Paturis' and simmering 'Mangshor Jhol'",
+      "likes": 24,
+      "isLiked": false
+    },
+    {
+      "id": 11,
+      "title": "Lab Celebrations",
+      "caption": "Team building and research discussions",
+      "date": "2024-25",
+      "category": "Lab Outings",
+      "image": "/images/gallery/lab-celebrations/lab-celebrations-cover.webp",
+      "images": [
+        "/images/gallery/lab-celebrations/lab-celebrations-photo.jpeg",
+        "/images/gallery/lab-celebrations/lab-celebrations-photo1.webp",
+        "/images/gallery/lab-celebrations/lab-celebrations-photo2.jpg",
+        "/images/gallery/lab-celebrations/lab-celebrations-photo3.webp",
+        "/images/gallery/lab-celebrations/lab-celebrations-photo4.jpeg",
+        "/images/gallery/lab-celebrations/lab-celebrations-photo5.jpeg",
+        "/images/gallery/lab-celebrations/lab-celebrations-photo6.webp",
+        "/images/gallery/lab-celebrations/lab-celebrations-photo7.jpeg",
+        "/images/gallery/lab-celebrations/lab-celebrations-photo8.webp"
+      ],
+      "description": "Celebrating every achievement, big or small - from birthdays, teacher’s day to the sanctioning of research proposals, manuscript acceptances and conference awards",
+      "likes": 24,
+      "isLiked": false
+    }
+  ]
+}

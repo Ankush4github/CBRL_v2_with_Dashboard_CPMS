@@ -1,0 +1,473 @@
+{
+  "faculty": [
+    {
+      "id": "professor-koel-chaudhury-phd",
+      "name": "Professor Koel Chaudhury, Ph.D.",
+      "title": "Principal Investigator",
+      "image": "/images/MembersDP/koel-chaudhury.jpg",
+      "bio": "Professor Koel Chaudhury is a distinguished researcher and professor at the Indian Institute of Technology Kharagpur, specializing in clinical proteomics, metabolomics, and biomarker discovery. Her work focuses on translational health research, particularly in the areas of women's health, respiratory health, and personalized medicine",
+      "research": "Women's health, Respiratory disorders, Non-invasive biomarkers, Multiomics, Predictive modeling",
+      "phone": "+91 03222 282221",
+      "email": "koel@smst.iitkgp.ac.in, koeliitkgp@gmail.com",
+      "profiles": {
+        "googleScholar": "https://scholar.google.co.in/citations?user=qafn3S0AAAAJ&hl=en",
+        "orcid": "https://orcid.org/0000-0002-9390-1179",
+        "linkedin": "https://www.linkedin.com/in/koel-chaudhury-5bab4018/",
+        "researchgate": "https://www.researchgate.net/profile/Koel-Chaudhury"
+      }
+    }
+  ],
+  "postdocs": [
+    {
+      "id": "dr-thangapandi-k",
+      "name": "Dr. Thangapandi K",
+      "title": "National Post Doctoral Fellow (NPDF)",
+      "image": "/images/MembersDP/thangapandi-k.webp",
+      "bio": "Researcher specializing in electrochemical biosensors and immunosensor development, with expertise in nanomaterials for biomedical diagnostics, biomarker detection, point-of-care devices, and translational sensing platforms.",
+      "research": "Rapid NfL Detection Device for Neurodegeneration Diagnosis",
+      "email": "thangapandi25t@kgpian.iitkgp.ac.in",
+      "joinedDate": "2026-01",
+      "qualifications": "Ph.D. in Biotechnology: National Institute of Technology, Arunachal Pradesh\n\nM.Sc. in Chemistry: Alagappa University, Karaikudi\n\nB.Sc. in Chemistry: Madurai Kamaraj University, Madurai",
+      "profiles": {
+        "googleScholar": "https://scholar.google.com/citations?user=L9M6-nYAAAAJ&hl=en",
+        "linkedin": "https://www.linkedin.com/in/dr-thangapandi-k-782913123/?trk=people-guest_people_search-card&originalSubdomain=in"
+      }
+    },
+    {
+      "id": "dr-pr-hemanth-vikram",
+      "name": "Dr. P.R Hemanth Vikram",
+      "title": "Post Doctoral Fellow (PDF)",
+      "image": "/images/MembersDP/pr-hemanth-vikram.webp",
+      "bio": "Has strong background in analytical chemistry with hands-on experience with mass spectrometry (LC-MS/MS, GC-MS/MS).",
+      "research": "Mass Spectrometry based Metabolomics",
+      "phone": "99999999999",
+      "email": "hemanth@smst.iitkgp.ac.in",
+      "joinedDate": "2026-01",
+      "qualifications": "PhD in Analytical Chemistry (ANRF-CII Prime Minister Fellowship for Doctoral Research): JSS Academy of Higher Education and Research, Mysuru\n\nM.S.(Pharma)-Gold Medal: National Institute of Pharmaceutical Education and Research-Guwahati\n\nB.Pharma: Jawaharlal Nehru Technological University, Anantapur",
+      "profiles": {
+        "googleScholar": "https://scholar.google.com/citations?user=SUwefpwAAAAJ&hl=en",
+        "linkedin": "https://www.linkedin.com/in/dr-hemanth-vikram-p-r-5a858016a/?originalSubdomain=in",
+        "researchgate": "https://www.researchgate.net/profile/Hemanth-Vikram-P-R"
+      }
+    },
+    {
+      "id": "dr-subhadeep-das",
+      "name": "Dr. Subhadeep Das",
+      "title": "Research Scientist",
+      "image": "/images/MembersDP/subhadeep-das.webp",
+      "bio": "Has extensive expertise in chromatography and mass spectrometry techniques, including SPME-GC/MS, HPLC, HPTLC, and LC-MS, with research experience in lipidomics, metabolomics, and volatilome analysis, along with hands-on experience in SEM and FTIR instrumentation.",
+      "research": "Multi-omics analysis of COPD progression to lung cancer",
+      "email": "subhadeep26@kgpian.iitkgp.ac.in",
+      "joinedDate": "2026-04",
+      "qualifications": "PhD in Zoology (CSIR Fellowship): University of Calcutta \n\nM.Sc. in Zoology: University of Calcutta\n\nB.Sc. in Zoology: Asutosh College, University of Calcutta",
+      "profiles": {
+        "googleScholar": "https://scholar.google.com/citations?user=WjS9jxsAAAAJ&hl=en",
+        "linkedin": "https://www.linkedin.com/in/dr-subhadeep-das-920b66b0/",
+        "researchgate": "https://www.researchgate.net/profile/Dr-Das-15?ev=hdr_xprf"
+      }
+    }
+  ],
+  "students": [
+    {
+      "id": "anindita-bhattacharya",
+      "name": "Anindita Bhattacharya",
+      "title": "Research Scholar",
+      "image": "/images/MembersDP/anindita-bhattacharya.webp",
+      "bio": "Working on identifying novel biomarkers for early detection of lung cancer. Expertise in cell culture techniques and molecular biology methodologies.",
+      "research": "Lung cancer pathogenesis",
+      "email": "a.bhattacharya@iitkgp.ac.in",
+      "joinedDate": "2019-07",
+      "qualifications": "M.Sc. in Microbiology: St. Xaviers College (Autonomous) under University of Calcutta\n\nB.Sc. in Microbiology: University of Calcutta",
+      "profiles": {
+        "googleScholar": "https://scholar.google.co.in/citations?user=rJcSj7cAAAAJ&hl=en",
+        "orcid": "https://orcid.org/0000-0003-3716-1257",
+        "linkedin": "https://www.linkedin.com/in/anindita-bhattacharya-389802308/?originalSubdomain=in"
+      }
+    },
+    {
+      "id": "imon-mitra",
+      "name": "Imon Mitra",
+      "title": "Research Scholar",
+      "image": "/images/MembersDP/imon-mitra.jpeg",
+      "bio": "Investigating novel non-invasive biomarkers for reproductive disorders. Experienced in clinical sample processing and biomarker validation techniques.",
+      "research": "Women's reproductive health",
+      "email": "imonm20@kgpian.iitkgp.ac.in",
+      "joinedDate": "2020-09",
+      "qualifications": "M.Sc. : UCSTA, University of Calcutta\n\nB.Sc. : University of Calcutta",
+      "profiles": {
+        "googleScholar": "https://scholar.google.com/citations?hl=en&user=Sgrg5OwAAAAJ",
+        "linkedin": "https://in.linkedin.com/in/imon-mitra-3b96b1196"
+      }
+    },
+    {
+      "id": "sumana-halder",
+      "name": "Sumana Halder",
+      "title": "Research Scholar",
+      "image": "/images/MembersDP/sumana-halder.jpg",
+      "bio": "With a foundation in Physics and a Master's in Medical Physics from IIT Kharagpur, I am currently pursuing a Ph.D. in Medical Imaging, focusing on ultrasound theranostics",
+      "research": "Multimodal Imaging for precision dosimetry",
+      "email": "sumanahalder006@kgpian.iitkgp.ac.in",
+      "joinedDate": "2021-09",
+      "qualifications": "M.Sc. in Medical Physics: IIT Kharagpur\n\nB.Sc. in Physics: University of Calcutta",
+      "profiles": {
+        "googleScholar": "https://scholar.google.com/citations?user=smcKqS4AAAAJ&hl=en&oi=ao",
+        "linkedin": "http://www.linkedin.com/in/sumanahalder"
+      }
+    },
+    {
+      "id": "bishnupriya-saha",
+      "name": "Bishnupriya Saha",
+      "title": "Research Scholar",
+      "image": "/images/MembersDP/bishnupriya-saha.jpg",
+      "bio": "Researching biomarkers for reproductive health disorders. Expertise in molecular biology techniques and clinical sample analysis.",
+      "research": "Women's health",
+      "email": "bishnupriyasaha@kgpian.iitkgp.ac.in",
+      "joinedDate": "2022-01",
+      "qualifications": "M.Tech. in Biotechnology: KIIT University\n\nB.Tech. in Biotechnology: KIIT University",
+      "profiles": {
+        "googleScholar": "https://scholar.google.com/citations?hl=en&user=FYODoU0AAAAJ",
+        "orcid": "https://orcid.org/0009-0000-0602-4757",
+        "linkedin": "http://www.linkedin.com/in/bishnupriyasaha"
+      }
+    },
+    {
+      "id": "sayak-roy-chowdhury",
+      "name": "Sayak Roy Chowdhury",
+      "title": "Research Scholar",
+      "image": "/images/MembersDP/sayak-roy-chowdhury.jpg",
+      "bio": "His research focuses on tissue engineering and nanobiotechnology, previously involving bone-based biomaterials for tissue engineering. Currently, he works on nanomaterials for skin wound healing.",
+      "research": "Nanomaterials application in Biotechnology",
+      "email": "sayak1997@kgpian.iitkgp.ac.in",
+      "joinedDate": "2022-12",
+      "qualifications": "M.Tech. in Biotechnology: NIT Durgapur\n\nB.Tech. in Biotechnology: UEM, Kolkata",
+      "profiles": {
+        "googleScholar": "https://scholar.google.com/citations?user=iy9s2_kAAAAJ&hl=en",
+        "linkedin": "https://www.linkedin.com/in/sayak-roy-chowdhury-0921a5215/"
+      }
+    },
+    {
+      "id": "palash-paul",
+      "name": "Palash Paul",
+      "title": "Research Scholar",
+      "image": "/images/MembersDP/palash-paul.webp",
+      "bio": "Investigating metabolic pathways in interstitial lung diseases using multi-omics approaches. Experienced in bioinformatics and biostatistical methods.",
+      "research": "Interstitial lung diseases and omics",
+      "email": "palashpaul.24@kgpian.iitkgp.ac.in",
+      "joinedDate": "2024-07",
+      "qualifications": "M.Sc. in Microbiology: University of Calcutta\n\nB.Sc. in Microbiology: University of Calcutta",
+      "profiles": {
+        "googleScholar": "https://scholar.google.com/citations?user=xYIi2CoAAAAJ&hl=en",
+        "orcid": "https://orcid.org/0000-0002-5505-4992",
+        "linkedin": "https://www.linkedin.com/in/palash-paul-1b7907199/"
+      }
+    },
+    {
+      "id": "shreya-choudhury",
+      "name": "Shreya Choudhury",
+      "title": "Research Scholar",
+      "image": "/images/MembersDP/shreya-choudhury.jpg",
+      "bio": "Exploring molecular mechanisms in pulmonary diseases through integrated multi-omics approaches. Skilled in bioinformatics and data-driven research.",
+      "research": "Integrative Multi-Omics of Lung Diseases",
+      "email": "choudhury.shreya11.24@kgpian.iitkgp.ac.in",
+      "joinedDate": "2024-07",
+      "qualifications": "M.Tech. in Biotechnology: KIIT University\n\nB.Tech. in Biotechnology: KIIT University",
+      "profiles": {
+        "orcid": "https://orcid.org/0009-0008-4170-5812",
+        "linkedin": "http://linkedin.com/in/shreyachoudhury11"
+      }
+    },
+    {
+      "id": "dr-soumendranath-ray-mbbs",
+      "name": "Dr. Soumendranath Ray, MBBS",
+      "title": "Research Scholar (Working Professional)",
+      "image": "/images/MembersDP/soumendranath-ray.webp",
+      "bio": "Dr. Soumendranath Ray is the Senior Consultant and Head of Department of Nuclear Medicine at Tata Medical Center, Calcutta. He brings extensive expertise in nuclear medicine, overseeing advanced diagnostic and therapeutic services, and is recognized for his leadership and commitment to excellence in patient care and medical research in the field.",
+      "research": "Integrated metabolomics and multi-modal imaging for evaluation of TENIS syndrome",
+      "email": "drsoumen25@kgpian.iitkgp.ac.in",
+      "joinedDate": "2025-07",
+      "qualifications": "DNB in Nuclear Medicine: Radiation medicine centre tata memorial hospital\n\nMBBS: North Bengal Medical College",
+      "profiles": {
+        "linkedin": "https://www.linkedin.com/in/dr-soumendranath-calcutta-96345339/?originalSubdomain=in",
+        "researchgate": "https://www.researchgate.net/profile/Soumendranath-Ray"
+      }
+    },
+    {
+      "id": "pragya-dey",
+      "name": "Pragya Dey",
+      "title": "Research Scholar",
+      "image": "/images/MembersDP/pragya-dey.jpg",
+      "bio": "Investigating putative biomarkers for predicting lung cancer risk in patients with COPD. Experienced in molecular biology techniques.",
+      "research": "Lung cancer and COPD",
+      "email": "deypragya25@kgpian.iitkgp.ac.in",
+      "joinedDate": "2025-12",
+      "qualifications": "M.Sc. in Zoology: University of Calcutta\n\nB.Sc. in Zoology: University of Calcutta",
+      "profiles": {
+        "googleScholar": "https://scholar.google.com/citations?hl=en&user=Yak-5JAAAAAJ",
+        "linkedin": "https://in.linkedin.com/in/pragya-dey-67752832b"
+      }
+    },
+    {
+      "id": "sovan-chakraborty",
+      "name": "Sovan Chakraborty",
+      "title": "Research Scholar",
+      "image": "/images/MembersDP/sovan-chakraborty.webp",
+      "bio": "With a background in Life Sciences and Biotechnology, my research interests focus on organ-on-a-chip technology, microfluidic systems, and their applications in biomedical research.",
+      "research": "Endometrium on a chip",
+      "email": "sovanchakraborty26@kgpian.iitkgp.ac.in",
+      "joinedDate": "2026-07",
+      "qualifications": "M.Tech. in Biotechnology: NIT Warangal \n\n M.Sc. in Zoology: Ramakrishna Mission Vivekananda Centenary College, Rahara\n\n B.Sc. Honours in Zoology: University of Calcutta"
+    }
+  ],
+  "staff": [
+    {
+      "id": "ankush-das",
+      "name": "Ankush Das",
+      "title": "Technical Support I",
+      "image": "/images/MembersDP/ankush-das.webp",
+      "email": "ankush4kgp@gmail.com",
+      "joinedDate": "2021-01",
+      "responsibilities": "Responsible for managing additional administrative work, including purchasing equipment and chemicals and handling other miscellaneous tasks related to project execution."
+    },
+    {
+      "id": "abhijit-saha",
+      "name": "Abhijit Saha",
+      "title": "Junior Research Fellow",
+      "image": "/images/MembersDP/abhijit-saha.webp",
+      "bio": "M.Sc. Biotechnology graduate with a keen interest for image processing, data analysis and machine learning.",
+      "email": "asahaagcs@gmail.com",
+      "joinedDate": "2025-09",
+      "responsibilities": "Currently involved in analyzing in-house generated and publicly available data to gather biological insights for early disease detection."
+    }
+  ],
+  "alumni": [
+    {
+      "id": "dr-sunil-kumar",
+      "name": "Dr. Sunil Kumar",
+      "title": "Research Scholar (2007)",
+      "image": "/images/AlumniDP/sunil-kumar.jpeg",
+      "email": "sunilkumar1@gmail.com",
+      "currentPosition": "Senior Data Scientist and Group Lead, Farming Solutions & Digital, Corteva Agriscience, Hyderabad, India",
+      "thesisTitle": "Micro-structural and Biochemical Changes in Human Spermatozoa Associated with RISUG®."
+    },
+    {
+      "id": "dr-soumen-das",
+      "name": "Dr. Soumen Das",
+      "title": "Research Scholar (2009)",
+      "image": "/images/AlumniDP/soumen-das.jpg",
+      "email": "dasdou@gmail.com",
+      "currentPosition": "Device Qualification Lead, Takeda Development Center Americas.",
+      "thesisTitle": "Role of Reactive Oxygen Species in Male Infertility and Its Association with Assisted Reproductive Techniques."
+    },
+    {
+      "id": "dr-asha-latha-g-mbbs",
+      "name": "Dr. Asha Latha G, MBBS",
+      "title": "Research Scholar (2010)",
+      "image": "/images/AlumniDP/asha-latha-g.jpg",
+      "email": "ashalathag@gmail.com",
+      "currentPosition": "Director, Wellspring Fertility Centre,Kalyanagar, Bangalore 560043",
+      "thesisTitle": "The Clinical Use of Aromatase Inhibitor Letrozole for Routine Ovulation Induction."
+    },
+    {
+      "id": "dr-dharitri-goswami-mbbs",
+      "name": "Dr. Dharitri Goswami, MBBS",
+      "title": "Research Scholar (2010)",
+      "image": "/images/empty_dp.jpg",
+      "email": "mahadgos@yahoo.com",
+      "currentPosition": "Medical Officer at BCRTH, IIT Kharagpur, India.",
+      "thesisTitle": "Photoplethysmograph Signal Modeling Towards Preventive Cardiology"
+    },
+    {
+      "id": "dr-narendra-babu-k",
+      "name": "Dr. Narendra Babu K",
+      "title": "Research Scholar (2011)",
+      "image": "/images/AlumniDP/narendra-babu-k.jpg",
+      "email": "narendra.iitkgp2010@gmail.com",
+      "currentPosition": "Senior Embryologist, Valley Medical & Health Group, New Jersey, USA.",
+      "thesisTitle": "Role of Reactive Oxygen Species in Female Infertility and Its Association with Assisted Reproductive Techniques."
+    },
+    {
+      "id": "dr-rashmi-mukherjee",
+      "name": "Dr. Rashmi Mukherjee",
+      "title": "Research Scholar (2012)",
+      "image": "/images/AlumniDP/rashmi-mukherjee.jpeg",
+      "email": "rashmikgpiit@gmail.com",
+      "currentPosition": "Assistant Professor, Raja Narendra Lal Khan Womens College,Paschim Medinipur, West Bengal, India.",
+      "thesisTitle": "Oxidative Stress Induced Changes in Early and Late Onset Preeclampsia"
+    },
+    {
+      "id": "dr-saikat-kumar-jana",
+      "name": "Dr. Saikat Kumar Jana",
+      "title": "Research Scholar (2013)",
+      "image": "/images/AlumniDP/saikat-kumar-jana.jpg",
+      "email": "saikatmicro4@gmail.com",
+      "currentPosition": "Assistant Professor, Dept. of Biotechnology, NIT Arunachal Pradesh, India.",
+      "thesisTitle": "Effect of Oxidative Stress on the Pathogenesis and Endometrial Receptivity in Women with Endometriosis and Therapeutic Management Using Dual-Drug Loaded Nanoparticles."
+    },
+    {
+      "id": "dr-abhay-kumar-singh",
+      "name": "Dr. Abhay Kumar Singh",
+      "title": "Research Scholar (2014)",
+      "image": "/images/AlumniDP/abhay-kumar-singh.jpg",
+      "email": "biotech.abhay@gmail.com",
+      "currentPosition": "Senior Biology Faculty (NEET division), ALLEN Career Institute, Kota.",
+      "thesisTitle": "Oxidative stress, extracellular matrix remodelling and angiogenesis related changes in women with endometriosis undergoing in vitro fertilization."
+    },
+    {
+      "id": "dr-priyanka-banerjee",
+      "name": "Dr. Priyanka Banerjee",
+      "title": "Research Scholar (2015)",
+      "image": "/images/AlumniDP/priyanka-banerjee.png",
+      "email": "priyankabanerjee15@gmail.com",
+      "currentPosition": "Senior Medical Writer, Dava Oncology.",
+      "thesisTitle": "Understanding Endometrial Receptivity in Idiopathic Recurrent Spontaneous Miscarriage."
+    },
+    {
+      "id": "dr-akhtar-jahan-siddiqa",
+      "name": "Dr. Akhtar Jahan Siddiqa",
+      "title": "Research Scholar (2016)",
+      "image": "/images/empty_dp.jpg",
+      "research": "Metabolomics and biomarker discovery",
+      "email": "akhtar.mtech@gmail.com",
+      "currentPosition": "Chemical Data Specialist, Albert Invent",
+      "thesisTitle": "Hydrophilic Polymer Modified Low Density Polyethylene for Controlled Drug Release System."
+    },
+    {
+      "id": "dr-mainak-dutta",
+      "name": "Dr. Mainak Dutta",
+      "title": "Research Scholar (2016)",
+      "image": "/images/AlumniDP/mainak-dutta.jpg",
+      "research": "Clinical diagnostics and biomarker validation",
+      "email": "mainakdutta.86@gmail.com",
+      "currentPosition": "Associate Professor & Head of Department, Department of Biotechnology , BITS Pilani, Dubai Campus.",
+      "thesisTitle": "Minimally Invasive Diagnosis of Early Endometriosis: An Integrated Proteomics and Metabolomics Approach."
+    },
+    {
+      "id": "dr-elavarasan-subramani",
+      "name": "Dr. Elavarasan Subramani",
+      "title": "Research Scholar (2017)",
+      "image": "/images/AlumniDP/elavarasan-subramani.webp",
+      "research": "Mass spectrometry-based metabolomics",
+      "email": "ela2genetics@gmail.com",
+      "currentPosition": "Instructor, The UT MD Anderson Cancer Center, Houston, Texas, USA.",
+      "thesisTitle": "Molecular Understanding of Endometrial Receptivity in Women with Dormant Genital Tuberculosis."
+    },
+    {
+      "id": "dr-sourav-roy-choudhury",
+      "name": "Dr. Sourav Roy Choudhury",
+      "title": "Research Scholar (2018)",
+      "image": "/images/AlumniDP/sourav-roy-choudhury.jpg",
+      "research": "Metabolomics and biomarker discovery",
+      "email": "src.bio@gmail.com",
+      "currentPosition": "Visiting Fellow, National Institute of Diabetes and Digestive and Kidney Diseases (NIDDK), Phoenix, Arizona, United States",
+      "thesisTitle": "Serum Markers in Women with Polycystic Ovary Syndrome: A Hypothesis-Free Multi-Omics Approach."
+    },
+    {
+      "id": "dr-brajesh-singh",
+      "name": "Dr. Brajesh Singh",
+      "title": "Research Scholar (2021)",
+      "image": "/images/AlumniDP/brajesh-singh.jpg",
+      "research": "Clinical diagnostics and biomarker validation",
+      "email": "brajesh.singh21@gmail.com",
+      "currentPosition": "Scientist E, Defence R&D Organisation, Ministry of Defence, Delhi, India",
+      "thesisTitle": "Effect of Long-term Doxycycline as Adjuvant Therapy in Chronic Obstructive Pulmonary Diseasen."
+    },
+    {
+      "id": "dr-nilanjana-ghosh",
+      "name": "Dr. Nilanjana Ghosh",
+      "title": "Research Scholar (2021)",
+      "image": "/images/AlumniDP/nilanjana-ghosh.jpg",
+      "research": "Asthma-Chronic Obstructive Pulmonary Disease Overlap (ACO): A Unique Disease Entity?",
+      "email": "n.nilanjana@gmail.com",
+      "currentPosition": "Post Doctoral Fellow, The University of Gothenburg, Sweden",
+      "thesisTitle": "Advanced Mass Spectrometry Techniques for Metabolite Profiling."
+    },
+    {
+      "id": "dr-siva-prakasam-o-k",
+      "name": "Dr. Siva Prakasam O K",
+      "title": "Research Scholar (2022)",
+      "image": "/images/AlumniDP/siva-prakasam-o-k.jpg",
+      "research": "Metabolomics and biomarker discovery",
+      "email": "sivaprakasamok@gmail.com",
+      "thesisTitle": "Design and Development of Paper-Based Microchip for Healthcare Applications."
+    },
+    {
+      "id": "dr-apoorva-singh",
+      "name": "Dr. Apoorva Singh",
+      "title": "Research Scholar (2023)",
+      "image": "/images/AlumniDP/apoorva-singh.jpg",
+      "research": "Clinical diagnostics and biomarker validation",
+      "email": "apporvasingh91@gmail.com",
+      "currentPosition": "Senior Research Professional at Stanford University",
+      "thesisTitle": "Exploring Metallo-Curcumin Nanoparticles as a Therapeutic Strategy for Endometriosis."
+    },
+    {
+      "id": "dr-sanjukta-dasgupta",
+      "name": "Dr. Sanjukta Dasgupta",
+      "title": "Research Scholar (2023)",
+      "image": "/images/AlumniDP/sanjukta-dasgupta.jpg",
+      "research": "Mass spectrometry-based metabolomics",
+      "email": "dasguptasanjukta5@gmail.com",
+      "currentPosition": "Assistant Professor, Dept. of Biotechnology, Brainware University.",
+      "thesisTitle": "Radiologic, Metabolomic, and Transcriptomic Signatures of Hypersensitivity Pneumonitis."
+    },
+    {
+      "id": "dr-pritha-biswas",
+      "name": "Dr. Pritha Biswas",
+      "title": "Research Scholar (2024)",
+      "image": "/images/AlumniDP/pritha-biswas.jpg",
+      "research": "Metabolomics and biomarker discovery",
+      "email": "prithabhu10@gmail.com",
+      "currentPosition": "Postdoctoral fellow at Indian Institute of Science - IISc Bangalore.",
+      "thesisTitle": "Enzyme Mediated Resistant Starch Production and Exploring its Therapeutic Efficacy in Experimental Polycystic Ovary Syndrome (PCOS) Rat Model."
+    },
+    {
+      "id": "dr-atul-kumar-ojha",
+      "name": "Dr. Atul Kumar Ojha",
+      "title": "Research Scholar (2024)",
+      "image": "/images/AlumniDP/atul-kumar-ojha.jpeg",
+      "research": "Clinical diagnostics and biomarker validation",
+      "email": "ojha.kratul@gmail.com",
+      "currentPosition": "Postdoctoral fellow at University College Dublin, Ireland.",
+      "thesisTitle": "Development of cervix analogue for women with cervical atresia using tissue engineering approach."
+    },
+    {
+      "id": "dr-souvik-biswas",
+      "name": "Dr. Souvik Biswas",
+      "title": "Research Scholar (2024)",
+      "image": "/images/AlumniDP/souvik-biswas.webp",
+      "research": "Mass spectrometry-based metabolomics",
+      "email": "sbiswas.bme@nitrr.ac.in",
+      "currentPosition": "Assistant Professor, Department of Biomedical Engineering, NIT Raipur, Chhattisgarh 492010, India.",
+      "thesisTitle": "Conducting Polymer Based Papertronic Devices for pH and Urea Sensing: Theory to Application."
+    },
+    {
+      "id": "dr-priyanka-choudhury",
+      "name": "Dr. Priyanka Choudhury",
+      "title": "Research Scholar (2024)",
+      "image": "/images/AlumniDP/priyanka-choudhury.webp",
+      "research": "Clinical diagnostics and biomarker validation",
+      "email": "priyanka91choudhury@gmail.com",
+      "currentPosition": "Postdoctoral Fellow, Karolinska Institutet, Sweden.",
+      "thesisTitle": "COPD Associated Pulmonary Hypertension: Understanding Disease Mechanism and Development of a Sensing Device."
+    },
+    {
+      "id": "dr-arijit-pal",
+      "name": "Dr. Arijit Pal",
+      "title": "Research Scholar (2024)",
+      "image": "/images/AlumniDP/arijit-pal.jpg",
+      "research": "Mass spectrometry-based metabolomics",
+      "email": "pal.arijit88@gmail.com",
+      "currentPosition": "Postdoctoral Research Associate, Graphene Engineering Laboratory, Department of Engineering, University of Exeter, UK",
+      "thesisTitle": "MoS₂, 2S and its Nanocomposite Based Smart Sensors for Targeted Biomolecule Detection."
+    },
+    {
+      "id": "dr-da-doma-sherpa",
+      "name": "Dr. Da Doma Sherpa",
+      "title": "Research Scholar (2024)",
+      "image": "/images/AlumniDP/da-doma-sherpa.jpg",
+      "research": "Mass spectrometry-based metabolomics",
+      "email": "domasherpa27@gmail.com",
+      "thesisTitle": "Insight into the Mechanism of Recurrent Spontaneous Miscarriage of Unknown Etiology."
+    }
+  ]
+}

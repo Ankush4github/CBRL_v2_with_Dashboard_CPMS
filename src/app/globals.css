@@ -1,0 +1,288 @@
+/*
+ * This file uses Tailwind CSS directives which may trigger CSS linter warnings.
+ * These warnings can be safely ignored as they're valid Tailwind syntax.
+ * See: https://tailwindcss.com/docs/functions-and-directives
+ */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 210 40% 98%;
+    --foreground: 222.2 84% 4.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+    /* 47% is the lightest this hue clears WCAG AA (4.5:1) at, against both
+       --background and --card, and for --primary-foreground sitting on it.
+       At the previous 59% those pairs measured 3.18:1, 3.33:1 and 3.18:1 —
+       failures for the eyebrow labels, links and every default button label.
+       Dark mode already passes at 62% and is unchanged. */
+    --primary: 213 99% 47%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    /* 45.4% rather than 46.9%: on the muted track — the tab list on
+       /projects — 46.9% measured 4.34:1, short of AA for normal text. The
+       nudge lifts that to 4.59:1 and every other pairing with it. */
+    --muted-foreground: 215.4 16.3% 45.4%;
+    --accent: 213 100% 96%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 213 99% 59%;
+    --radius: 0.625rem;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+    --card: 222.2 47.4% 9%;
+    --card-foreground: 210 40% 98%;
+    --popover: 222.2 47.4% 9%;
+    --popover-foreground: 210 40% 98%;
+    --primary: 213 99% 62%;
+    --primary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 217.2 32.6% 17.5%;
+    --secondary-foreground: 210 40% 98%;
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+    --accent: 217.2 32.6% 17.5%;
+    --accent-foreground: 210 40% 98%;
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: 213 99% 62%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground transition-colors duration-300;
+  }
+
+  /* Custom text selection styling */
+  ::selection {
+    @apply bg-primary/20 text-foreground;
+  }
+
+  ::-moz-selection {
+    @apply bg-primary/20 text-foreground;
+  }
+}
+
+@layer components {
+
+  /* Collaborations Scroll Animations */
+  @keyframes scroll-left {
+    0% {
+      transform: translateX(0);
+    }
+
+    100% {
+      transform: translateX(-50%);
+    }
+  }
+
+  @keyframes scroll-right {
+    0% {
+      transform: translateX(-50%);
+    }
+
+    100% {
+      transform: translateX(0);
+    }
+  }
+
+  .animate-scroll-left {
+    animation: scroll-left 30s linear infinite;
+  }
+
+  .animate-scroll-right {
+    animation: scroll-right 30s linear infinite;
+  }
+
+  .animate-scroll-left:hover,
+  .animate-scroll-right:hover {
+    animation-play-state: paused;
+  }
+
+  /* Dropdown fade-in-up animation */
+  @keyframes fade-in-up {
+    0% {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+
+    100% {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  .animate-fade-in-up {
+    animation: fade-in-up 0.3s ease-out forwards;
+  }
+
+  /* 3D Card Flip Effect (used by member/facility cards) */
+  .flip-card {
+    perspective: 1000px;
+    cursor: pointer;
+  }
+
+  .flip-card-inner {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    transition: transform 0.6s;
+    transform-style: preserve-3d;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    border-radius: var(--radius);
+  }
+
+  .is-flipped {
+    transform: rotateY(180deg);
+  }
+
+  .flip-card-front,
+  .flip-card-back {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    border-radius: var(--radius);
+    display: flex;
+    flex-direction: column;
+    @apply bg-card text-card-foreground border border-border;
+  }
+
+  .flip-card-front {
+    transform: rotateY(0deg);
+  }
+
+  .flip-card-back {
+    transform: rotateY(180deg);
+  }
+}
+
+@layer base {
+  /*
+   * CPMS's design tokens, scoped to its subtree.
+   *
+   * Both apps name their tokens identically and give them different values —
+   * the site's primary is blue 213 99% 47%, this one's is teal 168 76% 36%.
+   * They are declared on the [data-app="cpms"] wrapper rather than :root
+   * because custom properties resolve to the nearest ancestor that declares
+   * them: everything inside the wrapper sees these, everything outside sees
+   * the site's, and neither needs !important or a specificity fight.
+   *
+   * That is also why CPMS's own .dark block is not carried over. The site's
+   * theme toggle puts .dark on <html>, which is an ancestor of this element,
+   * so its values lose to these ones — leaving CPMS light-only, which is what
+   * it has always been in practice.
+   */
+  [data-app="cpms"] {
+    --background: 210 20% 98%;
+    --foreground: 222 47% 11%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 47% 11%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 47% 11%;
+    --primary: 168 76% 36%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 210 40% 96%;
+    --secondary-foreground: 222 47% 11%;
+    --muted: 210 40% 96%;
+    --muted-foreground: 215 16% 47%;
+    --accent: 168 60% 94%;
+    --accent-foreground: 168 76% 26%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+    --border: 214 32% 91%;
+    --input: 214 32% 91%;
+    --ring: 168 76% 36%;
+    --radius: 0.75rem;
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 0%;
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 0 0% 0%;
+    --sidebar-primary: 0 0% 0%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 90%;
+    --sidebar-accent-foreground: 0 0% 0%;
+    --sidebar-border: 0 0% 0%;
+    --sidebar-ring: 0 0% 0%;
+    --chart-1: 12 76% 61%;
+    --chart-2: 173 58% 39%;
+    --chart-3: 197 37% 24%;
+    --chart-4: 43 74% 66%;
+    --chart-5: 27 87% 67%;
+    --sidebar: 0 0% 98%;
+    --shadow-2xs: 1px 1px 0px 0px #000000;
+    --shadow-xs: 2px 2px 0px 0px #000000;
+    --shadow-sm: 3px 3px 0px 0px #000000;
+    --shadow: 5px 5px 0px 0px #000000;
+    --shadow-md: 8px 8px 0px 0px #000000;
+    --shadow-lg: 12px 12px 0px 0px #000000;
+    --shadow-xl: 16px 16px 0px 0px #000000;
+    --shadow-2xl: 24px 24px 0px 0px #000000;
+    --tracking-normal: 0em;
+    --spacing: 0.25rem;
+
+    /* Space Grotesk, loaded by next/font in the CPMS layout. */
+    font-family: var(--font-cpms-sans), ui-sans-serif, system-ui, -apple-system,
+      'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  }
+
+  /*
+   * font-mono is used across the CPMS pages for reference numbers and patient
+   * IDs. Tailwind's fontFamily is global config and cannot be scoped, so the
+   * utility is re-pointed here instead — two selectors because the wrapper
+   * itself could carry the class. Higher specificity than the .font-mono
+   * utility, so it wins wherever it applies and nowhere else.
+   */
+  [data-app="cpms"] .font-mono,
+  [data-app="cpms"].font-mono {
+    font-family: var(--font-cpms-mono), ui-monospace, SFMono-Regular, Menlo,
+      Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace;
+  }
+
+  /*
+   * CPMS's shadows: hard offsets with no blur, part of its visual identity
+   * rather than the site's.
+   *
+   * Its own Tailwind config used to set these through theme.extend.boxShadow.
+   * Carrying that into the merged config would have repointed shadow-sm, -md
+   * and -lg for the whole site as well — 43 usages across the public pages and
+   * the dashboard — and since --shadow-* is only declared inside this scope,
+   * every one of them would have silently rendered with no shadow at all.
+   * Scoping the utilities instead leaves both designs intact.
+   *
+   * Only the three tiers CPMS actually uses are re-pointed; the 2xs/xs/xl/2xl
+   * tiers its config declared have no usages.
+   */
+  [data-app="cpms"] .shadow-sm {
+    box-shadow: var(--shadow-sm);
+  }
+
+  [data-app="cpms"] .shadow-md {
+    box-shadow: var(--shadow-md);
+  }
+
+  [data-app="cpms"] .shadow-lg {
+    box-shadow: var(--shadow-lg);
+  }
+}

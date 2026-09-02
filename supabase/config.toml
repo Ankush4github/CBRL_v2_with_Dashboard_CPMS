@@ -1,0 +1,13 @@
+project_id = "qjjyjrdcyjrkhhmdfywh"
+
+[functions.extract-prescription]
+verify_jwt = false
+
+[functions.generate-patient-pdf]
+verify_jwt = false
+
+[functions.attendance-notifications]
+verify_jwt = false
+
+[functions.vapid-public-key]
+verify_jwt = false

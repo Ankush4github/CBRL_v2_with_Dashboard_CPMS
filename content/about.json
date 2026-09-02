@@ -1,0 +1,87 @@
+{
+  "hero": {
+    "image": "/images/photo/background-image-4.jpg",
+    "imageAlt": "IIT Kharagpur, Old Main Building",
+    "eyebrow": "Faculty Profile",
+    "title": "About the Principal Investigator",
+    "lead": "Leading groundbreaking research in clinical biomarkers and advancing precision medicine at IIT Kharagpur"
+  },
+  "profile": {
+    "image": "/images/prof-koel-chaudhury.jpg",
+    "imageAlt": "Prof. Koel Chaudhury",
+    "eyebrow": "Principal Investigator",
+    "name": "Dr. Koel Chaudhury, Ph.D.",
+    "position": "Professor, School of Medical Science and Technology",
+    "institution": "Indian Institute of Technology Kharagpur",
+    "email": "koel@smst.iitkgp.ac.in",
+    "phone": "+91-3222-283572"
+  },
+  "stats": [
+    {
+      "value": "{publications}",
+      "label": "Publications"
+    },
+    {
+      "value": "23",
+      "label": "Ph.D. Guided"
+    },
+    {
+      "value": "3",
+      "label": "Awards"
+    },
+    {
+      "value": "4",
+      "label": "Patents"
+    }
+  ],
+  "biography": {
+    "eyebrow": "Profile",
+    "heading": "Biography",
+    "paragraphs": [
+      "Professor Koel Chaudhury initiated her academic career at IIT Delhi, where she played a key role in the development of a non-hormonal male contraceptive RISUG® which has successfully completed Phase III clinical trials. Since joining IIT Kharagpur as Assistant Professor in 2002, she has led impactful and wide-ranging research in diverse areas of women's health. Her initial work on gestational hypertension, a common pregnancy complication and one of the major causes of maternal and perinatal mortality and morbidity in India, identified novel proteomic and metabolomic biomarkers for early prediction of women at risk of developing this condition. She also demonstrated that excessive systemic endothelial dysfunction is a defining feature of early-onset preeclampsia, establishing clear pathophysiological differences between early- and late-onset forms of the disease that have important implications for clinical management. A challenging obstetric condition characterized by diagnostic uncertainty and limitations in targeted treatment is recurrent pregnancy loss. Using combined NMR metabolomics and vibrational spectroscopy, Professor Chaudhury and her research group identified reduced lipid and glucose metabolism in the implantation-phase endometrium of affected women. The endometrial milieu in asymptomatic infertile women with female genital tuberculosis has also been extensively characterized. Another major research focus is recurrent implantation failure - a distressing condition for couples opting for assisted conception. To tailor treatment plans, integrated omics approach is being used to identify molecular signatures that reflect the status of endometrial receptivity in these women. Endometriosis remains one of the core strengths of the group. Enhanced glucose metabolism and defects in the mitochondrial respiratory system as potential sources of oxidative stress in endometriosis has been established. Further, the team has identified serum metabolite and protein markers for early diagnosis, and demonstrated the diagnostic utility of MMP2/TIMP2 ratio in distinguishing ovarian endometriosis, diffuse adenomyosis, and their coexistence. Therapeutic potential of polyphenol-functionalized nanoparticles in the management of endometriosis has also been demonstrated. Polycystic ovary syndrome (PCOS) is a common hormonal disorder affecting adolescent and reproductive-age women and is an increasing health concern in India. The group has developed an integrated proteomic–metabolomic–lipidomic serum marker panel to enable early screening and precise diagnosis of this condition.",
+      "Professor Chaudhury initiated research in the area of respiratory health in 2012, establishing one of the earliest NMR-based repositories of \"breath signatures\" across a spectrum of lung diseases. This resource laid the foundation for major research advances in lung health. A key focus of her group's early work was understanding the overlapping features of asthma and chronic obstructive pulmonary disease (COPD). Distinct metabolic and immune signatures of asthma-COPD overlap (ACO) were identified. Her team also investigated COPD-associated pulmonary hypertension, a common yet poorly understood complication of COPD. This work identified key metabolic markers and inflammatory pathways driving disease progression. Building on these discoveries, the team developed an electrochemical immunosensor capable of accurately detecting inflammation-related marker in serum of affected patients. Another significant contribution from the group involved demonstrating the diverse benefits associated with extended doxycycline therapy. Their research showed that doxycycline, beyond its antibiotic properties, exerts antioxidant, anti-inflammatory, and matrix metalloproteinase (MMP)-inhibitory effects, highlighting its therapeutic potential in COPD management. In the domain of interstitial lung diseases (ILDs), Professor Chaudhury and her team are working on the integration of multi-omic signatures using machine learning to build clinically relevant robust models for classification of major ILD subtypes. One of the major environmental drivers of hypersensitivity pneumonitis (HP), a major ILD subtype in India, is prolonged exposure to airborne organic antigens, particularly those originating from birds. Using integrated metabolomic and transcriptomic analyses, altered energy metabolism, immune signaling, and inflammatory pathways contributing to disease pathophysiology has been established. Additionally, the team developed an advanced predictive framework capable of identifying lung abnormalities and effectively distinguishing chronic HP from other respiratory conditions. Another ongoing study focuses on generating omics-driven discriminatory model for differentiating between idiopathic pulmonary fibrosis (IPF) and chronic HP, since these two ILD subtypes often exhibit overlapping clinical, radiological, and pathological features, making differential diagnosis challenging. Integrative multi-omics approach is being used to define distinct disease profiles of major lung cancer subtypes. It is also well known that COPD predisposes individuals to lung cancer by creating a pro-carcinogenic environment in the lungs. The team is developing an omics-based model for predicting the likelihood of lung cancer development in such high-risk COPD patients.",
+      "Across these diverse research initiatives, Professor Chaudhury’s work continues to advance precision diagnostics, deepen mechanistic understanding, and drive innovative therapeutic solutions for some of the most challenging health conditions."
+    ]
+  },
+  "awards": {
+    "eyebrow": "Recognition",
+    "heading": "Awards & Recognition",
+    "items": [
+      {
+        "title": "Labhsetwar Award",
+        "description": "For outstanding contributions to reproductive health research"
+      },
+      {
+        "title": "Technology Innovation Award",
+        "description": "For developing low-cost sanitary napkins for rural women"
+      },
+      {
+        "title": "Fellow of the West Bengal Academy of Science & Technology (WAST)",
+        "description": ""
+      }
+    ]
+  },
+  "impact": {
+    "eyebrow": "Impact",
+    "heading": "Research Impact",
+    "items": [
+      {
+        "title": "{publications} Publications",
+        "description": "High-impact research in leading journals"
+      },
+      {
+        "title": "4 Major Patents",
+        "description": "innovation in healthcare"
+      },
+      {
+        "title": "23 PhDs Guided",
+        "description": "Currently supervising 8 doctoral students"
+      }
+    ]
+  },
+  "contact": {
+    "eyebrow": "Get in touch",
+    "heading": "Contact Information",
+    "office": "Room No. 328, 3rd Floor\nLife Science Building, SMST\nIIT Kharagpur"
+  }
+}

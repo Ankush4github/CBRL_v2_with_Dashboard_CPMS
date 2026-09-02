@@ -1,0 +1,377 @@
+{
+  "stats": [
+    {
+      "value": "10+",
+      "label": "Instruments"
+    },
+    {
+      "value": "10+",
+      "label": "Researchers"
+    },
+    {
+      "value": "7000+",
+      "label": "Citations"
+    },
+    {
+      "value": "2002",
+      "label": "Established"
+    }
+  ],
+  "instruments": [
+    {
+      "title": "Mass Spectrometry with DESI MSI",
+      "subtitle": "Waters Xevo G3 QTof",
+      "imageSrc": "/images/facilities/waters-ms.jpg",
+      "imageAlt": "Waters Xevo G3 QTof Mass Spectrometer",
+      "features": [
+        "High-resolution accurate mass measurements",
+        "Superior sensitivity for complex sample analysis",
+        "Advanced protein and metabolite identification capabilities",
+        "Comprehensive biomarker discovery and validation",
+        "QuanTof technology for precise quantification"
+      ],
+      "fundingSource": "IIT Kharagpur",
+      "inCharge": {
+        "name": "Palash Paul",
+        "title": "Research Scholar",
+        "email": "palashpaul3543@gmail.com",
+        "link": "/members#palash-paul"
+      }
+    },
+    {
+      "title": "Molecular Spectroscopy(FTIR)",
+      "subtitle": "Agilent Cary 630 FTIR Spectrometer",
+      "imageSrc": "/images/facilities/ftir.webp",
+      "imageAlt": "Agilent FTIR Imaging System",
+      "features": [
+        "High-resolution chemical imaging",
+        "Rapid sample analysis and visualization",
+        "Non-destructive analysis capabilities",
+        "Advanced spectral data processing",
+        "Tissue section analysis and characterization"
+      ],
+      "fundingSource": "IIT Kharagpur",
+      "inCharge": {
+        "name": "Sumana Halder",
+        "title": "Research Scholar",
+        "email": "sumanahalder006@gmail.com",
+        "link": "/members#sumana-halder"
+      }
+    },
+    {
+      "title": "Molecular Spectroscopy(LDIR)",
+      "subtitle": "Agilent 8700 LDIR Chemical Imaging System",
+      "imageSrc": "/images/facilities/ldir.jpg",
+      "imageAlt": "8700 LDIR Chemical Imaging System",
+      "features": [
+        "Rapid, high-definition chemical imaging",
+        "Automated particle analysis",
+        "High spatial resolution capabilities",
+        "Advanced material characterization",
+        "Microplastic analysis capabilities"
+      ],
+      "fundingSource": "IIT Kharagpur",
+      "inCharge": {
+        "name": "Sumana Halder",
+        "title": "Research Scholar",
+        "email": "sumanahalder006@gmail.com",
+        "link": "/members#sumana-halder"
+      }
+    },
+    {
+      "title": "Atomic Force Microscope",
+      "subtitle": "Bruker Multimode 8-HR",
+      "imageSrc": "/images/facilities/AFM.webp",
+      "imageAlt": "Bruker Multimode 8-HR Atomic Force Microscope",
+      "features": [
+        "High-resolution 3D surface imaging at nanoscale",
+        "Multiple imaging modes (contact, tapping, non-contact)",
+        "Force spectroscopy for molecular interaction analysis",
+        "Biological sample characterization in near-native conditions",
+        "Nanomechanical property measurements (elasticity, adhesion)"
+      ],
+      "fundingSource": "IIT Kharagpur",
+      "inCharge": {
+        "name": "Sumana Halder",
+        "title": "Research Scholar",
+        "email": "sumanahalder006@gmail.com",
+        "link": "/members#sumana-halder"
+      }
+    },
+    {
+      "title": "Zeta Potential Analyzer",
+      "subtitle": "Malvern Zetasizer Nano ZS",
+      "imageSrc": "/images/facilities/zetasizer.jpg",
+      "imageAlt": "Malvern Zetasizer Nano Series",
+      "features": [
+        "Dynamic light scattering for size measurements",
+        "Zeta potential analysis",
+        "Molecular weight measurements",
+        "Protein aggregation studies",
+        "Nanoparticle characterization"
+      ],
+      "fundingSource": "Science and Engineering Research Board (SERB) | Sanction Letter No: SR/SO/HS-0058/2011 | Date: 24-02-2014",
+      "inCharge": {
+        "name": "Bishnupriya Saha",
+        "title": "Research Scholar",
+        "email": "bsaha3592@gmail.com",
+        "link": "/members#bishnupriya-saha"
+      }
+    },
+    {
+      "title": "HPLC",
+      "subtitle": "Agilent 1260 Infinity HPLC System",
+      "imageSrc": "/images/facilities/hplc.webp",
+      "imageAlt": "Agilent HPLC System",
+      "features": [
+        "Advanced separation capabilities for complex biological samples",
+        "High-precision solvent delivery system",
+        "Multiple detection options (UV-Vis, fluorescence, DAD)",
+        "Automated sample handling and injection",
+        "Method development and optimization capabilities"
+      ],
+      "fundingSource": "Indian Council of Medical Research (ICMR)",
+      "inCharge": {
+        "name": "Pragya Dey",
+        "title": "Project Technical Support",
+        "email": "deypragya1@gmail.com",
+        "link": "/members#pragya-dey"
+      }
+    },
+    {
+      "title": "Spectrophotometer",
+      "subtitle": "Thermo Scientific NanoDrop Lite Plus UV",
+      "imageSrc": "/images/facilities/nanodrop.webp",
+      "imageAlt": "NanoDrop One Spectrophotometer",
+      "features": [
+        "UV-Vis spectrophotometry for nucleic acid quantification",
+        "High-sensitivity protein analysis",
+        "Micro-volume sample analysis (1-2 µL)",
+        "Automated pathlength correction",
+        "Comprehensive data analysis software"
+      ],
+      "fundingSource": "Indian Council of Medical Research (ICMR) | Sanction Letter No: 13/11/23/dr/koel/nk | Date: 09-02-2024",
+      "inCharge": {
+        "name": "Bishnupriya Saha",
+        "title": "Research Scholar",
+        "email": "bsaha3592@gmail.com",
+        "link": "/members#bishnupriya-saha"
+      }
+    },
+    {
+      "title": "EZ-Retriever",
+      "subtitle": "BioGenex EZ-Retriever System V.4",
+      "imageSrc": "/images/facilities/EZ-Retriever.webp",
+      "imageAlt": "BioGenex EZ-Retriever System V.4",
+      "features": [
+        "Automated antigen retrieval for immunohistochemistry",
+        "Precise temperature control",
+        "Compatibility with multiple buffer solutions",
+        "Programmable protocols",
+        "Consistent and reproducible results"
+      ],
+      "fundingSource": "IIT Kharagpur",
+      "inCharge": {
+        "name": "Bishnupriya Saha",
+        "title": "Research Scholar",
+        "email": "bsaha3592@gmail.com",
+        "link": "/members#bishnupriya-saha"
+      }
+    },
+    {
+      "title": "Concentrator",
+      "subtitle": "Eppendorf Concentrator plus",
+      "imageSrc": "/images/facilities/concentrator-plus.webp",
+      "imageAlt": "CentriVap Concentrator",
+      "features": [
+        "High-speed vacuum concentration",
+        "Temperature-controlled sample processing",
+        "Multiple sample capacity options",
+        "Chemical-resistant construction",
+        "Versatile operation modes"
+      ],
+      "fundingSource": "IIT Kharagpur",
+      "inCharge": {
+        "name": "Palash Paul",
+        "title": "Research Scholar",
+        "email": "palashpaul3543@gmail.com",
+        "link": "/members#palash-paul"
+      }
+    },
+    {
+      "title": "Water Purification System",
+      "subtitle": "Millipore Milli-Q Integral 3",
+      "imageSrc": "/images/facilities/Milli-Q.webp",
+      "imageAlt": "Milli-Q IQ 7000 Water Purification System",
+      "features": [
+        "Dual production of Type 1 ultrapure and Type 2 pure water",
+        "High-efficiency purification from tap water",
+        "Flexible delivery through up to three POD dispensers",
+        "Integrated water quality monitoring",
+        "Real-time water quality monitoring"
+      ],
+      "fundingSource": "IIT Kharagpur",
+      "inCharge": {
+        "name": "Bishnupriya Saha",
+        "title": "Research Scholar",
+        "email": "bsaha3592@gmail.com",
+        "link": "/members#bishnupriya-saha"
+      }
+    },
+    {
+      "title": "System Electrometer",
+      "subtitle": "Keithley 6514 System Electrometer",
+      "imageSrc": "/images/facilities/keithley-6514.webp",
+      "imageAlt": "Keithley 6514 System Electrometer",
+      "features": [
+        "Ultra-high input impedance (>200 TΩ) for accurate low-current measurements",
+        "Wide measurement range for voltage, current, resistance, and charge",
+        "High-speed readings up to 1200 readings/second",
+        "IEEE-488 and RS-232 interfaces for system integration",
+        "Built-in zero check and zero correct for precise measurements"
+      ],
+      "fundingSource": "Department of Biotechnology (DBT) | Sanction Letter No: BT/PR16930/NER/95/355/2015 | Date: 30-01-2017",
+      "inCharge": {
+        "name": "Sumana Halder",
+        "title": "Research Scholar",
+        "email": "sumanahalder006@gmail.com",
+        "link": "/members#sumana-halder"
+      }
+    }
+  ],
+  "charges": [
+    {
+      "title": "Mass Spectrometry with DESI MSI",
+      "duration": "1 hour",
+      "prices": [
+        {
+          "label": "Own Dept",
+          "value": "₹2,000"
+        },
+        {
+          "label": "Other Depts",
+          "value": "₹3,000"
+        },
+        {
+          "label": "Academia (Outside IIT KGP)",
+          "value": "₹6,136"
+        },
+        {
+          "label": "Industry",
+          "value": "₹15,340"
+        }
+      ]
+    },
+    {
+      "title": "Molecular Spectroscopy (FTIR)",
+      "duration": "1 hour",
+      "prices": [
+        {
+          "label": "Own Dept",
+          "value": "₹150"
+        },
+        {
+          "label": "Other Depts",
+          "value": "₹250"
+        },
+        {
+          "label": "Academia (Outside IIT KGP)",
+          "value": "₹767"
+        },
+        {
+          "label": "Industry",
+          "value": "₹1,534"
+        }
+      ]
+    },
+    {
+      "title": "Molecular Spectroscopy (LDIR)",
+      "duration": "2 hours",
+      "prices": [
+        {
+          "label": "Own Dept",
+          "value": "₹800"
+        },
+        {
+          "label": "Other Depts",
+          "value": "₹1,200"
+        },
+        {
+          "label": "Academia (Outside IIT KGP)",
+          "value": "₹4,602"
+        },
+        {
+          "label": "Industry",
+          "value": "₹10,738"
+        }
+      ]
+    },
+    {
+      "title": "Atomic Force Microscope (AFM)",
+      "duration": "3 hours",
+      "prices": [
+        {
+          "label": "Own Dept",
+          "value": "₹1,500"
+        },
+        {
+          "label": "Other Depts",
+          "value": "₹1,800"
+        },
+        {
+          "label": "Academia (Outside IIT KGP)",
+          "value": "₹5,369"
+        },
+        {
+          "label": "Industry",
+          "value": "₹7,670"
+        }
+      ]
+    },
+    {
+      "title": "Zeta Potential Analyzer / DLS",
+      "duration": "1 hour",
+      "prices": [
+        {
+          "label": "Own Dept",
+          "value": "₹600"
+        },
+        {
+          "label": "Other Depts",
+          "value": "₹900"
+        },
+        {
+          "label": "Academia (Outside IIT KGP)",
+          "value": "₹4,602"
+        },
+        {
+          "label": "Industry",
+          "value": "₹7,670"
+        }
+      ]
+    },
+    {
+      "title": "HPLC",
+      "duration": "1 hour",
+      "prices": [
+        {
+          "label": "Own Dept",
+          "value": "₹500"
+        },
+        {
+          "label": "Other Depts",
+          "value": "₹600"
+        },
+        {
+          "label": "Academia (Outside IIT KGP)",
+          "value": "₹1,227"
+        },
+        {
+          "label": "Industry",
+          "value": "₹1,840"
+        }
+      ]
+    }
+  ],
+  "chargesNote": "GST is included, where applicable."
+}

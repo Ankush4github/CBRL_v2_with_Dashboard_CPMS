@@ -1,0 +1,43 @@
+# dependencies
+node_modules
+/.pnp
+.pnp.js
+
+# testing
+/coverage
+
+# next.js
+/.next/
+/out/
+
+# production
+/build
+
+# misc
+.DS_Store
+*.pem
+
+# local tooling settings
+.claude/settings.local.json
+
+# image originals kept on disk, not in history (17MB)
+/public/images-backup/
+
+# rolling snapshots the dashboard takes before each save
+/content/.backups/
+
+# debug
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# local env files
+.env*.local
+.env
+
+# vercel
+.vercel
+
+# typescript
+*.tsbuildinfo
+next-env.d.ts

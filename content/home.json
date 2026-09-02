@@ -1,0 +1,146 @@
+{
+  "hero": {
+    "slides": [
+      {
+        "src": "/images/photo/background-image-1.jpg",
+        "alt": "CBRL Research Laboratory - Image 1"
+      },
+      {
+        "src": "/images/photo/background-image-2.jpg",
+        "alt": "CBRL Research Laboratory - Image 2"
+      },
+      {
+        "src": "/images/photo/background-image-3.webp",
+        "alt": "CBRL Research Laboratory - Image 3"
+      },
+      {
+        "src": "/images/photo/background-image-4.jpg",
+        "alt": "CBRL Research Laboratory - Image 4"
+      }
+    ]
+  },
+  "collaborators": [
+    {
+      "src": "/images/Collab/AIIMS_Delhi_logo.svg",
+      "alt": "AIIMS Delhi Logo",
+      "name": "AIIMS, Delhi",
+      "width": 80,
+      "intrinsic": [
+        225,
+        251
+      ],
+      "row": 1
+    },
+    {
+      "src": "/images/Collab/AIIMS_kalyan_logo.svg",
+      "alt": "AIIMS Kalyani Logo",
+      "name": "AIIMS, Kalyani",
+      "width": 80,
+      "intrinsic": [
+        237,
+        237
+      ],
+      "row": 1,
+      "href": "https://aiimskalyani.edu.in/"
+    },
+    {
+      "src": "/images/Collab/Fortis_logo.png",
+      "alt": "Fortis Hospital Logo",
+      "name": "Fortis Hospital, Kolkata",
+      "width": 95,
+      "intrinsic": [
+        1663,
+        1176
+      ],
+      "row": 1
+    },
+    {
+      "src": "/images/Collab/NRS_logo.svg",
+      "alt": "NRS Medical College Logo",
+      "name": "NRS Medical College",
+      "width": 80,
+      "intrinsic": [
+        240,
+        276
+      ],
+      "row": 1
+    },
+    {
+      "src": "/images/Collab/SSKM_logo.svg",
+      "alt": "SSKM Hospital Logo",
+      "name": "SSKM Hospital, Kolkata",
+      "width": 80,
+      "intrinsic": [
+        237,
+        237
+      ],
+      "row": 1
+    },
+    {
+      "src": "/images/Collab/IRM_logo.webp",
+      "alt": "IRM Hospital Logo",
+      "name": "IRM Hospital, Kolkata",
+      "width": 120,
+      "intrinsic": [
+        1024,
+        462
+      ],
+      "row": 1
+    },
+    {
+      "src": "/images/Collab/nioh.png",
+      "alt": "ICMR-NIOH Logo",
+      "name": "ICMR-NIOH, Ahmedabad",
+      "width": 130,
+      "intrinsic": [
+        300,
+        108
+      ],
+      "row": 2
+    },
+    {
+      "src": "/images/Collab/NIRRCH-logo.webp",
+      "alt": "ICMR-NIRRCH Logo",
+      "name": "ICMR-NIRRCH, Mumbai",
+      "width": 130,
+      "intrinsic": [
+        2203,
+        625
+      ],
+      "row": 2
+    },
+    {
+      "src": "/images/Collab/shh_logo.webp",
+      "alt": "Srijoni Healing Home Logo",
+      "name": "Srijoni Healing Home",
+      "width": 120,
+      "intrinsic": [
+        927,
+        324
+      ],
+      "row": 2
+    },
+    {
+      "src": "/images/Collab/IQ-CIty_logo.webp",
+      "alt": "IQ City Medical College Logo",
+      "name": "IQ City Medical College",
+      "width": 60,
+      "intrinsic": [
+        484,
+        600
+      ],
+      "row": 2
+    },
+    {
+      "src": "/images/Collab/IPCR_logo.webp",
+      "alt": "Institute of Pulmocare & Research Logo",
+      "name": "Institute of Pulmocare & Research",
+      "width": 60,
+      "intrinsic": [
+        1024,
+        1024
+      ],
+      "row": 2
+    }
+  ]
+}

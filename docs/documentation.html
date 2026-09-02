@@ -1,0 +1,1323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CBRL Website — Documentation</title>
+<style>
+  @page { size: A4; margin: 18mm 16mm 18mm 16mm; }
+
+  :root {
+    --ink: #14181f;
+    --muted: #5b6572;
+    --rule: #d8dde4;
+    --brand: #12507e;
+    --brand-soft: #eef4f9;
+    --warn: #8a4b00;
+    --warn-soft: #fdf4e7;
+    --danger: #8c2020;
+    --danger-soft: #fdeeee;
+    --code-bg: #f5f7f9;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    font-family: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+    color: var(--ink);
+    font-size: 10.2pt;
+    line-height: 1.55;
+    margin: 0;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  h1, h2, h3, h4 { line-height: 1.25; margin: 0; font-weight: 650; }
+  p { margin: 0 0 .62em; }
+
+  /* ---------------------------------------------------------- cover */
+  .cover { height: 250mm; display: flex; flex-direction: column; page-break-after: always; }
+  .cover-top { flex: 1; display: flex; flex-direction: column; justify-content: center; }
+  .cover img { width: 26mm; margin-bottom: 10mm; }
+  .cover .eyebrow {
+    font-size: 8.5pt; font-weight: 700; letter-spacing: .22em;
+    text-transform: uppercase; color: var(--brand); margin-bottom: 6mm;
+  }
+  .cover h1 { font-size: 30pt; letter-spacing: -.02em; margin-bottom: 5mm; }
+  .cover .sub { font-size: 13pt; color: var(--muted); font-weight: 400; margin-bottom: 12mm; }
+  .cover .rule { height: 3px; width: 30mm; background: var(--brand); margin-bottom: 9mm; }
+  .cover dl { display: grid; grid-template-columns: 34mm 1fr; gap: 2.4mm 0; font-size: 9.6pt; margin: 0; }
+  .cover dt { color: var(--muted); }
+  .cover dd { margin: 0; font-weight: 550; }
+  .cover-foot { font-size: 8.6pt; color: var(--muted); border-top: 1px solid var(--rule); padding-top: 4mm; }
+
+  /* ------------------------------------------------------------ toc */
+  .toc { page-break-after: always; }
+  .toc h2 { font-size: 16pt; margin-bottom: 7mm; padding-bottom: 3mm; border-bottom: 2px solid var(--brand); }
+  .toc-part { font-weight: 700; color: var(--brand); font-size: 10.4pt; margin: 6mm 0 2.5mm; }
+  .toc ol { list-style: none; padding: 0; margin: 0; }
+  .toc li { padding: 1.15mm 0; border-bottom: 1px dotted var(--rule); font-size: 9.7pt; }
+  .toc li .n { display: inline-block; width: 13mm; color: var(--muted); font-variant-numeric: tabular-nums; }
+  .toc li.sub { padding-left: 13mm; font-size: 9.2pt; color: #3d4653; border-bottom: none; }
+  .toc li.sub .n { width: 15mm; }
+
+  /* ---------------------------------------------------------- parts */
+  .part-divider { page-break-before: always; padding-top: 55mm; page-break-after: always; }
+  .part-divider .kicker {
+    font-size: 8.5pt; font-weight: 700; letter-spacing: .22em;
+    text-transform: uppercase; color: var(--brand);
+  }
+  .part-divider h1 { font-size: 26pt; margin: 5mm 0 6mm; letter-spacing: -.02em; }
+  .part-divider .rule { height: 3px; width: 30mm; background: var(--brand); margin-bottom: 7mm; }
+  .part-divider p { font-size: 11pt; color: var(--muted); max-width: 125mm; }
+  .part-divider .who {
+    margin-top: 10mm; padding: 5mm; background: var(--brand-soft);
+    border-left: 3px solid var(--brand); font-size: 9.6pt;
+  }
+  .part-divider .who strong { display: block; margin-bottom: 1.5mm; }
+
+  h2.sec {
+    font-size: 15pt; margin: 0 0 4mm; padding-bottom: 2.5mm;
+    border-bottom: 2px solid var(--brand); page-break-before: always; page-break-after: avoid;
+  }
+  h2.sec .num { color: var(--brand); margin-right: 3mm; }
+  h3 { font-size: 11.4pt; margin: 7mm 0 2.5mm; page-break-after: avoid; }
+  h3 .num { color: var(--muted); margin-right: 2.5mm; font-weight: 500; }
+  h4 { font-size: 10.2pt; margin: 5mm 0 1.8mm; page-break-after: avoid; color: #26313f; }
+
+  ul, ol.list { margin: 0 0 .7em; padding-left: 5.2mm; }
+  li { margin-bottom: .28em; }
+
+  code {
+    font-family: "Cascadia Mono", Consolas, "SF Mono", Menlo, monospace;
+    font-size: .88em; background: var(--code-bg);
+    padding: .1em .35em; border-radius: 2px; border: 1px solid var(--rule);
+  }
+  pre {
+    background: var(--code-bg); border: 1px solid var(--rule); border-left: 3px solid var(--brand);
+    padding: 3mm 4mm; font-family: "Cascadia Mono", Consolas, Menlo, monospace;
+    font-size: 8.5pt; line-height: 1.45; overflow-x: auto; margin: 0 0 3.5mm;
+    white-space: pre-wrap; word-wrap: break-word; page-break-inside: avoid;
+  }
+  pre code { background: none; border: none; padding: 0; font-size: 1em; }
+
+  table { width: 100%; border-collapse: collapse; margin: 0 0 4mm; font-size: 8.9pt; page-break-inside: avoid; }
+  thead th {
+    background: var(--brand); color: #fff; text-align: left; font-weight: 600;
+    padding: 2mm 2.4mm; font-size: 8.5pt; letter-spacing: .01em;
+  }
+  tbody td { padding: 1.9mm 2.4mm; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  tbody tr:nth-child(even) td { background: #fafbfc; }
+  td code, th code { font-size: .92em; white-space: nowrap; }
+  table.compact { font-size: 8.4pt; }
+  .nowrap { white-space: nowrap; }
+
+  .note, .warn, .danger {
+    padding: 3mm 4mm; margin: 0 0 4mm; font-size: 9.3pt;
+    border-left: 3px solid; page-break-inside: avoid;
+  }
+  .note { background: var(--brand-soft); border-color: var(--brand); }
+  .warn { background: var(--warn-soft); border-color: #c98a2e; }
+  .danger { background: var(--danger-soft); border-color: var(--danger); }
+  .note .lbl, .warn .lbl, .danger .lbl {
+    display: block; font-weight: 700; font-size: 8.2pt; letter-spacing: .1em;
+    text-transform: uppercase; margin-bottom: 1.2mm;
+  }
+  .note .lbl { color: var(--brand); }
+  .warn .lbl { color: var(--warn); }
+  .danger .lbl { color: var(--danger); }
+  .note p:last-child, .warn p:last-child, .danger p:last-child { margin-bottom: 0; }
+
+  .steps { counter-reset: step; list-style: none; padding: 0; margin: 0 0 4mm; }
+  .steps > li {
+    counter-increment: step; position: relative; padding-left: 8mm; margin-bottom: 2.4mm;
+    page-break-inside: avoid;
+  }
+  .steps > li::before {
+    content: counter(step); position: absolute; left: 0; top: .15em;
+    width: 5mm; height: 5mm; background: var(--brand); color: #fff;
+    border-radius: 50%; font-size: 7.4pt; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .lead { font-size: 10.6pt; color: #39424f; margin-bottom: 4.5mm; }
+  .kv { font-size: 9.2pt; color: var(--muted); margin-bottom: 4mm; }
+  .avoid-break { page-break-inside: avoid; }
+  .path { font-family: "Cascadia Mono", Consolas, Menlo, monospace; font-size: .9em; }
+</style>
+</head>
+<body>
+
+<!-- ======================================================== COVER -->
+<section class="cover">
+  <div class="cover-top">
+    <img src="../public/cbrl-logo.png" alt="">
+    <div class="eyebrow">Clinical Biomarker Research Laboratory</div>
+    <h1>CBRL Website</h1>
+    <div class="sub">Content Dashboard &amp; System Documentation</div>
+    <div class="rule"></div>
+    <dl>
+      <dt>Version</dt><dd>2.0.0</dd>
+      <dt>Application</dt><dd>Next.js 16 · React 19 · TypeScript 5</dd>
+      <dt>Live site</dt><dd>cbrl.iitkgp.ac.in</dd>
+      <dt>Institution</dt><dd>School of Medical Science and Technology, IIT Kharagpur</dd>
+      <dt>Audience</dt><dd>Content editors and system administrators</dd>
+    </dl>
+  </div>
+  <div class="cover-foot">
+    This document has two parts. <strong>Part I</strong> is written for the people who edit the
+    website day to day and assumes no technical background. <strong>Part II</strong> is written for
+    whoever installs, configures, secures and maintains the server, and assumes command-line
+    familiarity.
+  </div>
+</section>
+
+<!-- ========================================================== TOC -->
+<section class="toc">
+  <h2>Contents</h2>
+
+  <div class="toc-part">Part I — Content Editor's Guide</div>
+  <ol>
+    <li><span class="n">1</span> What the dashboard controls</li>
+    <li><span class="n">2</span> Signing in</li>
+    <li><span class="n">3</span> Sessions and the inactivity timeout</li>
+    <li><span class="n">4</span> How every editor screen works</li>
+    <li class="sub"><span class="n">4.1</span> The sidebar and the save bar</li>
+    <li class="sub"><span class="n">4.2</span> Adding, reordering and removing entries</li>
+    <li class="sub"><span class="n">4.3</span> Saving, discarding and validation errors</li>
+    <li class="sub"><span class="n">4.4</span> Uploading images</li>
+    <li><span class="n">5</span> Section by section</li>
+    <li class="sub"><span class="n">5.1</span> Overview</li>
+    <li class="sub"><span class="n">5.2</span> Members</li>
+    <li class="sub"><span class="n">5.3</span> Publications</li>
+    <li class="sub"><span class="n">5.4</span> Projects</li>
+    <li class="sub"><span class="n">5.5</span> Research areas</li>
+    <li class="sub"><span class="n">5.6</span> Gallery</li>
+    <li class="sub"><span class="n">5.7</span> Facilities</li>
+    <li class="sub"><span class="n">5.8</span> Citation metrics</li>
+    <li><span class="n">6</span> Field limits and formats</li>
+    <li><span class="n">7</span> When something goes wrong</li>
+  </ol>
+
+  <div class="toc-part">Part II — System Administrator's Guide</div>
+  <ol>
+    <li><span class="n">8</span> Architecture</li>
+    <li><span class="n">9</span> Installation and the build</li>
+    <li><span class="n">10</span> Environment variables</li>
+    <li><span class="n">11</span> How content is stored and revalidated</li>
+    <li><span class="n">12</span> Authentication and session model</li>
+    <li class="sub"><span class="n">12.1</span> The session cookie</li>
+    <li class="sub"><span class="n">12.2</span> Absolute expiry and idle timeout</li>
+    <li class="sub"><span class="n">12.3</span> The activity heartbeat</li>
+    <li><span class="n">13</span> Security layers</li>
+    <li><span class="n">14</span> Reverse proxy configuration</li>
+    <li><span class="n">15</span> Deployment and keeping git in step</li>
+    <li><span class="n">16</span> Deploying elsewhere (Vercel and other hosts)</li>
+    <li><span class="n">17</span> API reference</li>
+    <li><span class="n">18</span> Backup and restore</li>
+    <li><span class="n">19</span> Routine maintenance</li>
+    <li><span class="n">20</span> Administrator troubleshooting</li>
+  </ol>
+</section>
+
+<!-- ==================================================== PART I -->
+<section class="part-divider">
+  <div class="kicker">Part I</div>
+  <h1>Content Editor's Guide</h1>
+  <div class="rule"></div>
+  <p>Everything you need in order to keep the CBRL website up to date — adding a new lab member,
+  recording a publication, publishing photographs from a conference — without touching any code.</p>
+  <div class="who">
+    <strong>Who this part is for</strong>
+    Anyone given the dashboard password: research scholars, staff, or the PI. No programming
+    knowledge is assumed. You will need a web browser and the address of the site.
+  </div>
+</section>
+
+<h2 class="sec"><span class="num">1</span>What the dashboard controls</h2>
+
+<p class="lead">The dashboard lives at <span class="path">/admin</span> on the website — for the live
+site that is <span class="path">https://cbrl.iitkgp.ac.in/admin</span>. It edits the parts of the
+site that change often, and it publishes instantly: there is no separate "deploy" step and no
+waiting for a developer.</p>
+
+<table>
+  <thead><tr><th style="width:31%">Dashboard section</th><th style="width:26%">Public page</th><th>What you can change</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Overview</strong></td><td>—</td><td>A summary of what is currently on the site. Nothing is edited here.</td></tr>
+    <tr><td><strong>Members</strong></td><td><span class="path">/members</span></td><td>Faculty, postdoctoral fellows, research scholars, staff and alumni — including photographs and profile links.</td></tr>
+    <tr><td><strong>Publications</strong></td><td><span class="path">/publications</span></td><td>The list of peer-reviewed papers. Add by DOI, paste BibTeX, or fill in a form.</td></tr>
+    <tr><td><strong>Projects</strong></td><td><span class="path">/projects</span></td><td>Ongoing funded projects, their objectives, the completed-projects PDF, and sponsor logos.</td></tr>
+    <tr><td><strong>Research areas</strong></td><td><span class="path">/research</span></td><td>The research areas and the disease topics written up under each.</td></tr>
+    <tr><td><strong>Gallery</strong></td><td><span class="path">/gallery</span></td><td>Photo albums, their categories, cover images and captions.</td></tr>
+    <tr><td><strong>Facilities</strong></td><td><span class="path">/facilities</span></td><td>Instruments, their features and in-charges, headline figures, and slot charges.</td></tr>
+    <tr><td><strong>Citation metrics</strong></td><td><span class="path">/publications</span></td><td>Total citations, h-index, and the source link shown alongside the publication list.</td></tr>
+  </tbody>
+</table>
+
+<div class="note">
+  <span class="lbl">Everything else</span>
+  <p>Page wording outside these sections — the homepage introduction, the contact details in the
+  footer, the About&nbsp;the&nbsp;PI biography — is part of the site's code and needs a developer.
+  If you are unsure whether something is editable, look for it in the sidebar; if it is not there,
+  it is not editable from the dashboard.</p>
+</div>
+
+<h2 class="sec"><span class="num">2</span>Signing in</h2>
+
+<ol class="steps">
+  <li>Go to <span class="path">https://cbrl.iitkgp.ac.in/admin</span> in any modern browser.</li>
+  <li>Enter the dashboard password. There is one shared password for everybody — there are no
+      individual user accounts.</li>
+  <li>You arrive at the Overview screen. If you were trying to reach a particular section before
+      signing in, you are returned to it automatically.</li>
+</ol>
+
+<h4>If the password is refused</h4>
+<p>The message tells you how many attempts remain. After <strong>five</strong> wrong attempts your
+network address is blocked for <strong>ten minutes</strong>; waiting is the only way through, so
+find the correct password rather than guessing again.</p>
+
+<h4>If you see "The dashboard is not configured yet"</h4>
+<p>The server has not been given a password. This is not something you can fix from the browser —
+contact your system administrator and point them at section&nbsp;10 of this document.</p>
+
+<div class="warn">
+  <span class="lbl">Sharing the password</span>
+  <p>Because there is a single shared password and no per-person accounts, the site cannot show who
+  made a given change. Treat the password as you would a key to the lab: share it only with people
+  who need to edit the site, and ask your administrator to change it whenever somebody with access
+  leaves the group.</p>
+</div>
+
+<h2 class="sec"><span class="num">3</span>Sessions and the inactivity timeout</h2>
+
+<p class="lead">Being signed in does not last indefinitely. Two separate limits apply, and whichever
+is reached first signs you out.</p>
+
+<table>
+  <thead><tr><th style="width:34%">Limit</th><th style="width:16%">Duration</th><th>Behaviour</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>Inactivity timeout</strong></td>
+      <td class="nowrap">5 minutes</td>
+      <td>Five minutes with no typing, clicking, scrolling or mouse movement ends the session. Any activity resets the clock.</td>
+    </tr>
+    <tr>
+      <td><strong>Absolute session length</strong></td>
+      <td class="nowrap">8 hours</td>
+      <td>Eight hours after signing in the session ends regardless of how busy you have been. Sign in again to continue.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3><span class="num">3.1</span>The warning</h3>
+
+<p>One minute before the inactivity timeout expires, a panel appears in the middle of the screen
+titled <strong>"Still there?"</strong> with a countdown. You have three choices:</p>
+
+<ul>
+  <li><strong>Stay signed in</strong> — dismisses the warning and resets the five minutes.</li>
+  <li><strong>Sign out</strong> — ends the session immediately.</li>
+  <li><strong>Do nothing</strong> — the countdown reaches zero and you are returned to the sign-in
+      screen, which explains that you were signed out for inactivity.</li>
+</ul>
+
+<p>Simply moving the mouse or pressing a key also dismisses the warning, because that counts as
+activity.</p>
+
+<div class="danger">
+  <span class="lbl">Unsaved work is lost</span>
+  <p>Being signed out discards anything you have typed but not saved. The warning exists to give you
+  a minute to press <strong>Save changes</strong> first — treat it as a prompt to save, not as a
+  notice you can ignore. If you are interrupted mid-edit, save before you walk away.</p>
+</div>
+
+<h3><span class="num">3.2</span>Why five minutes, and what counts as activity</h3>
+
+<p>The timeout is deliberately short because the dashboard can change the public website. Typing
+counts as activity even though nothing is being sent to the server while you write, so composing a
+long paragraph will <em>not</em> sign you out. Activity in one browser tab keeps every other
+dashboard tab signed in as well.</p>
+
+<p>If five minutes proves too disruptive for the way your group works, the limit is a server setting
+and your administrator can raise it — see section&nbsp;10.</p>
+
+<h2 class="sec"><span class="num">4</span>How every editor screen works</h2>
+
+<p class="lead">All seven editable sections share the same layout and the same controls. Learn them
+once and every screen behaves the same way.</p>
+
+<h3><span class="num">4.1</span>The sidebar and the save bar</h3>
+
+<p>The <strong>sidebar</strong> on the left lists every section. On a narrow screen or a phone it is
+hidden behind the menu button at the top left.</p>
+
+<p>The <strong>save bar</strong> is pinned to the bottom of the screen and is the only place work is
+committed. It always tells you the current state:</p>
+
+<table class="compact">
+  <thead><tr><th style="width:38%">What it says</th><th>What it means</th></tr></thead>
+  <tbody>
+    <tr><td><strong>No changes yet</strong></td><td>Nothing has been touched since the page loaded.</td></tr>
+    <tr><td><strong>Unsaved changes</strong></td><td>You have edited something. It exists only in your browser.</td></tr>
+    <tr><td><strong>Saving…</strong></td><td>The change is being written on the server.</td></tr>
+    <tr><td><strong>Saved — the live page is updated</strong></td><td>Done. The public page already reflects it.</td></tr>
+    <tr><td><strong>Last saved 5 minutes ago</strong></td><td>Everything is saved; this is when it happened.</td></tr>
+  </tbody>
+</table>
+
+<p>The <strong>View page</strong> button at the top right of each section opens the public page it
+drives in a new tab, so you can check a change immediately after saving.</p>
+
+<h3><span class="num">4.2</span>Adding, reordering and removing entries</h3>
+
+<p>Lists — members, projects, albums, instruments — are shown as collapsed cards, numbered, with the
+title on the left. Click a card to expand it and edit its fields; click again to collapse.</p>
+
+<table class="compact">
+  <thead><tr><th style="width:30%">Control</th><th>Effect</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Add</strong> button</td><td>Appends a new blank entry at the end of the list. Expand it and fill it in.</td></tr>
+    <tr><td><strong>▲ / ▼</strong> arrows</td><td>Move the entry one place up or down. <strong>This order is exactly the order visitors see.</strong> The arrows grey out at the ends of the list.</td></tr>
+    <tr><td><strong>Bin</strong> icon</td><td>Removes the entry — click once to arm it, and the row turns red asking you to confirm; click the bin a second time to remove it. Clicking anywhere else cancels.</td></tr>
+  </tbody>
+</table>
+
+<div class="note">
+  <span class="lbl">Nothing is permanent until you save</span>
+  <p>Adding, reordering and removing all happen in your browser only. Nothing reaches the website
+  until you press <strong>Save changes</strong> — and until then, <strong>Discard changes</strong>
+  puts everything back exactly as it was.</p>
+</div>
+
+<h3><span class="num">4.3</span>Saving, discarding and validation errors</h3>
+
+<p>Press <strong>Save changes</strong> to publish. The server checks the whole document before
+writing anything. If something is wrong, <em>nothing</em> is saved and the save bar lists the
+problems, each naming the exact field, for example:</p>
+
+<pre><code>students[4].email  must be a valid email address
+albums[2].image    is required</code></pre>
+
+<p>Read this as: the fifth research scholar has a malformed email address, and the third gallery
+album has no cover image. Counting starts at zero, so <code>[4]</code> is the fifth entry. Fix the
+named fields and save again. At most twelve problems are listed at once; if there are more, the list
+ends with a count of the remainder.</p>
+
+<p><strong>Discard changes</strong> throws away everything unsaved and reloads what is currently
+published. It cannot be undone, but it also cannot affect the live site.</p>
+
+<div class="note">
+  <span class="lbl">What the server tidies up for you</span>
+  <p>Saving normalises the document: spaces at the beginning and end of fields are trimmed, blank
+  rows in lists are dropped, and duplicated identifiers are made unique. The form redraws to show
+  exactly what was stored, so if a field looks slightly different after saving, that is why.</p>
+</div>
+
+<h3><span class="num">4.4</span>Uploading images</h3>
+
+<p>Anywhere the site shows a photograph you get an image box: a small preview, the current image
+path, and an <strong>Upload image</strong> button (<strong>Replace image</strong> once one is set).</p>
+
+<ol class="steps">
+  <li>Click <strong>Upload image</strong> and choose a file. JPEG, PNG, WebP, AVIF and GIF are
+      accepted, up to <strong>12&nbsp;MB</strong>.</li>
+  <li>The server converts it to WebP, rotates it upright, and resizes it to a sensible width for
+      where it will appear. The path fills in automatically.</li>
+  <li>Press <strong>Save changes</strong>. The upload alone does not publish anything.</li>
+</ol>
+
+<p><strong>Clear</strong> removes the image from the entry. It does not delete the uploaded file
+from the server.</p>
+
+<div class="note">
+  <span class="lbl">Why replaced photos appear instantly</span>
+  <p>Every upload is given a filename containing a fingerprint of its contents, so a replacement
+  always arrives at a brand-new address. That is why you never have to clear your browser cache to
+  see an updated photograph.</p>
+</div>
+
+<p>You may also type a path directly into the box — useful for an image already on the server. It
+must begin with <code>/</code> and point inside the site, for example
+<code>/images/MembersDP/koel-chaudhury-a1b2c3d4.webp</code>. Full web addresses beginning
+<code>http://</code> or <code>https://</code> are rejected.</p>
+
+<h2 class="sec"><span class="num">5</span>Section by section</h2>
+
+<h3><span class="num">5.1</span>Overview</h3>
+<p>The landing screen after signing in. It reports how many members, publications, projects, albums
+and instruments are currently published, and links to each section. Nothing is editable here — it is
+a place to confirm the site holds what you expect.</p>
+
+<h3><span class="num">5.2</span>Members</h3>
+
+<p>Members are divided into five groups, each shown as its own tab or block, and each rendered as a
+separate band on the public page:</p>
+
+<table class="compact">
+  <thead><tr><th style="width:34%">Group</th><th>Shown on the site as</th></tr></thead>
+  <tbody>
+    <tr><td><code>faculty</code></td><td>Faculty</td></tr>
+    <tr><td><code>postdocs</code></td><td>Postdoctoral Fellows</td></tr>
+    <tr><td><code>students</code></td><td>Research Scholars</td></tr>
+    <tr><td><code>staff</code></td><td>Staff</td></tr>
+    <tr><td><code>alumni</code></td><td>Alumni</td></tr>
+  </tbody>
+</table>
+
+<h4>Fields</h4>
+<table class="compact">
+  <thead><tr><th style="width:26%">Field</th><th style="width:13%">Required</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Name</strong></td><td>Yes</td><td>Up to 160 characters.</td></tr>
+    <tr><td><strong>Title</strong></td><td>Yes</td><td>Designation, e.g. "Senior Research Scholar". Up to 160 characters.</td></tr>
+    <tr><td><strong>Photo</strong></td><td>No</td><td>Uploaded to the members or alumni folder. A missing photo falls back to a placeholder.</td></tr>
+    <tr><td><strong>Email</strong></td><td>No</td><td>Two addresses may be given, separated by a comma.</td></tr>
+    <tr><td><strong>Phone</strong></td><td>No</td><td>Up to 60 characters.</td></tr>
+    <tr><td><strong>Bio</strong></td><td>No</td><td>Up to 2,000 characters.</td></tr>
+    <tr><td><strong>Research</strong></td><td>No</td><td>One-line research interest. Up to 500 characters.</td></tr>
+    <tr><td><strong>Qualifications</strong></td><td>No</td><td>Up to 2,000 characters.</td></tr>
+    <tr><td><strong>Joined</strong></td><td>No</td><td>Must be written <code>YYYY-MM</code> — for example <code>2023-08</code>. Any other format is rejected.</td></tr>
+    <tr><td><strong>Responsibilities</strong></td><td>No</td><td>Mainly used for staff. Up to 2,000 characters.</td></tr>
+    <tr><td><strong>Current position</strong></td><td>No</td><td>Alumni only — where they are now. Up to 400 characters.</td></tr>
+    <tr><td><strong>Thesis title</strong></td><td>No</td><td>Alumni only. Up to 600 characters.</td></tr>
+    <tr><td><strong>Profile links</strong></td><td>No</td><td>Google Scholar, ORCID, LinkedIn and ResearchGate. Each must start with <code>https://</code>.</td></tr>
+  </tbody>
+</table>
+
+<div class="warn">
+  <span class="lbl">Renaming a member breaks their link</span>
+  <p>Each member has a hidden identifier derived from their name the first time they are saved, and
+  the public site links to individual cards using it — <span class="path">/members#ankush-das</span>.
+  Changing a spelling is fine, but be aware that any link shared earlier to that specific card may
+  stop working. If two members would end up with the same identifier, the second is automatically
+  given a numbered suffix.</p>
+</div>
+
+<h4>Moving somebody to Alumni</h4>
+<p>There is no automatic transfer. Remove the person from their current group, add them under
+Alumni, and re-enter their details — adding <strong>Current position</strong> and
+<strong>Thesis title</strong>, which only Alumni displays. Do it in a single sitting and save once.</p>
+
+<h3><span class="num">5.3</span>Publications</h3>
+
+<p>The publications page is generated from a BibTeX record of roughly 180 entries. The editor works
+on <strong>one entry at a time</strong> — every other entry in the file is left untouched, byte for
+byte — so there is no risk of a stray edit disturbing the rest of the list.</p>
+
+<h4>Three ways to add a paper</h4>
+
+<table class="compact">
+  <thead><tr><th style="width:24%">Method</th><th>How it works</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>By DOI</strong><br><em>recommended</em></td>
+      <td>Paste the DOI — <code>10.1016/j.bios.2026.118980</code>, or the full <code>https://doi.org/…</code> address — and the server fetches the full record from doi.org. Check the filled-in fields and save.</td>
+    </tr>
+    <tr>
+      <td><strong>Paste BibTeX</strong></td>
+      <td>Paste an entry copied from the publisher or Google Scholar. It must start with <code>@article{</code> or similar. Several entries can be pasted at once and they keep their order.</td>
+    </tr>
+    <tr>
+      <td><strong>Fill the form</strong></td>
+      <td>Type the title, authors, journal, year and so on by hand. Use this when a paper has no DOI yet.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>New entries are added at the <strong>top</strong> of the record. The public page groups everything
+by year regardless, so position within the file does not affect what visitors see.</p>
+
+<h4>Editing and deleting</h4>
+<p>Existing entries are listed with their title, authors and year. Open one to edit its fields, or
+delete it outright. Fields the public page does not display — <code>keywords</code>,
+<code>issn</code>, <code>abstract</code> — are preserved even though the form does not show them.</p>
+
+<div class="note">
+  <span class="lbl">Duplicate citation keys</span>
+  <p>Every entry carries a citation key, which must be unique. If a paste or a DOI import produces a
+  key already in use, the entry is flagged as a duplicate. Give one of them a slightly different key
+  — appending <code>a</code> or the journal abbreviation is the usual fix.</p>
+</div>
+
+<h4>If a DOI lookup fails</h4>
+<table class="compact">
+  <thead><tr><th style="width:44%">Message</th><th>What to do</th></tr></thead>
+  <tbody>
+    <tr><td>"That does not look like a DOI"</td><td>The DOI must start <code>10.</code> followed by four or more digits, a slash, then the suffix. Remove any surrounding text.</td></tr>
+    <tr><td>"No record found for that DOI"</td><td>The DOI is not registered. Check it against the publisher's page; very new papers sometimes take days to appear.</td></tr>
+    <tr><td>"Could not reach doi.org"</td><td>The server has no internet access, or doi.org is down. Paste the BibTeX instead — that works entirely offline.</td></tr>
+  </tbody>
+</table>
+
+<h3><span class="num">5.4</span>Projects</h3>
+
+<p>Three separate things live here.</p>
+
+<h4>Ongoing projects</h4>
+<p>Each card carries a title and a short description (both required), plus duration, funding agency,
+your role, a detailed description, methodology and expected outcomes. <strong>Objectives</strong> is
+a list — add one line per objective; blank lines are dropped when you save. The <strong>icon</strong>
+is a single emoji shown beside the title and defaults to 🔬 if left empty.</p>
+
+<h4>Completed projects PDF</h4>
+<p>A single link to the PDF listing finished projects. It must be a path inside the site beginning
+<code>/</code>, such as <code>/data/completed-projects.pdf</code>. Replacing the document is a job
+for your administrator — the dashboard uploads images only, not PDFs.</p>
+
+<h4>Sponsor logos</h4>
+<p>Each sponsor needs an image, descriptive alt text for screen readers, and its
+<strong>width and height in pixels</strong>. All four are required. The dimensions stop the page
+jumping about while logos load, so they must match the real image — your image viewer or the file's
+properties will tell you.</p>
+
+<h3><span class="num">5.5</span>Research areas</h3>
+
+<p>A two-level structure. Each <strong>area</strong> has a number badge, a title, a tagline and a
+description. Inside it sit <strong>topics</strong>, shown on the public page as an expanding
+accordion.</p>
+
+<p>Each topic has a title, a one-line summary, and a <strong>body</strong> made of separate
+paragraphs — add one box per paragraph rather than pressing Enter inside a single box, which is what
+produces the spacing on the published page.</p>
+
+<p>The index badge (<code>01</code>, <code>02</code>, …) is filled in automatically from the position
+of the area if you leave it blank, so reordering areas renumbers them.</p>
+
+<h3><span class="num">5.6</span>Gallery</h3>
+
+<p><strong>Categories</strong> are defined first, as a simple list — "Conferences", "Awards", "Lab
+outings". Every album must then be given a category <em>from that list</em>; a category that is not
+in the list is rejected when you save.</p>
+
+<p>Each album needs a title and a <strong>cover image</strong> (both required), and may also carry a
+caption, a date, a longer description and any number of additional photographs. Gallery uploads may
+be filed into a sub-folder, which keeps large albums tidy on the server.</p>
+
+<div class="warn">
+  <span class="lbl">Removing a category</span>
+  <p>Deleting a category from the list while albums still use it makes those albums fail to save,
+  with an error naming the allowed categories. Move the albums to another category first, then
+  remove the old one.</p>
+</div>
+
+<h3><span class="num">5.7</span>Facilities</h3>
+
+<p>Three groups of content:</p>
+
+<ul>
+  <li><strong>Headline figures</strong> — the short statistics across the top of the page. Each is a
+      value (up to 20 characters, e.g. "12+") and a label (up to 40 characters, e.g. "Major
+      instruments"). Both required.</li>
+  <li><strong>Instruments</strong> — title, photograph and its alt text are all required. Each may
+      also list features, a funding source, and an in-charge with name, title, email and a profile
+      link.</li>
+  <li><strong>Slot charges</strong> — each charge block has a title, a duration, and a list of
+      price rows (label and value, both required, such as "IIT KGP internal" / "₹500"). The note
+      below the table is edited in <strong>Charges note</strong>.</li>
+</ul>
+
+<h3><span class="num">5.8</span>Citation metrics</h3>
+
+<p>The small panel of figures on the publications page. Four fields, all required:</p>
+
+<table class="compact">
+  <thead><tr><th style="width:28%">Field</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Total citations</strong></td><td>Free text, so "4,250" and "4250+" are both fine. Up to 20 characters.</td></tr>
+    <tr><td><strong>h-index</strong></td><td>A whole number between 0 and 500.</td></tr>
+    <tr><td><strong>Source name</strong></td><td>Usually "Google Scholar".</td></tr>
+    <tr><td><strong>Source URL</strong></td><td>Must start <code>https://</code>.</td></tr>
+    <tr><td><strong>Last updated</strong></td><td>Must be written <code>YYYY-MM-DD</code> — for example <code>2026-07-27</code>.</td></tr>
+  </tbody>
+</table>
+
+<p>These figures are typed in by hand; nothing fetches them automatically. Refreshing them once a
+term is a sensible habit.</p>
+
+<h2 class="sec"><span class="num">6</span>Field limits and formats</h2>
+
+<p class="lead">A reference for the formats the server insists on. Getting one of these wrong is the
+most common reason a save is rejected.</p>
+
+<table>
+  <thead><tr><th style="width:30%">Rule</th><th>Applies to</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Dates as <code>YYYY-MM</code></strong></td><td>Member "Joined" — <code>2023-08</code>, not <code>Aug 2023</code>.</td></tr>
+    <tr><td><strong>Dates as <code>YYYY-MM-DD</code></strong></td><td>Citation metrics "Last updated" — <code>2026-07-27</code>.</td></tr>
+    <tr><td><strong>Links</strong></td><td>Must start with <code>https://</code>, <code>http://</code>, <code>mailto:</code> or <code>/</code>. A bare <code>www.example.com</code> is rejected.</td></tr>
+    <tr><td><strong>Image and file paths</strong></td><td>Must start with a single <code>/</code> and stay inside the site. Full web addresses and <code>..</code> are rejected.</td></tr>
+    <tr><td><strong>Email addresses</strong></td><td>Must contain <code>@</code> and a dot in the domain. Two addresses may be separated by a comma.</td></tr>
+    <tr><td><strong>Uploads</strong></td><td>JPEG, PNG, WebP, AVIF or GIF, maximum 12&nbsp;MB. Everything becomes WebP.</td></tr>
+    <tr><td><strong>Blank rows</strong></td><td>Silently dropped from lists such as objectives, features and topic paragraphs.</td></tr>
+    <tr><td><strong>Leading/trailing spaces</strong></td><td>Trimmed from every text field on save.</td></tr>
+  </tbody>
+</table>
+
+<h2 class="sec"><span class="num">7</span>When something goes wrong</h2>
+
+<table>
+  <thead><tr><th style="width:33%">What you see</th><th>What it means and what to do</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>"Some fields need attention before this can be saved."</strong></td>
+      <td>Validation failed and <em>nothing</em> was written. Each listed line names the field. Fix them and save again — see section&nbsp;4.3.</td>
+    </tr>
+    <tr>
+      <td><strong>"Could not write the file on the server. Check file permissions."</strong></td>
+      <td>The server could not save to disk. Nothing was lost from your screen — do not reload. Copy your work somewhere safe and contact your administrator; this is section&nbsp;20 for them.</td>
+    </tr>
+    <tr>
+      <td><strong>"Could not reach the server."</strong></td>
+      <td>Your network connection dropped, or the site is down. Your edits are still on screen. Restore the connection and press Save again.</td>
+    </tr>
+    <tr>
+      <td><strong>Sent back to the sign-in page unexpectedly</strong></td>
+      <td>The session expired — five minutes idle or eight hours total. Sign in again. Unsaved work is gone; see section&nbsp;3.</td>
+    </tr>
+    <tr>
+      <td><strong>"Signed out after a period of inactivity."</strong></td>
+      <td>Confirmation of the five-minute timeout. Sign in and continue.</td>
+    </tr>
+    <tr>
+      <td><strong>"Too many attempts. Try again in N minutes."</strong></td>
+      <td>Five wrong passwords. Wait it out — there is no way to shorten it from the browser.</td>
+    </tr>
+    <tr>
+      <td><strong>"The dashboard is not available from your network."</strong></td>
+      <td>An address restriction is in force and yours is not on the list. Try from the campus network, or ask your administrator — section&nbsp;13.</td>
+    </tr>
+    <tr>
+      <td><strong>"This request did not come from the dashboard."</strong></td>
+      <td>Usually a stale browser tab left open a long time. Reload the page and try again.</td>
+    </tr>
+    <tr>
+      <td><strong>"That image is larger than 12 MB."</strong></td>
+      <td>Resize or compress the photograph before uploading. Anything much above 2,000 pixels wide is larger than the site needs.</td>
+    </tr>
+    <tr>
+      <td><strong>"That file could not be read as an image."</strong></td>
+      <td>The file is corrupt, or it is not really an image — a PDF renamed <code>.jpg</code>, for instance. Re-export it and try again.</td>
+    </tr>
+    <tr>
+      <td><strong>A saved change is not visible on the public page</strong></td>
+      <td>Confirm the save bar said "Saved". Then reload the public page with <code>Ctrl</code>+<code>F5</code>. If it is still missing, tell your administrator which section and field.</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="note">
+  <span class="lbl">Reporting a problem usefully</span>
+  <p>Include the section you were editing, the exact wording of the message, roughly when it
+  happened, and whether you had just uploaded an image. The server keeps logs, and a timestamp makes
+  the matching entry easy to find.</p>
+</div>
+
+<!-- =================================================== PART II -->
+<section class="part-divider">
+  <div class="kicker">Part II</div>
+  <h1>System Administrator's Guide</h1>
+  <div class="rule"></div>
+  <p>Installing, configuring, securing, deploying and maintaining the application — including the
+  authentication model, the reverse-proxy requirements it depends on, and the runbook for when
+  something breaks.</p>
+  <div class="who">
+    <strong>Who this part is for</strong>
+    Whoever operates the server. Assumes a working knowledge of the command line, Node.js and nginx.
+    Read sections&nbsp;12 to&nbsp;14 before exposing the dashboard to a network.
+  </div>
+</section>
+
+<h2 class="sec"><span class="num">8</span>Architecture</h2>
+
+<table class="compact">
+  <thead><tr><th style="width:26%">Layer</th><th>Technology</th></tr></thead>
+  <tbody>
+    <tr><td>Framework</td><td>Next.js 16 (App Router, Turbopack)</td></tr>
+    <tr><td>Language</td><td>TypeScript 5, target ES2017</td></tr>
+    <tr><td>UI</td><td>React 19, Tailwind CSS 3, Radix primitives</td></tr>
+    <tr><td>Images</td><td>Next.js Image, Sharp for upload re-encoding</td></tr>
+    <tr><td>Contact form</td><td>EmailJS, entirely client-side</td></tr>
+    <tr><td>Content store</td><td>JSON and BibTeX files on disk — no database</td></tr>
+    <tr><td>Auth</td><td>Single shared password, HMAC-SHA256 signed cookie, Web Crypto</td></tr>
+  </tbody>
+</table>
+
+<h3><span class="num">8.1</span>Directories that matter</h3>
+
+<pre><code>content/                     Editable content, written by the dashboard
+├── members.json             Faculty, postdocs, scholars, staff, alumni
+├── projects.json            Ongoing projects, completed-projects PDF, sponsors
+├── research.json            Research areas and their topics
+├── gallery.json             Albums and categories
+├── facilities.json          Instruments, in-charges, stats, slot charges
+└── .backups/                Rolling snapshots before each save (gitignored)
+
+public/
+├── data/publications.bib    ~180 BibTeX entries
+├── data/metrics.json        Citations, h-index, source, lastUpdated
+└── images/                  Uploads land here, by destination folder
+
+src/
+├── proxy.ts                 Auth + network gate on /admin and /api/admin
+├── lib/admin-auth.ts        Session tokens, password check, cookie options
+├── lib/admin-network.ts     X-Forwarded-For parsing, CIDR allowlist, origin
+├── lib/content.ts           Atomic reads/writes, backups, revalidation
+├── lib/content-schema.ts    Validation and normalisation of every write
+└── components/admin/        Dashboard shell, fields, session timeout</code></pre>
+
+<div class="note">
+  <span class="lbl">One gate, no per-route checks</span>
+  <p><span class="path">src/proxy.ts</span> runs ahead of every <span class="path">/admin</span> page
+  and <span class="path">/api/admin</span> endpoint. Address allowlist, <code>Origin</code> check and
+  session validation all live there, which is why no individual route can ship without them. Read it
+  first when auditing.</p>
+</div>
+
+<h2 class="sec"><span class="num">9</span>Installation and the build</h2>
+
+<h3><span class="num">9.1</span>Requirements</h3>
+<ul>
+  <li><strong>Node.js 20.9 or newer</strong> — required by Next.js 16.</li>
+  <li><strong>npm</strong>, or pnpm (a <code>pnpm-lock.yaml</code> is committed).</li>
+  <li>A build host able to compile Sharp, or one of its prebuilt binaries.</li>
+</ul>
+
+<h3><span class="num">9.2</span>First run</h3>
+<pre><code>git clone https://github.com/Ankush4github/CBRL-Website-v2-With-CMS.git
+cd CBRL-Website-v2-With-CMS
+npm install
+
+cp .env.example .env.local     # then edit it — see section 10
+npm run dev                    # http://localhost:3000</code></pre>
+
+<h3><span class="num">9.3</span>Production</h3>
+<pre><code>npm run build
+npm start                      # serves the build, default port 3000</code></pre>
+
+<h3><span class="num">9.4</span>Scripts</h3>
+<table class="compact">
+  <thead><tr><th style="width:34%">Command</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td><code>npm run dev</code></td><td>Development server with Turbopack.</td></tr>
+    <tr><td><code>npm run build</code></td><td>Production build. Fails on type errors.</td></tr>
+    <tr><td><code>npm start</code></td><td>Serve the production build.</td></tr>
+    <tr><td><code>npm run lint</code></td><td>ESLint over <span class="path">src</span>.</td></tr>
+    <tr><td><code>npm run typecheck</code></td><td>TypeScript, no emit.</td></tr>
+    <tr><td><code>npm run optimize-images</code></td><td>Batch-compress <span class="path">public/images</span> with Sharp.</td></tr>
+    <tr><td><code>npm run test:network</code></td><td>Exercises IP parsing and CIDR matching — the logic the throttle and allowlist depend on. Run after changing proxy settings.</td></tr>
+  </tbody>
+</table>
+
+<h2 class="sec"><span class="num">10</span>Environment variables</h2>
+
+<p class="lead">All configuration lives in <span class="path">.env.local</span>, which is gitignored.
+Restart the server after any change. <span class="path">.env.example</span> is the annotated
+template.</p>
+
+<h3><span class="num">10.1</span>Required for the dashboard</h3>
+<table>
+  <thead><tr><th style="width:31%">Variable</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><code>ADMIN_PASSWORD</code></td>
+      <td>The single shared dashboard password. Make it long — it is the entire perimeter. Compared by SHA-256 digest, so its length never leaks through timing.</td>
+    </tr>
+    <tr>
+      <td><code>ADMIN_SESSION_SECRET</code></td>
+      <td>Signs the session cookie. <strong>Minimum 16 characters</strong>; the app refuses to issue sessions below that. Changing it signs everybody out immediately.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Generate a secret with:</p>
+<pre><code>node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"</code></pre>
+
+<div class="danger">
+  <span class="lbl">If these are unset</span>
+  <p>The dashboard refuses every sign-in and shows a setup notice instead of a login form. This is a
+  deliberate fail-closed default: an unconfigured deployment is locked, never open.</p>
+</div>
+
+<h3><span class="num">10.2</span>Session timing</h3>
+<table>
+  <thead><tr><th style="width:31%">Variable</th><th>Default</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><code>ADMIN_IDLE_TIMEOUT_MINUTES</code></td>
+      <td class="nowrap">5</td>
+      <td>Minutes of inactivity before a session ends. Accepts fractions (<code>0.5</code>). Anything unparseable or ≤&nbsp;0 falls back to 5 rather than to "no limit"; values above the 8-hour absolute cap are clamped to it.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>The 8-hour absolute cap is a compile-time constant
+(<code>SESSION_MAX_AGE_SECONDS</code> in <span class="path">src/lib/admin-auth.ts</span>) and is not
+configurable by environment.</p>
+
+<div class="note">
+  <span class="lbl">Raising the idle timeout</span>
+  <p>Five minutes is short by design, but the editors hold unsaved drafts in the browser. If your
+  editors write long-form content and complain about losing work, raising this to 15 or 30 minutes is
+  reasonable — a timeout people work around is worse than a longer one they respect.</p>
+</div>
+
+<h3><span class="num">10.3</span>Network and proxy</h3>
+<table>
+  <thead><tr><th style="width:31%">Variable</th><th>Default</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><code>TRUSTED_PROXY_HOPS</code></td>
+      <td class="nowrap">1</td>
+      <td>How many reverse proxies sit in front of the app. <code>1</code> for a single nginx; <code>0</code> if Node is exposed directly, which makes <code>X-Forwarded-For</code> ignored entirely. Getting this wrong silently disables the login throttle — see section&nbsp;14.</td>
+    </tr>
+    <tr>
+      <td><code>ADMIN_ALLOWED_IPS</code></td>
+      <td class="nowrap">unset</td>
+      <td>Optional. Comma-separated IPs and CIDR ranges, IPv4 and IPv6, e.g. <code>10.111.0.0/16, 203.0.113.5</code>. Restricts <span class="path">/admin</span> and <span class="path">/api/admin</span> only; the public site is untouched. Unset means password-only.</td>
+    </tr>
+    <tr>
+      <td><code>ADMIN_ORIGIN</code></td>
+      <td class="nowrap">unset</td>
+      <td>Optional. Pins the origin that dashboard writes must come from, e.g. <code>https://cbrl.iitkgp.ac.in</code>. Leave unset to derive it from <code>X-Forwarded-Proto</code> and <code>X-Forwarded-Host</code>.</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3><span class="num">10.4</span>Contact form</h3>
+<table class="compact">
+  <thead><tr><th style="width:44%">Variable</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td><code>NEXT_PUBLIC_EMAILJS_SERVICE_ID</code></td><td rowspan="3">EmailJS credentials for the contact form. Without them the form renders but submission fails. <code>NEXT_PUBLIC_</code> means these are <strong>visible in the browser bundle</strong> — that is inherent to EmailJS, so use a key scoped to sending only.</td></tr>
+    <tr><td><code>NEXT_PUBLIC_EMAILJS_TEMPLATE_ID</code></td></tr>
+    <tr><td><code>NEXT_PUBLIC_EMAILJS_PUBLIC_KEY</code></td></tr>
+  </tbody>
+</table>
+
+<h2 class="sec"><span class="num">11</span>How content is stored and revalidated</h2>
+
+<p class="lead">There is no database. Pages read JSON from disk on the server, so a dashboard save
+writes a file and the change is live on the next request — no rebuild, no redeploy.</p>
+
+<h3><span class="num">11.1</span>The write path</h3>
+<ol class="steps">
+  <li><strong>Validate.</strong> The whole document is checked and normalised. A single bad field
+      rejects the entire save with a 422 and a per-field issue list; nothing is written.</li>
+  <li><strong>Back up.</strong> The current file is copied to
+      <span class="path">content/.backups/&lt;collection&gt;/&lt;timestamp&gt;.json</span>. The most
+      recent <strong>20</strong> are kept per collection; older ones are pruned automatically.</li>
+  <li><strong>Write atomically.</strong> Content goes to a temporary file in the same directory and
+      is then renamed over the target. A crash or a concurrent read can never observe a
+      half-written file.</li>
+  <li><strong>Revalidate.</strong> <code>revalidatePath()</code> drops the cached render of the
+      pages that depend on the collection.</li>
+</ol>
+
+<h3><span class="num">11.2</span>Which pages each collection revalidates</h3>
+<table class="compact">
+  <thead><tr><th style="width:30%">Collection</th><th>Paths revalidated</th></tr></thead>
+  <tbody>
+    <tr><td><code>members</code></td><td><span class="path">/members</span>, <span class="path">/facilities</span></td></tr>
+    <tr><td><code>projects</code></td><td><span class="path">/projects</span></td></tr>
+    <tr><td><code>research</code></td><td><span class="path">/research</span></td></tr>
+    <tr><td><code>gallery</code></td><td><span class="path">/gallery</span></td></tr>
+    <tr><td><code>facilities</code></td><td><span class="path">/facilities</span></td></tr>
+    <tr><td><code>metrics</code></td><td><span class="path">/publications</span>, <span class="path">/about-the-pi</span></td></tr>
+    <tr><td><code>publications.bib</code></td><td><span class="path">/publications</span>, <span class="path">/about-the-pi</span>, <span class="path">/</span></td></tr>
+  </tbody>
+</table>
+
+<h3><span class="num">11.3</span>Uploads</h3>
+<p>Uploaded bytes are re-encoded through Sharp to WebP at quality 82 and given a content-hashed
+filename. <strong>Re-encoding is the validation</strong> — the caller's <code>Content-Type</code> and
+filename are never trusted, and anything Sharp cannot decode is refused, so no caller-chosen file can
+be served back from this origin.</p>
+
+<table class="compact">
+  <thead><tr><th style="width:20%">Destination</th><th style="width:36%">Folder</th><th style="width:16%">Max width</th><th>Sub-folders</th></tr></thead>
+  <tbody>
+    <tr><td><code>members</code></td><td><span class="path">public/images/MembersDP</span></td><td>900 px</td><td>No</td></tr>
+    <tr><td><code>alumni</code></td><td><span class="path">public/images/AlumniDP</span></td><td>900 px</td><td>No</td></tr>
+    <tr><td><code>facilities</code></td><td><span class="path">public/images/facilities</span></td><td>1600 px</td><td>No</td></tr>
+    <tr><td><code>gallery</code></td><td><span class="path">public/images/gallery</span></td><td>2000 px</td><td>Yes</td></tr>
+    <tr><td><code>sponsors</code></td><td><span class="path">public/images/sponsors</span></td><td>800 px</td><td>No</td></tr>
+  </tbody>
+</table>
+
+<p>Maximum accepted size is 12&nbsp;MB, checked against <code>Content-Length</code> before the body
+is read into memory. Editing the JSON and BibTeX files by hand still works exactly as before — the
+dashboard is another way in, not a replacement.</p>
+
+<h2 class="sec"><span class="num">12</span>Authentication and session model</h2>
+
+<h3><span class="num">12.1</span>The session cookie</h3>
+
+<p>One shared password buys an HMAC-SHA256 signed cookie. Signing uses Web Crypto rather than
+<code>node:crypto</code>, so identical code verifies the cookie in the Edge-runtime proxy and inside
+Node route handlers.</p>
+
+<table class="compact">
+  <thead><tr><th style="width:26%">Property</th><th>Value</th></tr></thead>
+  <tbody>
+    <tr><td>Name (production)</td><td><code>__Host-cbrl_admin_session</code></td></tr>
+    <tr><td>Name (development)</td><td><code>cbrl_admin_session</code></td></tr>
+    <tr><td>Flags</td><td><code>httpOnly</code>, <code>SameSite=Lax</code>, <code>Secure</code> in production, <code>Path=/</code></td></tr>
+    <tr><td><code>Max-Age</code></td><td>The idle timeout, re-issued on every authenticated request</td></tr>
+  </tbody>
+</table>
+
+<p>The <code>__Host-</code> prefix binds the cookie to the exact host: the browser accepts it only
+with <code>Secure</code>, <code>Path=/</code> and no <code>Domain</code>, so no sibling
+<code>*.iitkgp.ac.in</code> site can set or shadow it. The prefix is dropped in development because a
+<code>__Host-</code> cookie without <code>Secure</code> is refused outright and <code>npm run dev</code>
+serves plain HTTP.</p>
+
+<p>The cookie carries no secret of its own — only two timestamps and a signature over them. A stolen
+cookie therefore expires on its own, and rotating <code>ADMIN_SESSION_SECRET</code> invalidates every
+session at once.</p>
+
+<h3><span class="num">12.2</span>Absolute expiry and idle timeout</h3>
+
+<p>The signed payload holds two clocks, and the session dies to whichever fires first:</p>
+
+<table class="compact">
+  <thead><tr><th style="width:16%">Field</th><th style="width:22%">Meaning</th><th>Behaviour</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><code>exp</code></td>
+      <td>Absolute expiry</td>
+      <td>Fixed at sign-in, 8 hours out, and <strong>never moved</strong>. No amount of activity extends a session beyond it.</td>
+    </tr>
+    <tr>
+      <td><code>seen</code></td>
+      <td>Last activity</td>
+      <td>Slid forward by the proxy on every authenticated request. Once it falls further behind than the idle timeout, the session is over.</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>Keeping <code>seen</code> inside the signed payload is what makes the idle timeout real rather
+than decorative: the browser cannot move it, so a client that never runs the in-page timer is still
+signed out by the server. The <code>Max-Age</code> on the cookie is set to the idle timeout as a
+second line of defence — a browser closed for longer than that has nothing left to send.</p>
+
+<p>The proxy distinguishes an expired-by-idle session from an absent or invalid one. Page requests
+are redirected to <span class="path">/admin/login?reason=timeout</span> (preserving the page they
+were on via <code>next=</code>), and API requests receive <code>401</code> with
+<code>{"reason":"timeout"}</code>. Both responses clear the cookie.</p>
+
+<h3><span class="num">12.3</span>The activity heartbeat</h3>
+
+<p>The editors keep drafts in the browser and only contact the server on save, so somebody typing a
+long abstract generates no requests for minutes — indistinguishable, to a request-counting timeout,
+from an empty chair. <span class="path">src/components/admin/SessionTimeout.tsx</span> closes that
+gap:</p>
+
+<ul>
+  <li>Pointer, keyboard, wheel, scroll and touch events count as activity, throttled to once a
+      second.</li>
+  <li>When activity has occurred, a <code>POST /api/admin/heartbeat</code> slides the server-side
+      clock, at most about once every quarter of the idle timeout.</li>
+  <li>A warning panel appears 60 seconds before expiry; reaching zero signs the user out.</li>
+  <li>Activity is shared between tabs through <code>localStorage</code>, so work in one tab keeps
+      the others alive.</li>
+  <li>Everything is measured against wall-clock time rather than counted down, so a slept laptop or
+      a throttled background tab still reaches the right conclusion on its next tick.</li>
+</ul>
+
+<div class="note">
+  <span class="lbl">The heartbeat cannot keep an idle session alive</span>
+  <p>It fires only when genuine interaction has been recorded since the previous one. An untouched
+  tab sends nothing and times out normally. It is also a <code>POST</code>, so the <code>Origin</code>
+  check applies and no other site can trigger it.</p>
+</div>
+
+<h2 class="sec"><span class="num">13</span>Security layers</h2>
+
+<p class="lead">The password is the perimeter, so the layers around it carry the weight.</p>
+
+<table>
+  <thead><tr><th style="width:24%">Layer</th><th>What it does</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>Session cookie</strong></td>
+      <td>HMAC-SHA256 signed, <code>httpOnly</code>, <code>Secure</code>, 8-hour absolute cap and 5-minute idle timeout. Host-bound by the <code>__Host-</code> prefix.</td>
+    </tr>
+    <tr>
+      <td><strong>Login throttle</strong></td>
+      <td>5 attempts per address, then a 10-minute block. The address is read from the <em>right-hand</em> end of <code>X-Forwarded-For</code> — reading from the left would let a caller mint a fresh identity per request and guess indefinitely. An unidentifiable address falls into one shared bucket, so a misconfigured proxy throttles everyone together rather than nobody.</td>
+    </tr>
+    <tr>
+      <td><strong>Origin check</strong></td>
+      <td>Writes to <span class="path">/api/admin/*</span> must carry an <code>Origin</code> matching the site. <code>SameSite=Lax</code> alone is insufficient here because it treats every <code>*.iitkgp.ac.in</code> host as same-site, so a compromised neighbour could otherwise drive authenticated writes.</td>
+    </tr>
+    <tr>
+      <td><strong>IP allowlist</strong></td>
+      <td>Optional <code>ADMIN_ALLOWED_IPS</code>, applied ahead of everything else including the login endpoint. An allowlist consisting only of unparseable entries is treated as unset, so a typo cannot lock everybody out permanently.</td>
+    </tr>
+    <tr>
+      <td><strong>Upload hardening</strong></td>
+      <td>Re-encoded through Sharp to <code>.webp</code>; the declared type and filename are never trusted. Destination folders are chosen from a fixed set, so no request can write outside <span class="path">public/images</span>.</td>
+    </tr>
+    <tr>
+      <td><strong>Write safety</strong></td>
+      <td>Validated, then temp-file-and-rename, with the previous 20 versions retained.</td>
+    </tr>
+    <tr>
+      <td><strong>Path validation</strong></td>
+      <td>Saved asset paths must begin with a single <code>/</code> and may not contain <code>..</code>, so no record can point the site at another origin or escape <span class="path">public/</span>.</td>
+    </tr>
+    <tr>
+      <td><strong>Response headers</strong></td>
+      <td>A strict CSP, HSTS, <code>X-Frame-Options: DENY</code>, <code>nosniff</code> and a restrictive <code>Permissions-Policy</code> are set site-wide in <span class="path">next.config.js</span>. Everything under <span class="path">/admin</span> is additionally <code>no-store</code>.</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="warn">
+  <span class="lbl">Scripting against the API</span>
+  <p>The <code>Origin</code> check rejects non-browser clients such as <code>curl</code>, which never
+  send that header. Pass <code>-H "Origin: https://cbrl.iitkgp.ac.in"</code> when scripting writes.</p>
+</div>
+
+<h2 class="sec"><span class="num">14</span>Reverse proxy configuration</h2>
+
+<p class="lead">The login throttle and the IP allowlist both depend on nginx replacing or appending
+to <code>X-Forwarded-For</code> rather than passing the caller's value through untouched. Next.js 16
+exposes no socket address in either runtime, so this header is the only source of a client address.</p>
+
+<pre><code>location / {
+    proxy_pass         http://127.0.0.1:3000;
+    proxy_http_version 1.1;
+
+    proxy_set_header   Host              $host;
+    proxy_set_header   X-Forwarded-For   $proxy_add_x_forwarded_for;
+    proxy_set_header   X-Forwarded-Proto $scheme;
+    proxy_set_header   X-Forwarded-Host  $host;
+
+    proxy_set_header   Upgrade    $http_upgrade;
+    proxy_set_header   Connection "upgrade";
+}</code></pre>
+
+<p><code>$proxy_add_x_forwarded_for</code> is the important one: it <em>appends</em> the peer nginx
+actually spoke to, which is what makes the right-hand end of the list trustworthy.</p>
+
+<h3><span class="num">14.1</span>Verifying it end to end</h3>
+
+<p>Do this after every proxy change, and <strong>before</strong> setting
+<code>ADMIN_ALLOWED_IPS</code>, so you allowlist the address the server really sees. Sign in, then:</p>
+
+<pre><code>curl -H "Cookie: &lt;session cookie&gt;" \
+     -H "X-Forwarded-For: 1.2.3.4" \
+     https://cbrl.iitkgp.ac.in/api/admin/whoami</code></pre>
+
+<p>The <code>clientIp</code> in the response must be <strong>your real address</strong>. If it comes
+back as <code>1.2.3.4</code>, nginx is forwarding the caller's header unchanged, the throttle is
+protecting nothing, and an allowlist would be trivially bypassed. Fix the proxy configuration before
+relying on either.</p>
+
+<p>The same endpoint reports <code>trustedProxyHops</code>, whether the allowlist is on, the expected
+origin, and the raw forwarded headers — enough to diagnose a mismatch from one response.</p>
+
+<div class="danger">
+  <span class="lbl">Setting TRUSTED_PROXY_HOPS wrongly</span>
+  <p>Too high and the app reads an entry the caller supplied, so every request appears to come from a
+  different address and the throttle never fires. Too low and it reads nginx's own address, so all
+  users share one bucket and five failures anywhere lock out everybody. Confirm with
+  <span class="path">/api/admin/whoami</span> rather than assuming.</p>
+</div>
+
+<h2 class="sec"><span class="num">15</span>Deployment and keeping git in step</h2>
+
+<h3><span class="num">15.1</span>Deploying an update</h3>
+<pre><code>git pull
+npm ci
+npm run build
+# restart the process manager, e.g.
+sudo systemctl restart cbrl-website</code></pre>
+
+<div class="danger">
+  <span class="lbl">Production edits live on the server's disk</span>
+  <p>Everything the dashboard writes — <span class="path">content/*.json</span>,
+  <span class="path">public/data/publications.bib</span>,
+  <span class="path">public/data/metrics.json</span> and new files under
+  <span class="path">public/images/</span> — exists only on the server until somebody copies it back.
+  <strong>A redeploy from a stale checkout will overwrite months of editorial work.</strong></p>
+</div>
+
+<h3><span class="num">15.2</span>Pulling editorial changes back into git</h3>
+<p>Do this regularly, and always immediately before a deployment:</p>
+<pre><code># on your workstation, from the repository root
+scp -r user@server:/srv/cbrl/content/*.json            ./content/
+scp    user@server:/srv/cbrl/public/data/publications.bib ./public/data/
+scp    user@server:/srv/cbrl/public/data/metrics.json     ./public/data/
+rsync -av user@server:/srv/cbrl/public/images/          ./public/images/
+
+git add content public/data public/images
+git commit -m "Sync editorial content from production"
+git push</code></pre>
+
+<p>A weekly cron job doing the same thing and committing on a branch removes the risk of forgetting.</p>
+
+<h2 class="sec"><span class="num">16</span>Deploying elsewhere (Vercel and other hosts)</h2>
+
+<p class="lead">The application assumes a <strong>writable, persistent filesystem</strong>. That
+assumption holds on a conventional server and fails on most serverless platforms.</p>
+
+<div class="danger">
+  <span class="lbl">The dashboard cannot save on Vercel</span>
+  <p>Vercel's filesystem is read-only outside <span class="path">/tmp</span>, and instances are
+  ephemeral and not shared. Content saves and image uploads both write into the project directory at
+  runtime, so on Vercel every save returns <em>"Could not write the file on the server"</em> and
+  every upload returns <em>"Could not write the image on the server"</em>. The public site is
+  unaffected — its pages are generated at build time from the committed
+  <span class="path">content/*.json</span>.</p>
+</div>
+
+<table class="compact">
+  <thead><tr><th style="width:30%">Host type</th><th>Public site</th><th>Dashboard</th></tr></thead>
+  <tbody>
+    <tr><td>VPS / bare metal / campus server</td><td>Works</td><td>Works</td></tr>
+    <tr><td>Docker with a persistent volume</td><td>Works</td><td>Works — mount <span class="path">content/</span> and <span class="path">public/images/</span></td></tr>
+    <tr><td>Vercel, Netlify Functions, Cloudflare Workers</td><td>Works</td><td><strong>Saves and uploads fail</strong></td></tr>
+  </tbody>
+</table>
+
+<p>Two secondary effects are worth knowing on any serverless host. The login throttle keeps its
+counters in memory, so separate instances do not share them and the effective attempt limit is
+higher than five. And <code>revalidatePath()</code> only affects the instance that handled the
+request.</p>
+
+<p>Making the dashboard work on such a platform means replacing the storage layer — moving
+<span class="path">content/</span> to a database or object store such as Vercel Blob, and uploads to
+the same, which touches <span class="path">src/lib/content.ts</span>, the upload route and the
+publications and metrics writers. If you deploy to Vercel as a preview, leave
+<code>ADMIN_PASSWORD</code> and <code>ADMIN_SESSION_SECRET</code> unset so the dashboard is locked
+rather than half-working.</p>
+
+<h2 class="sec"><span class="num">17</span>API reference</h2>
+
+<p class="lead">Every endpoint sits behind the proxy gate: address allowlist, then <code>Origin</code>
+on writes, then a valid non-idle session. <span class="path">/api/admin/login</span> and
+<span class="path">/api/admin/logout</span> are reachable without a session; everything else is not.</p>
+
+<table class="compact">
+  <thead><tr><th style="width:9%">Method</th><th style="width:34%">Path</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td>POST</td><td><span class="path">/api/admin/login</span></td><td>Exchange the password for a session. Throttled. <code>401</code> wrong, <code>429</code> blocked, <code>503</code> unconfigured.</td></tr>
+    <tr><td>POST</td><td><span class="path">/api/admin/logout</span></td><td>Clear the session cookie.</td></tr>
+    <tr><td>POST</td><td><span class="path">/api/admin/heartbeat</span></td><td>Report activity; slides the idle clock. Returns the idle timeout in seconds.</td></tr>
+    <tr><td>GET</td><td><span class="path">/api/admin/whoami</span></td><td>Diagnostics: client IP, allowlist state, trusted hops, expected origin, raw forwarded headers.</td></tr>
+    <tr><td>GET</td><td><span class="path">/api/admin/content/[collection]</span></td><td>Read one collection.</td></tr>
+    <tr><td>PUT</td><td><span class="path">/api/admin/content/[collection]</span></td><td>Validate and write one collection. <code>422</code> with a per-field issue list on failure.</td></tr>
+    <tr><td>GET</td><td><span class="path">/api/admin/publications</span></td><td>List BibTeX entries with duplicate-key flags.</td></tr>
+    <tr><td>POST</td><td><span class="path">/api/admin/publications</span></td><td>Add an entry, from a form payload or pasted BibTeX.</td></tr>
+    <tr><td>PUT / DELETE</td><td><span class="path">/api/admin/publications/[id]</span></td><td>Edit or remove one entry, leaving the rest byte-identical.</td></tr>
+    <tr><td>POST</td><td><span class="path">/api/admin/publications/doi</span></td><td>Fetch BibTeX from doi.org by DOI. 12-second timeout.</td></tr>
+    <tr><td>GET / PUT</td><td><span class="path">/api/admin/metrics</span></td><td>Read or write citation metrics.</td></tr>
+    <tr><td>POST</td><td><span class="path">/api/admin/upload</span></td><td>Upload an image. Multipart, 12&nbsp;MB cap, re-encoded to WebP.</td></tr>
+  </tbody>
+</table>
+
+<h2 class="sec"><span class="num">18</span>Backup and restore</h2>
+
+<h3><span class="num">18.1</span>What the application keeps for you</h3>
+<p>Before every save the previous version of the file is copied to
+<span class="path">content/.backups/&lt;collection&gt;/&lt;ISO-timestamp&gt;.json</span>, and the most
+recent 20 per collection are retained. Publications are kept the same way as <code>.bib</code> files.
+This is an "undo the last few edits" facility, <strong>not</strong> a backup strategy — it lives on
+the same disk and is excluded from git.</p>
+
+<h3><span class="num">18.2</span>Restoring a previous version</h3>
+<pre><code>ls -lt content/.backups/members/            # newest first
+cp content/.backups/members/2026-07-27T09-14-22-431Z.json content/members.json</code></pre>
+<p>Changes appear on the next request; no restart is needed. Copy rather than move, so the backup
+survives.</p>
+
+<h3><span class="num">18.3</span>A real backup</h3>
+<p>Back up nightly, off the machine, covering:</p>
+<ul>
+  <li><span class="path">content/</span> — including <span class="path">.backups/</span></li>
+  <li><span class="path">public/data/</span> — publications and metrics</li>
+  <li><span class="path">public/images/</span> — every upload ever made</li>
+  <li><span class="path">.env.local</span> — store this with your secrets, not alongside the content</li>
+</ul>
+<pre><code>tar czf cbrl-$(date +%F).tar.gz \
+    content public/data public/images</code></pre>
+
+<h2 class="sec"><span class="num">19</span>Routine maintenance</h2>
+
+<table>
+  <thead><tr><th style="width:24%">Task</th><th style="width:16%">Frequency</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td>Sync content into git</td><td>Weekly</td><td>Section 15.2. Mandatory before any redeploy.</td></tr>
+    <tr><td>Verify backups restore</td><td>Quarterly</td><td>A backup never test-restored is a guess.</td></tr>
+    <tr><td>Rotate <code>ADMIN_PASSWORD</code></td><td>On personnel change</td><td>Anyone who has ever had it retains access until it changes.</td></tr>
+    <tr><td>Rotate <code>ADMIN_SESSION_SECRET</code></td><td>Yearly, or on suspicion</td><td>Signs everyone out immediately. Safe to do at any time.</td></tr>
+    <tr><td>Re-verify <span class="path">/api/admin/whoami</span></td><td>After proxy changes</td><td>Section 14.1.</td></tr>
+    <tr><td><code>npm audit</code> / dependency updates</td><td>Quarterly</td><td>Run <code>npm run build</code>, <code>lint</code> and <code>typecheck</code> before deploying.</td></tr>
+    <tr><td>Prune <span class="path">public/images/</span></td><td>Yearly</td><td>Replaced uploads are never deleted automatically. Cross-check against the JSON before removing anything.</td></tr>
+  </tbody>
+</table>
+
+<h2 class="sec"><span class="num">20</span>Administrator troubleshooting</h2>
+
+<table>
+  <thead><tr><th style="width:31%">Symptom</th><th>Cause and remedy</th></tr></thead>
+  <tbody>
+    <tr>
+      <td><strong>"The dashboard is not configured"</strong></td>
+      <td><code>ADMIN_PASSWORD</code> is missing, or <code>ADMIN_SESSION_SECRET</code> is shorter than 16 characters. Set both in <span class="path">.env.local</span> and restart.</td>
+    </tr>
+    <tr>
+      <td><strong>Editors report "Could not write the file on the server"</strong></td>
+      <td>The process cannot write to <span class="path">content/</span> or <span class="path">public/</span>. Check ownership and permissions, and free disk space with <code>df -h</code>. On a serverless host this is expected — section&nbsp;16.</td>
+    </tr>
+    <tr>
+      <td><strong>Everyone is locked out by the throttle</strong></td>
+      <td><code>TRUSTED_PROXY_HOPS</code> is too low, so all users share one bucket. Verify with <span class="path">/api/admin/whoami</span>. Restarting the process clears the in-memory counters.</td>
+    </tr>
+    <tr>
+      <td><strong>The throttle never blocks anyone</strong></td>
+      <td><code>TRUSTED_PROXY_HOPS</code> is too high, or nginx is passing the caller's <code>X-Forwarded-For</code> through. Section&nbsp;14 — treat as urgent, since the password is then exposed to unlimited guessing.</td>
+    </tr>
+    <tr>
+      <td><strong>Sessions end far sooner than expected</strong></td>
+      <td>Check <code>ADMIN_IDLE_TIMEOUT_MINUTES</code>. Also confirm server time is correct — a clock that jumps forward expires sessions early. <code>timedatectl</code>.</td>
+    </tr>
+    <tr>
+      <td><strong>Everyone signed out at once</strong></td>
+      <td><code>ADMIN_SESSION_SECRET</code> changed, or the deployment rolled back to a build with a different one. Expected behaviour; sign in again.</td>
+    </tr>
+    <tr>
+      <td><strong>"This request did not come from the dashboard" for everyone</strong></td>
+      <td>The origin check is failing. nginx is probably not sending <code>X-Forwarded-Proto</code> or <code>X-Forwarded-Host</code>. Either fix the proxy or pin <code>ADMIN_ORIGIN</code>.</td>
+    </tr>
+    <tr>
+      <td><strong>Legitimate users get "not available from your network"</strong></td>
+      <td><code>ADMIN_ALLOWED_IPS</code> excludes them, or the allowlist is on while the address cannot be established — which is refused by design. The message names the address the server saw; add it, or unset the variable to fall back to password-only.</td>
+    </tr>
+    <tr>
+      <td><strong>Uploads fail with "could not be read as an image"</strong></td>
+      <td>Sharp cannot decode the file. If <em>every</em> upload fails, Sharp is likely not installed correctly for this platform — reinstall with <code>npm ci</code> on the target architecture.</td>
+    </tr>
+    <tr>
+      <td><strong>A saved change is not on the public page</strong></td>
+      <td>Confirm the file on disk actually changed. If it did, the cached render was not dropped — restart the process to clear it, then check for errors from <code>revalidatePath</code> in the logs.</td>
+    </tr>
+    <tr>
+      <td><strong>Content reverted after a deployment</strong></td>
+      <td>A stale checkout overwrote production edits. Restore from <span class="path">content/.backups/</span> or your off-machine backup, then adopt the sync routine in section&nbsp;15.2.</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="note">
+  <span class="lbl">First diagnostic to reach for</span>
+  <p><span class="path">GET /api/admin/whoami</span>, signed in, answers most networking questions in
+  one response: the address the server attributes to the caller, whether the allowlist is active, the
+  trusted-hop count, the expected origin, and the raw forwarded headers behind all of it.</p>
+</div>
+
+</body>
+</html>

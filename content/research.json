@@ -1,0 +1,119 @@
+{
+  "areas": [
+    {
+      "id": "womens-health",
+      "index": "01",
+      "title": "Women's Health and Reproductive Disorders",
+      "tagline": "Precision Medicine for Women's Health",
+      "description": "Advanced omics approaches for early prediction, diagnosis and management of reproductive health disorders",
+      "topics": [
+        {
+          "id": "wm-rcm",
+          "title": "Gestational hypertension",
+          "summary": "Early detection and risk assessment biomarkers",
+          "body": [
+            "Gestational hypertension is a condition characterized by new-onset high blood pressure that develops after 20 weeks of pregnancy in a normo-tensive woman. The exact pathophysiology of the disease is not fully understood, but it is believed to involve a combination of abnormal placental development, vascular endothelial dysfunction, and maternal immune and genetic factors. A major challenge is that gestational hypertension can develop into pre-eclampsia, a more severe condition involving proteinuria and/or organ dysfunction. Each year, pre-eclampsia accounts for approximately 46,000 maternal deaths and 500,000 fetal or neonatal deaths worldwide."
+          ]
+        },
+        {
+          "id": "wm-endometriosis",
+          "title": "Recurrent implantation failure",
+          "summary": "Non-invasive diagnostic markers",
+          "body": [
+            "Recurrent implantation failure refers to cases in which women have had three failed in vitro fertilization (IVF) attempts with good quality embryos. It is a distressing condition for couples opting for assisted conception. The exact cause remains unclear and is thought to be multifactorial, involving embryonic, uterine, immunological, and genetic factors."
+          ]
+        },
+        {
+          "id": "wm-preeclampsia",
+          "title": "Recurrent pregnancy loss",
+          "summary": "Predictive biomarkers for early intervention",
+          "body": [
+            "Recurrent pregnancy loss, defined as consecutive failed two or more clinical pregnancies, can significantly impact emotional, mental and physical well-being of childless couples. Despite extensive investigations, no specific cause can be identified in nearly half of the cases. These unexplained/idiopathic RPL cases often pose diagnostic and therapeutic dilemmas."
+          ]
+        },
+        {
+          "id": "wm-adenomyosis",
+          "title": "Genital tuberculosis",
+          "summary": "Serum diagnostic markers for asymptomatic women",
+          "body": [
+            "Female genital tuberculosis accounts for approximately 9% of all extrapulmonary tuberculosis cases. The disease often progresses silently and the patient remains asymptomatic, with diagnosis occurring only during infertility investigations."
+          ]
+        },
+        {
+          "id": "wm-rif",
+          "title": "Endometriosis",
+          "summary": "Mapping metabolic and proteomic changes",
+          "body": [
+            "Endometriosis is a common chronic and debilitating gynaecological condition which is characterized by the growth of endometrial-like tissue outside the uterus, leading to pain, infertility, and reduced quality of life. In India, endometriosis is estimated to affect around 10–15% of women of reproductive age. While diagnostic challenges include non-specific symptoms and delayed diagnosis, current therapies focus on symptom management rather than cure."
+          ]
+        },
+        {
+          "id": "wm-irsm",
+          "title": "Polycystic Ovary Syndrome (PCOS)",
+          "summary": "Omics based serum biomarkers",
+          "body": [
+            "Polycystic Ovary Syndrome (PCOS) is a common endocrine disorder characterized by reproductive, metabolic, and hormonal abnormalities in women of reproductive age. PCOS poses challenges due to its variable presentation, diagnostic complexity and long-term risks of insulin resistance, type 2 diabetes, cardiovascular disease and endometrial carcinoma."
+          ]
+        }
+      ]
+    },
+    {
+      "id": "respiratory-health",
+      "index": "02",
+      "title": "Respiratory Health",
+      "tagline": "Integrated multi-omics in lung disorders",
+      "description": "Enabling early prediction, pathogenesis, disease subtyping, prognosis, and monitoring therapeutic outcome",
+      "topics": [
+        {
+          "id": "rp-asthma-copd",
+          "title": "Asthma and chronic obstructive pulmonary disease (COPD)",
+          "summary": "Unique breath-based biomarkers",
+          "body": [
+            "Asthma and COPD are chronic inflammatory airway disorders characterized by airflow limitation, breathing difficulty, and reduced quality of life. While asthma typically involves reversible airway obstruction driven mostly by allergic inflammation, COPD is marked by progressive, largely irreversible airflow limitation due to chronic bronchitis and emphysema."
+          ]
+        },
+        {
+          "id": "rp-hp",
+          "title": "Asthma-COPD overlap (ACO)",
+          "summary": "Serum and breath-based metabolic and immune biomarkers",
+          "body": [
+            "Asthma–COPD overlap (ACO) is a complex respiratory condition that exhibits clinical and biological features of both asthma and COPD. Patients with ACO often experience more severe symptoms, frequent exacerbations, and a faster decline in lung function compared to those with asthma or COPD alone."
+          ]
+        },
+        {
+          "id": "rp-ph",
+          "title": "COPD associated pulmonary hypertension (COPD-PH)",
+          "summary": "Mapping disease signatures and sensor development",
+          "body": [
+            "COPD-associated pulmonary hypertension (COPD-PH) is a severe complication of COPD, characterized by elevated pulmonary arterial pressure and vascular remodelling. It leads to increased strain on the right heart, worsening breathlessness, and reduced exercise capacity. The condition arises from chronic hypoxia, inflammation, and endothelial dysfunction, and is linked to poor prognosis."
+          ]
+        },
+        {
+          "id": "rp-ilds",
+          "title": "Interstitial lung diseases (ILDs)",
+          "summary": "Early Detection, disease stratification and subtyping",
+          "body": [
+            "Interstitial lung diseases (ILDs) are a diverse group of inflammatory lung disorders characterized by progressive scarring of the lung tissue, leading to reduced elasticity, impaired gas exchange and difficulty in breathing. In India, the commonly reported ILDs include hypersensitivity pneumonitis, idiopathic pulmonary fibrosis (IPF), connective tissue disease–associated ILD (CTD-ILD), sarcoidosis and idiopathic nonspecific interstitial pneumonia (iNSIP).",
+            "Hypersensitivity pneumonitis is an immune-mediated inflammatory ILD caused by repeated inhalation of environmental antigens e.g.  mold, organic antigens in bird droppings and organic dust and can progress to irreversible fibrosis if exposure continues. IPF is a chronic, progressive ILD of unknown cause, characterized by fibrosis of the lung tissue, leading to stiffening of the lungs. CTD-ILD is a group of lung disorders that develop in patients with systemic autoimmune connective tissue diseases, such as rheumatoid arthritis, systemic sclerosis, or polymyositis/dermatomyositis. Sarcoidosis, a systemic inflammatory ILD involving abnormal immune response, is characterized by the formation of non-caseating granulomas (clusters of immune cells) in multiple organs, commonly the lungs and lymph nodes. NSIP is a chronic, progressive fibrotic lung disease exhibiting consistent histopathological patterns."
+          ]
+        },
+        {
+          "id": "rp-lung-cancer",
+          "title": "Lung cancer",
+          "summary": "Early prediction and subtyping",
+          "body": [
+            "Lung cancer is one of the leading causes of cancer-related deaths worldwide. It is broadly classified into two main types- non-small cell lung cancer (NSCLC), which accounts for nearly 85% of cases, and small cell lung cancer (SCLC). NSCLC, with tobacco use as a major risk factor, accounts for the majority of lung cancer cases in India. NSCLC subtypes include adenocarcinoma, squamous cell carcinoma, and large cell carcinoma, each differing in molecular characteristics, progression, and treatment response. SCLC is less common but more aggressive, often presenting with rapid progression and early metastasis. The prevalence and distribution of both the types are influenced by factors such as smoking habits, air pollution, occupational exposures, and genetic predisposition."
+          ]
+        },
+        {
+          "id": "rp-silicosis",
+          "title": "Silicosis",
+          "summary": "Establishing early predictive markers",
+          "body": [
+            "Silicosis is a chronic occupational lung disease caused by inhalation of respirable crystalline silica dust, commonly encountered in mining, construction, stone cutting, and sandblasting. The inhaled silica particles trigger inflammation and progressive fibrosis in the lungs, increasing susceptibility to infections such as tuberculosis. Silicosis can present in acute, accelerated, or chronic forms depending on the intensity and duration of exposure. There is no cure for the disease, and management focuses on preventing further exposure, alleviating symptoms, and monitoring for complications such as respiratory failure or lung cancer."
+          ]
+        }
+      ]
+    }
+  ]
+}

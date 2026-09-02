@@ -1,0 +1,1 @@
+ALTER TABLE public.patient_records ADD COLUMN bmi numeric NULL;

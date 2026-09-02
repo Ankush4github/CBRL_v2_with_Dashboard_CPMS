@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS patient_records_reference_number_key ON public.patient_records (reference_number) WHERE reference_number IS NOT NULL;

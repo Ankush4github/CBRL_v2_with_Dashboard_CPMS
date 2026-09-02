@@ -1,0 +1,120 @@
+{
+  "ongoing": [
+    {
+      "id": 2,
+      "title": "Gut Microbiome and Metabolome Analysis in PCOS",
+      "icon": "🧬",
+      "shortDescription": "Analysis of Gut Microbiome and Metabolome in Women with Polycystic Ovary Syndrome.",
+      "duration": "06-10-2023 to 05-10-2026",
+      "funding": "Department of Biotechnology(DBT)",
+      "role": "Co-Principal Investigator",
+      "detailedDescription": "Investigating the role of gut microbiome and metabolome in the pathophysiology of Polycystic Ovary Syndrome (PCOS) in Indian women.",
+      "objectives": [
+        "Analyze and compare the gut microbiome composition in women with PCOS versus healthy controls.",
+        "Compare gut metabolite profiles in women with PCOS with those of controls.",
+        "Explore associations between microbial abundance, fecal/serum metabolomes, and PCOS clinical traits.",
+        "Identify potential microbial and metabolic biomarkers for PCOS diagnosis and therapeutic targets."
+      ],
+      "methodology": "Whole metagenomic shotgun sequencing of fecal DNA and NMR/GC-MS metabolomic profiling of fecal and serum samples.",
+      "expectedOutcomes": "Identification of microbiome-metabolome signatures and biomarkers specific to Indian PCOS women."
+    },
+    {
+      "id": 3,
+      "title": "Metabolome-Transcriptome-Microbiome Integration for Lung Diseases",
+      "icon": "🫁",
+      "shortDescription": "Integration of metabolome, transcriptome and microbiome data to differentiate between chronic hypersensitivity pneumonitis and idiopathic pulmonary fibrosis.",
+      "duration": "31-01-2024 to 30-01-2027",
+      "funding": "Science and Engineering Research Board (SERB)",
+      "role": "Principal Investigator",
+      "detailedDescription": "Multi-omics integration of metabolomics, transcriptomics, and microbiome profiling of BALF to distinguish chronic hypersensitivity pneumonitis (cHP) from idiopathic pulmonary fibrosis (IPF).",
+      "objectives": [
+        "Identify BALF metabolites distinguishing cHP and IPF (NMR metabolomics).",
+        "Discover and validate differentially expressed genes between cHP and IPF (NGS, qPCR).",
+        "Characterize and compare lung microbiota signatures in cHP and IPF.",
+        "Integrate metabolome, transcriptome, and microbiome data using advanced bioinformatics."
+      ],
+      "methodology": "Multi-omics integration using advanced bioinformatics pipelines, machine learning algorithms, and systems biology approaches on patient cohorts.",
+      "expectedOutcomes": "Improved diagnostic accuracy, reduced time to diagnosis, and better patient outcomes through personalized treatment selection."
+    },
+    {
+      "id": 4,
+      "title": "Transcriptomics-Metabolomics-Microbiome Prediction for COPD-Lung Cancer",
+      "icon": "🫁",
+      "shortDescription": "Integrated transcriptomics, metabolomics and microbiome signatures-based prediction of COPD patients at-risk of progressing to lung cancer.",
+      "duration": "20-02-2024 to 19-02-2027",
+      "funding": "Indian Council of Medical Research (ICMR)",
+      "role": "Principal Investigator",
+      "detailedDescription": "Multi-omics profiling and machine learning–based prediction model to identify COPD patients at risk of progressing to lung cancer.",
+      "objectives": [
+        "Identify altered metabolome, transcriptome, and microbiome signatures in lung cancer patients with and without COPD.",
+        "Investigate expression of candidate signatures in COPD patients.",
+        "validation of the top five dysregulated metabolomic, transcriptomic and microbiome signatures using commercially available kits, qPCR and targeted Illumina MiSeq, respectively.",
+        "Integrate omics data with machine learning to predict COPD patients at risk of lung cancer."
+      ],
+      "methodology": "BALF-based metabolomic, transcriptomic, and microbiome profiling will distinguish lung cancer patients with and without COPD, followed by validation of key metabolites, genes, and microbial signatures in COPD. Machine learning will then be applied for predictive risk modeling of COPD-to-lung cancer progression.",
+      "expectedOutcomes": "Novel predictive biomarkers and machine learning model enabling early identification of COPD patients at risk of developing lung cancer."
+    },
+    {
+      "id": 5,
+      "title": "Integrated Multi-Omics and Machine Learning for Early Prediction of Recurrent Implantation Failure (RIF)",
+      "icon": "🧬",
+      "shortDescription": "Multi-omics integrated machine learning approach for prediction of women at-risk of undergoing recurrent implantation failure(RIF).",
+      "duration": "05-02-2025 to 04-02-2028",
+      "funding": "Indian Council of Medical Research (ICMR)",
+      "role": "Principal Investigator",
+      "detailedDescription": "Recurrent implantation failure (RIF) remains a formidable barrier in assisted reproductive technology, affecting up to 10% of IVF cycles globally. This project harnesses advanced metabolomic and lipidomic profiling of endometrial tissue, integrated with clinical parameters and analyzed using machine learning, to identify predictive biomarkers and develop robust tools for early identification of women at risk of RIF.",
+      "objectives": [
+        "Identify metabolomic signatures in endometrial tissue of RIF versus control women.",
+        "Explore lipidomic alterations in the same patient cohort.",
+        "Integrate metabolomics, lipidomics, and clinical parameters using machine learning.",
+        "Develop a predictive model for early identification of women at risk of RIF during IVF"
+      ],
+      "methodology": "E Endometrial biopsies will undergo comprehensive metabolomic (UHPLC-MS/MS) and lipidomic analysis, with subsequent integration of omics datasets using advanced machine learning algorithms (Random Forest, SVM, XGBoost).",
+      "expectedOutcomes": "Candidate biomarkers and predictive model enabling early identification of women susceptible to RIF, improving IVF success rates."
+    },
+    {
+      "id": 6,
+      "title": "Integrated LC-MS and DESI Imaging for RPL Diagnosis",
+      "icon": "🔬",
+      "shortDescription": "Lipid Profiling and Spatial Lipid Mapping of the Endometrium in Recurrent Pregnancy Loss using LC-MS and DESI Imaging.",
+      "duration": "01-12-2025 to 30-11-2028",
+      "funding": "Indian Council of Medical Research (ICMR)",
+      "role": "Principal Investigator",
+      "detailedDescription": "Recurrent pregnancy loss (RPL) affects approximately 5% of women globally, with nearly 70% of cases remaining unexplained (uRPL) and the pathophysiology largely unknown. This project investigates the hypothesis that lipid homeostasis in the endometrium is impaired during the window of implantation. By utilizing integrative mass spectrometry and imaging techniques, the study aims to phenotype uRPL by capturing specific lipid signatures and their spatial heterogeneity across the endometrial microenvironment.",
+      "objectives": [
+        "Elucidate the complete lipidomic profile in endometrial tissue of uRPL women compared to controls using LC-MS/MS.",
+        "Explore the spatial distribution of lipid subclasses across endometrial tissue regions using Desorption Electrospray Ionization (DESI) imaging.",
+        "Integrate bulk lipidomics, spatial imaging data, and clinical characteristics using machine learning pipelines."
+      ],
+      "methodology": "Endometrial biopsies collected during the window of implantation will undergo dual analysis: untargeted lipidomic profiling using UHPLC-Q-TOF-MS/MS and spatial mapping via DESI imaging to preserve histological context. The resulting spectral and imaging datasets will be fused with clinical features using multivariate statistical tools and supervised machine learning algorithms (Random Forest, SVM, XGBoost) to identify discriminatory lipid markers.",
+      "expectedOutcomes": "The study will generate an integrated model combining lipidomics and imaging data to visualize region-specific lipid alterations in the uterine microenvironment. These findings will establish the role of dysregulated lipid metabolism in uRPL, potentially laying the foundation for novel lipid-based diagnostic markers and future therapeutic strategies."
+    }
+  ],
+  "completedPdf": "/data/completed-projects-prof-koel-chaudhury-smst-iitkgp.pdf",
+  "sponsors": [
+    {
+      "src": "/images/sponsors/icmr_logo.svg",
+      "alt": "Indian Council of Medical Research",
+      "width": 196,
+      "height": 85
+    },
+    {
+      "src": "/images/sponsors/dbt_logo.png",
+      "alt": "Department of Biotechnology",
+      "width": 333,
+      "height": 100
+    },
+    {
+      "src": "/images/sponsors/serb_logo.png",
+      "alt": "Science and Engineering Research Board",
+      "width": 250,
+      "height": 150
+    },
+    {
+      "src": "/images/sponsors/anrf.png",
+      "alt": "Anusandhan National Research Foundation",
+      "width": 372,
+      "height": 218
+    }
+  ]
+}

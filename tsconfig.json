@@ -1,0 +1,58 @@
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "module": "esnext",
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "incremental": true,
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ],
+    "paths": {
+      "@/*": [
+        "./src/*"
+      ],
+      // Generated Supabase types, shared by the content dashboard and CPMS.
+      // Kept outside src/ because it is generated rather than written:
+      //   npx supabase gen types typescript --project-id <ref> > shared/supabase-types.ts
+      "@shared/*": [
+        "./shared/*"
+      ]
+    },
+    "types": [
+      "node",
+      "raf",
+      "trusted-types"
+    ]
+  },
+  "include": [
+    "next-env.d.ts",
+    "**/*.ts",
+    "**/*.tsx",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts"
+  ],
+  "exclude": [
+    "node_modules",
+    // Supabase Edge Functions are Deno, not Node. They import over https://,
+    // reference the Deno global, and are type-checked by Deno's own toolchain
+    // on deploy. The "**/*.ts" include above would otherwise pull them into
+    // this project, where every URL import is an unresolvable module and
+    // `Deno` is an undefined name — which fails `next build` outright.
+    "supabase/functions"
+  ]
+}
