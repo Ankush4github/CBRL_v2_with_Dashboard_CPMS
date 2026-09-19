@@ -47,7 +47,12 @@ import {
   X,
   RefreshCw,
   UserPlus,
+  Mail,
+  Send,
+  Ban,
+  MailCheck,
 } from "lucide-react";
+import { formatDistanceToNow } from "date-fns";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/cpms-client";
 import { useToast } from "@/hooks/cpms/use-toast";
@@ -70,6 +75,54 @@ interface UserWithDetails {
   } | null;
 }
 
+/**
+ * An invitation that has been sent and not yet taken up.
+ *
+ * Accepted and revoked rows stay in staff_invitations as the record of who
+ * granted what, but they are not what this screen is for: once an invitation is
+ * accepted the person is an ordinary account and appears in the lists below.
+ */
+interface Invitation {
+  id: string;
+  email: string;
+  role: string;
+  hospitals: string[];
+  created_at: string;
+}
+
+// Mirrors public.role_rank() in 20260908074018_peer_role_management.sql. An
+// account may only manage accounts below its own rank, so an equal rank is
+// never manageable — and because an account holds the same rank as itself, that
+// covers your own row too: an admin cannot grant itself scan or upload rights,
+// and a master cannot demote or disable itself. RLS enforces the same rule; the
+// checks here only keep the screen from offering an action the database refuses.
+const ROLE_RANK: Record<UserRole, number> = { master: 3, admin: 2, user: 1 };
+
+const ROLE_LABEL: Record<UserRole, string> = {
+  master: "Master (Super Admin)",
+  admin: "Admin (Hospital Admin)",
+  user: "User (Standard Staff)",
+};
+
+// A role can only be handed to someone below your own rank, so the assignable
+// roles are the ones ranking strictly below yours — a master offers Admin and
+// User, never Master. Enforced in the WITH CHECK of "user_roles: masters manage
+// lower ranks" (20260908075627_assign_below_own_role.sql); the list here just
+// stops the screen offering what the database refuses.
+//
+// The consequence is deliberate: no master can be created through this screen,
+// because nothing outranks a master. Appointing one is an `insert into
+// user_roles` in the SQL editor, which is the migration's stated intent.
+const assignableRoles = (rank: number): UserRole[] =>
+  (Object.keys(ROLE_RANK) as UserRole[])
+    .filter((r) => ROLE_RANK[r] < rank)
+    .sort((a, b) => ROLE_RANK[b] - ROLE_RANK[a]);
+
+// Shown wherever an action is withheld for that rule, so a disabled control is
+// never left unexplained.
+const PEER_NOTE =
+  "Accounts at your own role level — your own included — can only be changed by someone above them.";
+
 const UserManagement = () => {
   const router = useRouter();
   const { toast } = useToast();
@@ -83,6 +136,17 @@ const UserManagement = () => {
   const [selectedUser, setSelectedUser] = useState<UserWithDetails | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [saving, setSaving] = useState(false);
+
+  // Invitations
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
+  const [invitationsError, setInvitationsError] = useState<string | null>(null);
+  const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<UserRole>("user");
+  const [inviteHospitals, setInviteHospitals] = useState<string[]>([]);
+  const [inviting, setInviting] = useState(false);
+  const [revokingId, setRevokingId] = useState<string | null>(null);
+  const [activatingId, setActivatingId] = useState<string | null>(null);
 
   // Edit form state
   const [editRole, setEditRole] = useState<UserRole>("user");
@@ -182,13 +246,236 @@ const UserManagement = () => {
     }
   };
 
+  const fetchInvitations = async () => {
+    setInvitationsError(null);
+    // RLS decides the scope: a master sees every open invitation, an admin sees
+    // the ones covering a hospital it runs. Neither needs a filter here.
+    const { data, error } = await supabase
+      .from("staff_invitations")
+      .select("id, email, role, hospitals, created_at")
+      .is("accepted_at", null)
+      .is("revoked_at", null)
+      .order("created_at", { ascending: false });
+
+    if (error) {
+      // Deliberately not a toast. The likeliest cause by far is a build running
+      // against a database where 20260908120000_staff_invitations.sql has not
+      // been applied yet, and an error popup on every page load would be a
+      // worse answer than one line inside the card saying so.
+      setInvitationsError(describeError(error, "Could not load pending invitations."));
+      setInvitations([]);
+      return;
+    }
+
+    setInvitations(data || []);
+  };
+
   useEffect(() => {
     if (isAdmin) {
       fetchUsers();
+      fetchInvitations();
     }
   }, [isAdmin]);
 
+  const refreshAll = () => {
+    fetchUsers();
+    fetchInvitations();
+  };
+
+  const myRank = ROLE_RANK[currentUserRole] ?? 0;
+
+  /** True when `target` sits strictly below the signed-in account's role. */
+  const canManage = (target: UserWithDetails | null): boolean =>
+    target !== null && myRank > (ROLE_RANK[target.role] ?? 0);
+
+  const openInviteDialog = () => {
+    setInviteEmail("");
+    setInviteRole("user");
+    setInviteHospitals([]);
+    setIsInviteDialogOpen(true);
+  };
+
+  const toggleInviteHospital = (hospital: string) => {
+    setInviteHospitals((prev) =>
+      prev.includes(hospital)
+        ? prev.filter((h) => h !== hospital)
+        : [...prev, hospital]
+    );
+  };
+
+  /**
+   * Sends an invitation — which is to say, records the decision.
+   *
+   * Nothing is emailed. Sign-in is Google-only, so there is no link to send
+   * that the person could not reach by opening CPMS themselves; what the
+   * invitation buys is that their role and hospitals are already waiting when
+   * they do. handle_new_user() applies it on first sign-in.
+   */
+  const sendInvitation = async () => {
+    // Stored lower-cased, and the database holds callers to it, so that the
+    // trigger's lower(new.email) lookup can match what Google returns.
+    const email = inviteEmail.trim().toLowerCase();
+
+    // Mirrors staff_invitations_email_shape. Repeating it here is not
+    // belt-and-braces for its own sake: the constraint violation comes back as
+    // a 23514, which describeError() can only render as "One of the values
+    // entered is not allowed" — true, and no use to whoever typed it.
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) {
+      toast({
+        title: "Check the email address",
+        description: "Enter the full Google address this person will sign in with.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (inviteHospitals.length === 0) {
+      toast({
+        title: "Pick at least one hospital",
+        description: "Without one, the account can sign in but cannot see or add any records.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // An invitation is applied by the trigger that runs when an account is
+    // created, so it does nothing at all for someone who already has one —
+    // they will never sign up again. Say so, rather than leaving a row that can
+    // never be taken up.
+    if (users.some((u) => u.email?.toLowerCase() === email)) {
+      toast({
+        title: "That address already has an account",
+        description: "Find them in the list below and edit their role and hospitals directly.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (invitations.some((i) => i.email === email)) {
+      toast({
+        title: "Already invited",
+        description: "There is an open invitation for that address. Revoke it first to change it.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setInviting(true);
+    try {
+      // The same mapping the edit dialog uses: this screen's "user" is the
+      // enum's 'staff'. The enum's own 'user' is what an *uninvited* signup
+      // gets, and is not invitable.
+      const roleToInsert = inviteRole === "user" ? "staff" : inviteRole;
+
+      const { error } = await supabase.from("staff_invitations").insert({
+        email,
+        role: roleToInsert,
+        hospitals: inviteHospitals,
+        // Pinned by the insert policy too, so this is not optional.
+        invited_by: user?.id,
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: "Invitation created",
+        description: `${email} will be set up the moment they sign in with Google. They will then appear under "Awaiting approval" for you to activate.`,
+      });
+
+      setIsInviteDialogOpen(false);
+      fetchInvitations();
+    } catch (error: any) {
+      toast({
+        title: "Could not create the invitation",
+        description: describeError(error, "Could not create the invitation. Please try again."),
+        variant: "destructive",
+      });
+    } finally {
+      setInviting(false);
+    }
+  };
+
+  const revokeInvitation = async (invitation: Invitation) => {
+    setRevokingId(invitation.id);
+    try {
+      // Revoked rather than deleted: the row is the only record that this
+      // address was ever offered access, and by whom.
+      const { error } = await supabase
+        .from("staff_invitations")
+        .update({ revoked_at: new Date().toISOString(), revoked_by: user?.id })
+        .eq("id", invitation.id);
+
+      if (error) throw error;
+
+      toast({
+        title: "Invitation revoked",
+        description: `${invitation.email} will be treated as an ordinary new signup from now on.`,
+      });
+      fetchInvitations();
+    } catch (error: any) {
+      toast({
+        title: "Could not revoke the invitation",
+        description: describeError(error, "Could not revoke the invitation. Please try again."),
+        variant: "destructive",
+      });
+    } finally {
+      setRevokingId(null);
+    }
+  };
+
+  /**
+   * The far end of the invitation: the account has signed in, is sitting on the
+   * Pending Activation screen, and its role and hospitals are already what the
+   * invitation said. Creating the permissions row is all that is left, so it
+   * does not need the dialog — "Review & set up" is still there for the
+   * accounts that do.
+   *
+   * Gated on canManage() like every other write on this screen: the upsert goes
+   * to user_permissions, which RLS now restricts to targets the caller
+   * outranks.
+   */
+  const activateUser = async (target: UserWithDetails) => {
+    if (!canManage(target)) {
+      toast({ title: "Not allowed", description: PEER_NOTE, variant: "destructive" });
+      return;
+    }
+
+    setActivatingId(target.id);
+    try {
+      const { error } = await supabase.from("user_permissions").upsert(
+        {
+          user_id: target.id,
+          can_scan: true,
+          can_upload: true,
+          is_enabled: true,
+          updated_by: user?.id,
+        },
+        { onConflict: "user_id" }
+      );
+
+      if (error) throw error;
+
+      toast({
+        title: "Account activated",
+        description: `${target.full_name || target.email} can use CPMS now.`,
+      });
+      fetchUsers();
+    } catch (error: any) {
+      toast({
+        title: "Could not activate the account",
+        description: describeError(error, "Could not activate that account. Please try again."),
+        variant: "destructive",
+      });
+    } finally {
+      setActivatingId(null);
+    }
+  };
+
   const openEditDialog = (userToEdit: UserWithDetails) => {
+    if (!canManage(userToEdit)) {
+      toast({ title: "Not allowed", description: PEER_NOTE, variant: "destructive" });
+      return;
+    }
     setSelectedUser(userToEdit);
     setEditRole(userToEdit.role);
     setEditHospitals(userToEdit.hospitals);
@@ -200,41 +487,43 @@ const UserManagement = () => {
     setIsEditDialogOpen(true);
   };
 
-  const canEditRole = (targetRole: UserRole): boolean => {
-    if (isMaster) return true;
-    if (targetRole === "master") return false;
-    if (targetRole === "admin") return false;
-    return true;
-  };
+  // Only a master may change a role at all: RLS on user_roles requires it, and
+  // an admin able to grant 'admin' would be minting peers it then cannot
+  // manage. A master may still grant 'master' — otherwise no second master
+  // could ever be created, since peers are out of each other's reach.
+  const canChangeRole = isMaster && canManage(selectedUser);
 
-  const canAssignRole = (newRole: UserRole): boolean => {
-    if (isMaster) return true;
-    if (newRole === "master") return false;
-    if (newRole === "admin") return false;
-    return true;
-  };
+  // The roles this account may hand out: strictly below its own.
+  const roleOptions = assignableRoles(myRank);
 
   const saveUserChanges = async () => {
     if (!selectedUser) return;
 
+    // The dialog cannot be opened for a peer, but the role shown in the list
+    // may be stale — the target may have been promoted since the last fetch.
+    // Checking again here beats firing four writes for RLS to refuse one by one.
+    if (!canManage(selectedUser)) {
+      toast({ title: "Not allowed", description: PEER_NOTE, variant: "destructive" });
+      return;
+    }
+
+    // Refuse an out-of-reach role before anything is written, rather than
+    // letting the hospital and permission writes land and the role write fail.
+    if (editRole !== selectedUser.role && !roleOptions.includes(editRole)) {
+      toast({
+        title: "Not allowed",
+        description: "You can only assign a role below your own.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     setSaving(true);
     try {
-      // Update role if changed and allowed
-      if (editRole !== selectedUser.role && canAssignRole(editRole)) {
-        // Delete existing roles
-        await supabase
-          .from("user_roles")
-          .delete()
-          .eq("user_id", selectedUser.id);
-
-        // Insert new role
-        const roleToInsert = editRole === "user" ? "staff" : editRole;
-        const { error: roleError } = await supabase
-          .from("user_roles")
-          .insert({ user_id: selectedUser.id, role: roleToInsert });
-
-        if (roleError) throw roleError;
-      }
+      // Hospitals and permissions are written BEFORE any role change, because
+      // RLS reads the target's *current* rank: a role change can only lower an
+      // account, but it still re-evaluates every following write against the
+      // new rank, so the role goes last.
 
       // Update hospital assignments
       // Delete existing
@@ -273,6 +562,23 @@ const UserManagement = () => {
         );
 
       if (permsError) throw permsError;
+
+      // Update role last, if changed and allowed
+      if (editRole !== selectedUser.role && canChangeRole) {
+        // Delete existing roles
+        await supabase
+          .from("user_roles")
+          .delete()
+          .eq("user_id", selectedUser.id);
+
+        // Insert new role
+        const roleToInsert = editRole === "user" ? "staff" : editRole;
+        const { error: roleError } = await supabase
+          .from("user_roles")
+          .insert({ user_id: selectedUser.id, role: roleToInsert });
+
+        if (roleError) throw roleError;
+      }
 
       toast({
         title: "User updated",
@@ -380,7 +686,13 @@ const UserManagement = () => {
             {getRoleIcon(currentUserRole)}
             <span className="hidden sm:inline">{currentUserRole.toUpperCase()}</span>
           </Badge>
-          <Button variant="outline" size="icon" onClick={fetchUsers} disabled={loading} className="h-9 w-9 sm:h-10 sm:w-10 shrink-0">
+          {isMaster && (
+            <Button onClick={openInviteDialog} size="sm" className="gap-2 shrink-0 h-9 sm:h-10">
+              <UserPlus className="h-4 w-4" />
+              <span className="hidden sm:inline">Invite</span>
+            </Button>
+          )}
+          <Button variant="outline" size="icon" onClick={refreshAll} disabled={loading} className="h-9 w-9 sm:h-10 sm:w-10 shrink-0">
             <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
           </Button>
         </div>
@@ -428,6 +740,84 @@ const UserManagement = () => {
             </Card>
           </div>
 
+          {/* Invited, not signed in yet — the first half of the onboarding flow.
+              Shown to masters even when empty, because an empty list is the
+              state in which someone most wants the invite button. */}
+          {(isMaster || invitations.length > 0 || invitationsError) && (
+            <Card className="border-2">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                  <Mail className="h-5 w-5" />
+                  Invited, not signed in yet
+                  {invitations.length > 0 && (
+                    <Badge variant="secondary" className="ml-1">{invitations.length}</Badge>
+                  )}
+                </CardTitle>
+                <CardDescription>
+                  Their role and hospitals are set aside and applied the first time they sign in
+                  with Google. They land on the Pending Activation screen until you activate them.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                {invitationsError ? (
+                  <p className="text-xs text-destructive">{invitationsError}</p>
+                ) : invitations.length === 0 ? (
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:justify-between">
+                    <p className="text-xs text-muted-foreground">
+                      No one is waiting on a first sign-in.
+                    </p>
+                    {isMaster && (
+                      <Button size="sm" variant="outline" onClick={openInviteDialog} className="gap-2 shrink-0">
+                        <UserPlus className="h-4 w-4" />
+                        Invite a staff member
+                      </Button>
+                    )}
+                  </div>
+                ) : (
+                  invitations.map((invite) => (
+                    <div
+                      key={invite.id}
+                      className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 p-3 bg-secondary border-2 border-border"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium text-sm break-all">{invite.email}</p>
+                        <div className="flex flex-wrap items-center gap-1 mt-1">
+                          <Badge variant="outline" className="text-[10px]">
+                            {invite.role === "staff" ? "USER" : invite.role.toUpperCase()}
+                          </Badge>
+                          {invite.hospitals.map((h) => (
+                            <Badge key={h} variant="outline" className="text-[10px]">
+                              {h}
+                            </Badge>
+                          ))}
+                          <span className="text-[11px] text-muted-foreground">
+                            invited {formatDistanceToNow(new Date(invite.created_at), { addSuffix: true })}
+                          </span>
+                        </div>
+                      </div>
+                      {isMaster && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="gap-2 shrink-0"
+                          onClick={() => revokeInvitation(invite)}
+                          disabled={revokingId === invite.id}
+                        >
+                          {revokingId === invite.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <Ban className="h-4 w-4" />
+                          )}
+                          Revoke
+                        </Button>
+                      )}
+                    </div>
+                  ))
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {/* Pending approval — users who signed in but were never provisioned */}
           {pendingUsers.length > 0 && (
             <Card className="border-2 border-primary">
@@ -438,8 +828,9 @@ const UserManagement = () => {
                   <Badge variant="default" className="ml-1">{pendingUsers.length}</Badge>
                 </CardTitle>
                 <CardDescription>
-                  These accounts have signed in but have no permissions yet, so they cannot access
-                  anything. Set them up to grant access.
+                  These accounts have signed in but have no permissions yet, so they are sitting on
+                  the Pending Activation screen and cannot reach anything. Invited accounts already
+                  have the role and hospitals below — Activate is all they need.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-2">
@@ -451,10 +842,55 @@ const UserManagement = () => {
                     <div className="min-w-0 flex-1">
                       <p className="font-medium text-sm truncate">{u.full_name || "No name"}</p>
                       <p className="text-xs text-muted-foreground truncate">{u.email}</p>
+                      {/* What the invitation already put in place. An account
+                          with neither was not invited — it walked in — and
+                          needs the dialog rather than one click. */}
+                      <div className="flex flex-wrap items-center gap-1 mt-1">
+                        <Badge variant="outline" className="text-[10px]">
+                          {u.role.toUpperCase()}
+                        </Badge>
+                        {u.hospitals.length > 0 ? (
+                          u.hospitals.map((h) => (
+                            <Badge key={h} variant="outline" className="text-[10px]">
+                              {h}
+                            </Badge>
+                          ))
+                        ) : (
+                          <span className="text-[11px] text-muted-foreground">no hospital yet</span>
+                        )}
+                      </div>
                     </div>
-                    <Button size="sm" onClick={() => openEditDialog(u)} className="shrink-0">
-                      Review &amp; set up
-                    </Button>
+                    {canManage(u) ? (
+                      <div className="flex gap-2 shrink-0">
+                        <Button
+                          size="sm"
+                          onClick={() => activateUser(u)}
+                          disabled={activatingId === u.id || u.hospitals.length === 0}
+                          className="gap-2"
+                          // Activating an account with no hospital produces
+                          // exactly the state this queue exists to catch: it can
+                          // sign in and still see nothing. Those go through the
+                          // dialog, where a hospital can be picked.
+                          title={u.hospitals.length === 0 ? "Assign a hospital first" : undefined}
+                        >
+                          {activatingId === u.id ? (
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                          ) : (
+                            <MailCheck className="h-4 w-4" />
+                          )}
+                          Activate
+                        </Button>
+                        <Button size="sm" variant="outline" onClick={() => openEditDialog(u)}>
+                          Review
+                        </Button>
+                      </div>
+                    ) : (
+                      // A peer awaiting setup is a dead end for this account —
+                      // better to say so than to offer a button that fails.
+                      <span className="text-[11px] text-muted-foreground text-right shrink-0 max-w-[8rem]">
+                        Needs a higher role to set up
+                      </span>
+                    )}
                   </div>
                 ))}
                 <p className="text-xs text-muted-foreground pt-1">
@@ -561,7 +997,8 @@ const UserManagement = () => {
                             variant="ghost"
                             size="sm"
                             onClick={() => openEditDialog(u)}
-                            disabled={!canEditRole(u.role) && u.id !== user?.id}
+                            disabled={!canManage(u)}
+                            title={canManage(u) ? "Edit user" : PEER_NOTE}
                           >
                             <UserCog className="h-4 w-4" />
                           </Button>
@@ -583,7 +1020,7 @@ const UserManagement = () => {
                   </CardContent>
                 </Card>
               ) : filteredUsers.map((u) => {
-                const editable = canEditRole(u.role) || u.id === user?.id;
+                const editable = canManage(u);
                 return (
                   <Card
                     key={u.id}
@@ -650,10 +1087,122 @@ const UserManagement = () => {
                 );
               })}
             </div>
+
+            <p className="text-xs text-muted-foreground">{PEER_NOTE}</p>
             </>
           )}
         </div>
       </main>
+
+      {/* Invite Dialog */}
+      <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto w-[calc(100%-1.5rem)] sm:w-full">
+          <DialogHeader>
+            <DialogTitle>Invite a staff member</DialogTitle>
+            <DialogDescription>
+              Choose what they get before they arrive. It is applied the first time they sign in
+              with Google, and takes effect when you activate the account.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-6 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="inviteEmail">Google email address</Label>
+              <Input
+                id="inviteEmail"
+                type="email"
+                inputMode="email"
+                autoComplete="off"
+                placeholder="name@example.com"
+                value={inviteEmail}
+                onChange={(e) => setInviteEmail(e.target.value)}
+                className="h-11 sm:h-10"
+              />
+              <p className="text-xs text-muted-foreground">
+                It has to be the address they sign in to Google with — CPMS has no other way to
+                recognise them.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Role</Label>
+              <Select value={inviteRole} onValueChange={(v) => setInviteRole(v as UserRole)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {/* The same list the edit dialog offers: roles strictly below
+                      your own. Only a master can reach this dialog, so today
+                      that is exactly Admin and User — but deriving it means the
+                      invite path cannot drift from the rank rule if the insert
+                      policy is ever loosened to let admins invite. */}
+                  {roleOptions.map((r) => (
+                    <SelectItem key={r} value={r}>
+                      <div className="flex items-center gap-2">
+                        {getRoleIcon(r)}
+                        {ROLE_LABEL[r]}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {/* Master is absent for a second, independent reason, and the
+                  CHECK on staff_invitations.role refuses it as well: the
+                  acceptance trigger is SECURITY DEFINER, so it writes the
+                  invited role without any rank test at all. An account that
+                  arrived already holding 'master' would have no permissions row
+                  and nobody outranking it to create one — it could open CPMS
+                  and never save a record. */}
+              <p className="text-xs text-muted-foreground">
+                A master cannot be invited: nothing outranks one, so nobody could ever activate the
+                account. Invite them as Admin, activate, then raise the role from the edit dialog.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Hospitals</Label>
+              <div className="flex flex-wrap gap-2">
+                {hospitalOptions.map((h) => {
+                  const isAssigned = inviteHospitals.includes(h.value);
+                  return (
+                    <Button
+                      key={h.value}
+                      variant={isAssigned ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => toggleInviteHospital(h.value)}
+                      className="gap-1"
+                    >
+                      {isAssigned ? <X className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+                      {h.label}
+                    </Button>
+                  );
+                })}
+              </div>
+              {hospitalOptions.length === 0 && (
+                <p className="text-xs text-muted-foreground">
+                  No hospitals configured yet. Add one under Hospital Management first.
+                </p>
+              )}
+            </div>
+
+            <div className="border-l-4 border-primary bg-accent/40 px-4 py-3 text-xs leading-relaxed">
+              Inviting does not send an email and does not switch the account on. Ask them to open
+              CPMS and sign in with Google; they will land on a Pending Activation screen, and you
+              activate them from the queue on this page.
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsInviteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={sendInvitation} disabled={inviting} className="gap-2">
+              {inviting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+              Create invitation
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit User Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
@@ -672,34 +1221,35 @@ const UserManagement = () => {
               <Select
                 value={editRole}
                 onValueChange={(v) => setEditRole(v as UserRole)}
-                disabled={!canEditRole(selectedUser?.role || "user")}
+                disabled={!canChangeRole}
               >
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="user" disabled={!canAssignRole("user")}>
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4" />
-                      User (Standard Staff)
-                    </div>
-                  </SelectItem>
-                  <SelectItem value="admin" disabled={!canAssignRole("admin")}>
-                    <div className="flex items-center gap-2">
-                      <ShieldCheck className="h-4 w-4" />
-                      Admin (Hospital Admin)
-                    </div>
-                  </SelectItem>
-                  {isMaster && (
-                    <SelectItem value="master">
+                  {roleOptions.map((r) => (
+                    <SelectItem key={r} value={r}>
                       <div className="flex items-center gap-2">
-                        <Crown className="h-4 w-4" />
-                        Master (Super Admin)
+                        {getRoleIcon(r)}
+                        {ROLE_LABEL[r]}
                       </div>
                     </SelectItem>
-                  )}
+                  ))}
                 </SelectContent>
               </Select>
+              {!canChangeRole ? (
+                <p className="text-xs text-muted-foreground">
+                  {isMaster ? PEER_NOTE : "Only a master administrator can change a role."}
+                </p>
+              ) : (
+                // Explain the option that is missing rather than leave a master
+                // hunting for it: promotion to your own level is not available
+                // to anyone, by design.
+                <p className="text-xs text-muted-foreground">
+                  Only roles below your own can be assigned, so {ROLE_LABEL[currentUserRole]} is
+                  not offered here.
+                </p>
+              )}
             </div>
 
             {/* Hospital Assignments */}

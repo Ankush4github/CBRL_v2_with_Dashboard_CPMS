@@ -4,7 +4,10 @@ project_id = "qjjyjrdcyjrkhhmdfywh"
 verify_jwt = false
 
 [functions.generate-patient-pdf]
-verify_jwt = false
+# Matches the live setting. This function reads patient records; a CLI deploy
+# picks the value up from here, so `false` here would silently drop JWT
+# verification on the next deploy.
+verify_jwt = true
 
 [functions.attendance-notifications]
 verify_jwt = false

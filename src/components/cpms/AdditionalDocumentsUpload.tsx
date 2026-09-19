@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
+import type { Dispatch, SetStateAction } from "react";
 import { Button } from "@/components/cpms/ui/button";
 import { Card, CardContent } from "@/components/cpms/ui/card";
 import { Progress } from "@/components/cpms/ui/progress";
@@ -14,6 +15,8 @@ import {
 import {
   Plus,
   X,
+  Camera,
+  Upload,
   FileText,
   Image as ImageIcon,
   Loader2,
@@ -23,6 +26,7 @@ import {
   Eye,
 } from "lucide-react";
 import { toast } from "sonner";
+import DocumentCamera from "@/components/cpms/DocumentCamera";
 
 const DOCUMENT_TYPES = [
   { value: "PIS", label: "Patient Information Sheet (PIS)" },
@@ -52,7 +56,10 @@ export interface CategorizedDocument {
 
 interface AdditionalDocumentsUploadProps {
   documents: CategorizedDocument[];
-  onChange: (docs: CategorizedDocument[]) => void;
+  // A setState rather than a plain callback: photos arrive one capture at a
+  // time and each compresses in the background, so an add that rebuilt the
+  // list from a captured `documents` would drop whatever landed meanwhile.
+  onChange: Dispatch<SetStateAction<CategorizedDocument[]>>;
 }
 
 /* ── Compression helpers ── */
@@ -126,9 +133,13 @@ const AdditionalDocumentsUpload = ({ documents, onChange }: AdditionalDocumentsU
   const [selectedDocType, setSelectedDocType] = useState<DocumentType | "">("");
   const [previewDoc, setPreviewDoc] = useState<{ src: string; type: string } | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isCameraOpen, setIsCameraOpen] = useState(false);
+  // Page numbering carries across trips to the camera, so a second visit
+  // does not restart at "page 1".
+  const pageOffsetRef = useRef(0);
 
   const addFiles = useCallback(
-    async (files: FileList) => {
+    async (files: ArrayLike<File>) => {
       if (!selectedDocType) {
         toast.error("Please select a document type first");
         return;
@@ -158,7 +169,7 @@ const AdditionalDocumentsUpload = ({ documents, onChange }: AdditionalDocumentsU
       if (incoming.length === 0) return;
 
       // Add placeholders immediately (show compressing state)
-      onChange([...documents, ...incoming]);
+      onChange((prev) => [...prev, ...incoming]);
 
       // Compress each file
       const processed = await Promise.all(
@@ -188,22 +199,30 @@ const AdditionalDocumentsUpload = ({ documents, onChange }: AdditionalDocumentsU
         }),
       );
 
-      // Replace placeholders with processed docs
-      onChange([
-        ...documents,
-        ...processed,
-      ]);
+      // Swap each placeholder for its processed self. Matching on id instead
+      // of rebuilding the list keeps anything added -- or removed -- while
+      // this batch was compressing.
+      onChange((prev) => prev.map((doc) => processed.find((p) => p.id === doc.id) ?? doc));
 
       const readyCount = processed.filter((d) => d.status === "ready").length;
       if (readyCount > 0) toast.success(`${readyCount} file(s) optimized and added`);
     },
-    [documents, onChange, selectedDocType],
+    [onChange, selectedDocType],
   );
 
   const removeDoc = (id: string) => {
     const doc = documents.find((d) => d.id === id);
     if (doc?.preview) URL.revokeObjectURL(doc.preview);
-    onChange(documents.filter((d) => d.id !== id));
+    onChange((prev) => prev.filter((d) => d.id !== id));
+  };
+
+  const openCamera = () => {
+    if (!selectedDocType) {
+      toast.error("Please select a document type first");
+      return;
+    }
+    pageOffsetRef.current = documents.filter((d) => d.docType === selectedDocType).length;
+    setIsCameraOpen(true);
   };
 
   const openPreview = (doc: CategorizedDocument) => {
@@ -267,10 +286,28 @@ const AdditionalDocumentsUpload = ({ documents, onChange }: AdditionalDocumentsU
             }}
           />
           <Plus className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
-          <p className="font-medium">Upload Files</p>
-          <p className="text-sm text-muted-foreground">
+          <p className="font-medium">Add Files</p>
+          <p className="text-sm text-muted-foreground mb-4">
             PDF, JPG, PNG · Multi-page documents supported · Auto-compressed to ≤{MAX_FILE_SIZE_MB} MB
           </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Button type="button" variant="outline" className="gap-2">
+              <Upload className="h-4 w-4" />
+              Choose Files
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              className="gap-2"
+              onClick={(e) => {
+                e.stopPropagation();
+                openCamera();
+              }}
+            >
+              <Camera className="h-4 w-4" />
+              Take Photo
+            </Button>
+          </div>
         </div>
 
         {/* Grouped document list */}
@@ -371,6 +408,16 @@ const AdditionalDocumentsUpload = ({ documents, onChange }: AdditionalDocumentsU
           </div>
         )}
       </div>
+
+      <DocumentCamera
+        open={isCameraOpen}
+        title={`Take Photo · ${DOCUMENT_TYPES.find((dt) => dt.value === selectedDocType)?.label ?? ""}`}
+        hint="Each capture is added as another page."
+        multiple
+        fileName={(n) => `${selectedDocType}-page-${pageOffsetRef.current + n}.jpg`}
+        onCapture={(file) => addFiles([file])}
+        onClose={() => setIsCameraOpen(false)}
+      />
 
       {/* Preview modal */}
       {previewDoc && <PreviewModal src={previewDoc.src} type={previewDoc.type} onClose={() => setPreviewDoc(null)} />}

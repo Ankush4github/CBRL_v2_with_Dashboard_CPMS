@@ -908,27 +908,65 @@ const PatientDetail = () => {
                 </div>
               ) : auditLogs.length > 0 ? (
                 <div className="space-y-3">
-                  {auditLogs.map((log) => (
+                  {auditLogs.map((log) => {
+                    // Three kinds of entry now share this table. "record_created"
+                    // and the "ai:" prefix are written when a scan is committed;
+                    // everything else is a later edit caught by the
+                    // patient_records_audit trigger. Rendering them all as
+                    // "<field> updated" read as nonsense for the first two.
+                    const isCreation = log.field_name === "record_created";
+                    const isExtraction = log.field_name.startsWith("ai:");
+                    const fieldLabel = (isExtraction ? log.field_name.slice(3) : log.field_name)
+                      .replace(/_/g, " ");
+                    return (
                     <div
                       key={log.id}
-                      className="p-3 sm:p-4 bg-secondary border-l-4 border-primary"
+                      className={`p-3 sm:p-4 bg-secondary border-l-4 ${
+                        isExtraction ? "border-yellow-600" : "border-primary"
+                      }`}
                     >
                       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 sm:gap-4">
                         <div className="flex-1 min-w-0 order-2 sm:order-1">
                           <p className="font-medium capitalize">
-                            {log.field_name.replace(/_/g, " ")} updated
+                            {isCreation
+                              ? "Record created from a scan"
+                              : isExtraction
+                                ? `${fieldLabel} corrected after the scan`
+                                : `${fieldLabel} updated`}
                           </p>
-                          <div className="mt-2 space-y-1 text-sm break-words">
-                            {log.old_value && (
-                              <p className="text-muted-foreground">
-                                <span className="font-medium">From:</span>{" "}
-                                <span className="line-through">{log.old_value}</span>
-                              </p>
-                            )}
-                            <p className="text-foreground">
-                              <span className="font-medium">To:</span>{" "}
-                              {log.new_value || <span className="italic text-muted-foreground">(empty)</span>}
+                          {isExtraction && (
+                            <p className="text-xs text-muted-foreground mt-0.5 normal-case">
+                              The scan read one value; this is what was saved instead.
                             </p>
+                          )}
+                          <div className="mt-2 space-y-1 text-sm break-words">
+                            {isCreation ? (
+                              <p className="text-foreground">
+                                <span className="font-medium">Reference:</span>{" "}
+                                <span className="font-mono">
+                                  {log.new_value || (
+                                    <span className="italic font-sans text-muted-foreground">(none)</span>
+                                  )}
+                                </span>
+                              </p>
+                            ) : (
+                              <>
+                                {log.old_value && (
+                                  <p className="text-muted-foreground">
+                                    <span className="font-medium">
+                                      {isExtraction ? "Scan read:" : "From:"}
+                                    </span>{" "}
+                                    <span className="line-through">{log.old_value}</span>
+                                  </p>
+                                )}
+                                <p className="text-foreground">
+                                  <span className="font-medium">
+                                    {isExtraction ? "Saved as:" : "To:"}
+                                  </span>{" "}
+                                  {log.new_value || <span className="italic text-muted-foreground">(empty)</span>}
+                                </p>
+                              </>
+                            )}
                           </div>
                         </div>
                         <div className="text-left sm:text-right text-xs sm:text-sm shrink-0 order-1 sm:order-2">
@@ -940,7 +978,8 @@ const PatientDetail = () => {
                         </div>
                       </div>
                     </div>
-                  ))}
+                    );
+                  })}
                 </div>
               ) : (
                 <div className="text-center py-8 text-muted-foreground">

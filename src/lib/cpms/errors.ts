@@ -51,6 +51,18 @@ const BY_CODE: Record<string, string> = {
   // Expired or missing JWT.
   PGRST301: 'Your session has expired. Please sign in again.',
 
+  // The token's `iat` is ahead of the clock PostgREST checked it against, so
+  // the session is refused as not-yet-valid. Almost always a clock problem
+  // rather than anything the account did — a device whose time is running fast,
+  // or a token minted either side of a time correction. Signing in again mints
+  // one stamped with the current time, which is why that is the instruction.
+  //
+  // Worth naming rather than leaving to the caller's fallback: without it this
+  // renders as "Could not load your profile", whose Try again button retries
+  // with the same bad token and fails identically, with nothing on screen to
+  // suggest what would actually help.
+  PGRST303: 'Your device clock looks out of step, so your session was refused. Check the date and time, then sign in again.',
+
   // Supabase Storage.
   NoSuchKey: 'That file is no longer available.',
   NoSuchBucket: 'Something went wrong on our side. Please try again later.',

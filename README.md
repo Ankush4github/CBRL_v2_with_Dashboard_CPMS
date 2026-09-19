@@ -266,6 +266,7 @@ src/
 │   │
 │   ├── cpms/                  # ── CLINICAL APP ──
 │   │   ├── page.tsx           # Sign-in
+│   │   ├── pending/           # Waiting for an administrator to activate
 │   │   ├── onboarding/        # First-run setup
 │   │   ├── dashboard/         # Clinician home
 │   │   ├── patients/          # List, [id] detail, timeline
@@ -385,6 +386,19 @@ with Google — that grants nothing on its own.
 A save writes the `site_content` row and calls `revalidatePath()` on the pages that depend on
 it. **The change is live on the next request — no rebuild, no redeploy.**
 
+### Why the build clears Next's Data Cache
+
+The content read is an ordinary `fetch`, and Next caches `fetch` responses during **build-time
+prerendering** — in `.next/cache/fetch-cache`, with a one-year lifetime and no build id. The
+directory survives the next `next build`, so every build after the first one would prerender
+the content the *first* build fetched. The symptom is specific and misleading: `npm start`
+shows content weeks out of date while `npm run dev`, which never prerenders, shows the current
+database.
+
+`npm run build` therefore deletes that directory first. Running bare `next build` skips the
+step — use the npm script. The Turbopack compile cache and the optimized-image cache are not
+touched, so builds are no slower.
+
 ### Safety
 
 - Every save **validates the whole document first** — a bad email or an off-site image path
@@ -438,7 +452,7 @@ theme and security headers.
 | **Scan prescription** | Camera capture → `extract-prescription` Edge Function → Gemini OCR → reviewable fields |
 | **Attendance** | Geolocation check-in, geofenced and working-hours enforced in the database |
 | **Attendance reports** | Per-user and per-period reporting |
-| **User management** | Roles and permissions (master / staff) |
+| **User management** | Roles and permissions (master / admin / staff). An account may only change accounts **below** its own role — never a peer at the same role, and never itself. Enforced in RLS, not just the screen |
 | **Hospital management** | Hospitals and their geofences |
 | **Onboarding** | First-run setup for a new account |
 
@@ -591,7 +605,7 @@ https://cbrl.iitkgp.ac.in/cpms/dashboard          # CPMS
 | Script | What it does |
 |--------|--------------|
 | `npm run dev` | Dev server on port 3200 — site, `/admin` and `/cpms` |
-| `npm run build` | Production build. Expect ~24 routes across all three areas |
+| `npm run build` | Production build. Expect ~24 routes across all three areas. Clears Next's Data Cache first (`scripts/clear-data-cache.js`) so the prerendered pages carry the *current* `site_content`, not the copy the last build fetched |
 | `npm start` | Serve the production build on port 3200 |
 | `npm run lint` | ESLint over `src` |
 | `npm run typecheck` | `tsc --noEmit` |

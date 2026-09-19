@@ -36,10 +36,13 @@ import { describeError } from "@/lib/cpms/errors";
 import { supabase } from "@/lib/supabase/cpms-client";
 import { useAuth } from "@/hooks/cpms/useAuth";
 import { useHospitals } from "@/hooks/cpms/useHospitals";
+import { useRole } from "@/hooks/cpms/useRole";
 import ImagePreviewViewer from "@/components/cpms/ImagePreviewViewer";
 import AdditionalDocumentsUpload, { type CategorizedDocument } from "@/components/cpms/AdditionalDocumentsUpload";
+import DocumentCamera from "@/components/cpms/DocumentCamera";
 import DocumentProcessor from "@/components/cpms/DocumentProcessor";
 import { asset } from "@/lib/cpms/base-path";
+import type { Json } from "@shared/supabase-types";
 
 interface PriorVisitSummary {
   id: string;
@@ -162,14 +165,19 @@ const ScanPrescription = () => {
   const router = useRouter();
   const { user } = useAuth();
   const { hospitalOptions } = useHospitals();
+  const { canScan, canAccessHospital, loading: roleLoading } = useRole();
+
+  // Every enabled account can read the whole hospital list, but
+  // patient_records' insert policy requires user_has_hospital_access(). An
+  // unassigned hospital could therefore be picked here and only refused by the
+  // final insert -- after the extraction call and the upload had already
+  // happened. Offer only the hospitals that will actually save.
+  const permittedHospitals = hospitalOptions.filter((h) => canAccessHospital(h.value));
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   
   // Camera state
   const [isCameraOpen, setIsCameraOpen] = useState(false);
-  const [stream, setStream] = useState<MediaStream | null>(null);
   
   // Step tracking
   const [currentStep, setCurrentStep] = useState<FlowStep>('upload');
@@ -184,7 +192,6 @@ const ScanPrescription = () => {
   const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [uploadedImageUrl, setUploadedImageUrl] = useState<string | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   
   // Document processing state
@@ -194,6 +201,38 @@ const ScanPrescription = () => {
   // Additional documents
   const [additionalDocs, setAdditionalDocs] = useState<CategorizedDocument[]>([]);
   const [isUploadingDocs, setIsUploadingDocs] = useState(false);
+
+  // Minted when an extraction lands and held until the scan is reset, so
+  // pressing Save twice -- or retrying after a timeout that had in fact
+  // succeeded -- resolves to one record instead of two. create_patient_record()
+  // keys on it through patient_records.draft_id.
+  const [draftId, setDraftId] = useState<string | null>(null);
+
+  // What the model returned, before any correction. Sent with the commit so the
+  // record carries its own provenance: without it a saved record cannot be told
+  // apart from one a human typed from scratch.
+  const [extractionRaw, setExtractionRaw] = useState<Json | null>(null);
+
+  // Fields the model filled have to be looked at before they can be saved.
+  // Editing one counts as looking; so does pressing its own control.
+  //
+  // This is what replaces confidence_score as the gate. The extraction prompt
+  // tells the model to "Be generous with scoring" and that a reading with a
+  // name and one medicine "should be at least 70", so the number is engineered
+  // above the threshold the UI used to check it against and cannot flag a bad
+  // read. A human confirming the two fields that matter clinically can.
+  const [verifiedFields, setVerifiedFields] = useState<Set<string>>(new Set());
+
+  const markVerified = (key: string) =>
+    setVerifiedFields((prev) => (prev.has(key) ? prev : new Set(prev).add(key)));
+
+  const toggleVerified = (key: string) =>
+    setVerifiedFields((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
 
   // Prior visits for this Patient ID at this hospital
   const [priorVisits, setPriorVisits] = useState<PriorVisits | null>(null);
@@ -250,15 +289,28 @@ const ScanPrescription = () => {
   // Generate reference number when hospital is selected
   const handleHospitalChange = async (hospital: string) => {
     setSelectedHospital(hospital);
-    if (hospital) {
-      const ref = await generateReferenceNumber(hospital);
-      setReferenceNumber(ref);
-    } else {
+    if (!hospital) {
+      setReferenceNumber("");
+      return;
+    }
+    try {
+      setReferenceNumber(await generateReferenceNumber(hospital));
+    } catch {
+      // Only the preview. The number that gets stored is generated again at
+      // save time, so a failure here is not worth interrupting the scan for --
+      // and previously it threw out of an async event handler, which surfaced
+      // as an unhandled rejection with nothing shown to the user at all.
       setReferenceNumber("");
     }
   };
 
-  const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/jpg", "application/pdf"];
+  // Images only. A PDF could be selected before, but the extraction path could
+  // never read one: preprocessImage() cannot decode a PDF, so it forwarded the
+  // "data:application/pdf;base64," URL unchanged and the Edge Function's format
+  // check rejected it outright. Every PDF prescription failed with "Invalid
+  // image format" -- after the file had already been uploaded. Additional
+  // documents still accept PDF; those are stored, not extracted.
+  const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/jpg"];
 
   const handleFileSelect = (file: File) => {
     // Clear previous error
@@ -266,7 +318,7 @@ const ScanPrescription = () => {
 
     if (!ACCEPTED_TYPES.includes(file.type)) {
       const ext = file.name.split(".").pop()?.toUpperCase() || "Unknown";
-      const msg = `Unsupported file type: ${ext}. Please upload a JPG, PNG, or PDF.`;
+      const msg = `Unsupported file type: ${ext}. Please upload a JPG or PNG.`;
       setFileError(msg);
       toast.error(msg);
       // Reset native input so the same file can be reselected after fixing
@@ -282,23 +334,17 @@ const ScanPrescription = () => {
       return;
     }
     setSelectedFile(file);
-    if (file.type.startsWith("image/")) {
-      const reader = new FileReader();
-      reader.onerror = () => {
-        setFileError("Could not read the selected image. Please try again.");
-      };
-      reader.onloadend = () => {
-        const dataUrl = reader.result as string;
-        setRawPreview(dataUrl);
-        setPreview(dataUrl);
-        setShowDocProcessor(true);
-      };
-      reader.readAsDataURL(file);
-    } else {
-      setPreview(null);
-      setRawPreview(null);
-      setShowDocProcessor(false);
-    }
+    const reader = new FileReader();
+    reader.onerror = () => {
+      setFileError("Could not read the selected image. Please try again.");
+    };
+    reader.onloadend = () => {
+      const dataUrl = reader.result as string;
+      setRawPreview(dataUrl);
+      setPreview(dataUrl);
+      setShowDocProcessor(true);
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleDrop = useCallback((e: React.DragEvent) => {
@@ -322,7 +368,6 @@ const ScanPrescription = () => {
     setSelectedFile(null);
     setPreview(null);
     setExtractedData(null);
-    setUploadedImageUrl(null);
     setFileError(null);
     setShowDocProcessor(false);
     setRawPreview(null);
@@ -330,68 +375,6 @@ const ScanPrescription = () => {
       fileInputRef.current.value = "";
     }
   };
-
-  // Camera functions
-  const openCamera = async () => {
-    try {
-      const mediaStream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment', width: { ideal: 1920 }, height: { ideal: 1080 } }
-      });
-      setStream(mediaStream);
-      setIsCameraOpen(true);
-      
-      // Wait for video element to be mounted
-      setTimeout(() => {
-        if (videoRef.current) {
-          videoRef.current.srcObject = mediaStream;
-        }
-      }, 100);
-    } catch (error) {
-      console.error('Camera access error:', error);
-      toast.error("Unable to access camera. Please check permissions or use file upload instead.");
-    }
-  };
-
-  const closeCamera = () => {
-    if (stream) {
-      stream.getTracks().forEach(track => track.stop());
-      setStream(null);
-    }
-    setIsCameraOpen(false);
-  };
-
-  const capturePhoto = () => {
-    if (!videoRef.current || !canvasRef.current) return;
-    
-    const video = videoRef.current;
-    const canvas = canvasRef.current;
-    
-    canvas.width = video.videoWidth;
-    canvas.height = video.videoHeight;
-    
-    const ctx = canvas.getContext('2d');
-    if (!ctx) return;
-    
-    ctx.drawImage(video, 0, 0);
-    
-    canvas.toBlob((blob) => {
-      if (blob) {
-        const file = new File([blob], `prescription-${Date.now()}.jpg`, { type: 'image/jpeg' });
-        handleFileSelect(file);
-        closeCamera();
-        toast.success("Photo captured successfully!");
-      }
-    }, 'image/jpeg', 0.9);
-  };
-
-  // Cleanup camera stream on unmount
-  useEffect(() => {
-    return () => {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-      }
-    };
-  }, [stream]);
 
   // Downscale before sending to the model. This function always promised
   // preprocessing but the old body just base64'd the original, so a 4MB phone
@@ -450,35 +433,17 @@ const ScanPrescription = () => {
     setIsProcessing(true);
 
     try {
-      // The archive upload and the extraction both need the file but not each
-      // other's result, so they run concurrently. Previously the user waited
-      // for the full-size original to finish uploading before the model was
-      // even asked to start.
-      const fileExt = selectedFile.name.split('.').pop();
-      const fileName = `${user?.id}/${Date.now()}.${fileExt}`;
-
-      const uploadPromise = supabase.storage
-        .from('prescriptions')
-        .upload(fileName, selectedFile);
-
-      // Preprocess and convert file to base64 for AI processing
+      // Extraction only -- nothing is written until the operator commits in
+      // step 3. Uploading here is what left the bucket holding 14 unreferenced
+      // files against a single saved record: every abandoned scan and every
+      // retry after a failed extraction added one, and the bucket's
+      // admin-only delete policy meant the scanner who made them could not
+      // clear them. saveToDatabase() owns the upload now.
       const base64 = await preprocessImage(selectedFile);
 
-      // Call edge function for AI extraction with OCR
-      const [uploadResult, extraction] = await Promise.all([
-        uploadPromise,
-        supabase.functions.invoke('extract-prescription', {
-          body: { imageBase64: base64 }
-        }),
-      ]);
-
-      if (uploadResult.error) {
-        throw uploadResult.error;
-      }
-
-      setUploadedImageUrl(fileName);
-
-      const { data, error } = extraction;
+      const { data, error } = await supabase.functions.invoke('extract-prescription', {
+        body: { imageBase64: base64 },
+      });
 
       if (error) {
         // supabase-js wraps the raw Response in error.context — parse it to get
@@ -509,6 +474,10 @@ const ScanPrescription = () => {
       const extractedResult = normalizeExtractedData(data.data, selectedHospital);
 
       setExtractedData(extractedResult);
+      setExtractionRaw((data.data ?? null) as Json | null);
+      // A new reading is a new draft, and has to be confirmed from scratch.
+      setDraftId(crypto.randomUUID());
+      setVerifiedFields(new Set());
       toast.success("Prescription data extracted successfully!");
       
       // Move to additional documents step
@@ -549,6 +518,48 @@ const ScanPrescription = () => {
     return uploadedDocs;
   };
 
+  const removeMedicine = (index: number) => {
+    if (!extractedData) return;
+    setExtractedData({
+      ...extractedData,
+      medicines: extractedData.medicines.filter((_, i) => i !== index),
+    });
+    // A confirmation belongs to a row, not to a position. Without this,
+    // deleting the first row would hand its tick to the row that moves up into
+    // its place, and an unchecked medicine would count as checked.
+    setVerifiedFields((prev) => {
+      const next = new Set<string>();
+      prev.forEach((key) => {
+        const match = /^medicine:(\d+)$/.exec(key);
+        if (!match) {
+          next.add(key);
+          return;
+        }
+        const i = Number(match[1]);
+        if (i === index) return;
+        next.add(`medicine:${i > index ? i - 1 : i}`);
+      });
+      return next;
+    });
+  };
+
+  // Undo the uploads a failed save made.
+  //
+  // This only started working when the "prescriptions: uploader deletes own
+  // unreferenced" policy was added. The bucket's only delete policy was
+  // admins-only, so for every ordinary scanner this call was refused and the
+  // files stayed -- which is how 14 unreferenced objects accumulated against a
+  // single saved record.
+  const discardUploads = async (paths: string[]) => {
+    if (paths.length === 0) return;
+    const { error } = await supabase.storage.from('prescriptions').remove(paths);
+    if (error) {
+      // Nothing more to do from here, and the save has its own message to
+      // show. A sweeper for anything this misses is the follow-up.
+      console.error('[cpms] could not discard uploads after a failed save:', error.name);
+    }
+  };
+
   const proceedToReview = () => {
     const hasErrors = additionalDocs.some((d) => d.status === "error");
     const hasCompressing = additionalDocs.some((d) => d.status === "compressing");
@@ -587,103 +598,97 @@ const ScanPrescription = () => {
       return;
     }
 
+    if (!selectedFile) {
+      toast.error("The prescription image is missing. Please start the scan again.");
+      return;
+    }
+
     setIsProcessing(true);
 
+    // Every object this save puts in the bucket, so a failure can take them
+    // back out again. Nothing was written before this point.
+    const uploadedPaths: string[] = [];
+
     try {
+      // The prescription image, which the extraction step used to upload long
+      // before the operator had agreed to save anything.
+      const fileExt = selectedFile.name.split('.').pop();
+      const mainImagePath = `${user.id}/${Date.now()}.${fileExt}`;
+      const { error: mainUploadError } = await supabase.storage
+        .from('prescriptions')
+        .upload(mainImagePath, selectedFile);
+      if (mainUploadError) throw mainUploadError;
+      uploadedPaths.push(mainImagePath);
+
       // Upload additional documents if any
       let additionalDocsData: Array<{ name: string; url: string; type: string }> = [];
       if (additionalDocs.length > 0) {
         setIsUploadingDocs(true);
         additionalDocsData = await uploadAdditionalDocs();
         setIsUploadingDocs(false);
+        uploadedPaths.push(...additionalDocsData.map((d) => d.url).filter(Boolean));
       }
 
-      // Generate reference number and insert with retry on unique-violation
-      let insertError: any = null;
-      let freshRef = "";
-      const MAX_ATTEMPTS = 5;
-      for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-        freshRef = await generateReferenceNumber(selectedHospital);
+      // One call allocates the reference number and inserts the row inside a
+      // single transaction. The five-attempt retry loop this replaces existed
+      // because the browser did those in two round trips, so the advisory lock
+      // in generate_reference_number() was released before the insert arrived
+      // and two scanners could read the same number. It is also the server, not
+      // the client, that now decides permissions and stamps uploaded_by.
+      const draft = draftId ?? crypto.randomUUID();
+      if (!draftId) setDraftId(draft);
 
-        const { error } = await supabase.from('patient_records').insert({
-          patient_id: patientId.trim(),
-          patient_name: extractedData.patient_name,
-          age: extractedData.age ? Math.round(Number(extractedData.age)) : null,
-          gender: extractedData.gender,
-          height_cm: extractedData.height_cm ? Number(extractedData.height_cm) : null,
-          weight_kg: extractedData.weight_kg ? Number(extractedData.weight_kg) : null,
-          bmi: calculateBMI(extractedData.height_cm, extractedData.weight_kg),
-          hospital: selectedHospital,
-          doctor_name: extractedData.doctor_name,
-          diagnosis: extractedData.diagnosis,
-          medicines: extractedData.medicines,
-          visit_date: extractedData.visit_date || new Date().toISOString().split('T')[0],
-          prescription_image_url: uploadedImageUrl,
-          uploaded_by: user.id,
-          additional_documents: additionalDocsData,
-          reference_number: freshRef,
-          uhid: extractedData.uhid,
-          confidence_score: extractedData.confidence_score,
-        });
-
-        if (!error) {
-          insertError = null;
-          break;
-        }
-
-        const isDupRef =
-          (error as any).code === '23505' &&
-          (error.message?.includes('patient_records_reference_number_key') ||
-            error.message?.includes('reference_number'));
-
-        if (isDupRef && attempt < MAX_ATTEMPTS) {
-          // Brief jitter, then regenerate and retry
-          await new Promise((r) => setTimeout(r, 100 + Math.random() * 200));
-          continue;
-        }
-
-        insertError = error;
-        break;
-      }
-
-      setReferenceNumber(freshRef);
+      const { data: created, error: insertError } = await supabase.rpc('create_patient_record', {
+        _draft_id: draft,
+        _patient_id: patientId.trim(),
+        _patient_name: extractedData.patient_name.trim(),
+        _hospital: selectedHospital,
+        _uhid: extractedData.uhid ?? undefined,
+        _age: extractedData.age != null ? Math.round(Number(extractedData.age)) : undefined,
+        _gender: extractedData.gender ?? undefined,
+        _height_cm: extractedData.height_cm ?? undefined,
+        _weight_kg: extractedData.weight_kg ?? undefined,
+        _bmi: calculateBMI(extractedData.height_cm, extractedData.weight_kg) ?? undefined,
+        // Left null deliberately when the scan carried no date: the function
+        // defaults it to today, which is what the review step warned about.
+        _visit_date: extractedData.visit_date ?? undefined,
+        _doctor_name: extractedData.doctor_name ?? undefined,
+        _diagnosis: extractedData.diagnosis ?? undefined,
+        _medicines: extractedData.medicines as unknown as Json,
+        _additional_documents: additionalDocsData as unknown as Json,
+        _prescription_image_url: mainImagePath,
+        _confidence_score: extractedData.confidence_score ?? undefined,
+        _extraction_raw: extractionRaw ?? undefined,
+      });
 
       if (insertError) {
-        // The attachments were uploaded before the insert, and uploadAdditionalDocs()
-        // re-uploads every "ready" doc to a fresh randomised path on each attempt.
-        // Without this, each failed save leaves a full duplicate set in the bucket
-        // with no record referencing it — invisible to the audit trail.
-        // The main prescription image is deliberately left in place: it is uploaded
-        // during extraction and a retry of this save still points at it.
-        if (additionalDocsData.length > 0) {
-          const orphanedPaths = additionalDocsData.map((d) => d.url).filter(Boolean);
-          if (orphanedPaths.length > 0) {
-            const { error: cleanupError } = await supabase.storage
-              .from('prescriptions')
-              .remove(orphanedPaths);
-            if (cleanupError) {
-              console.error('[cpms] failed to clean up orphaned uploads:', cleanupError.name);
-            }
-          }
-        }
+        // Nothing references these files, so take them back out. Pressing
+        // Save again re-uploads the lot to fresh randomised paths, so leaving
+        // them behind accumulates a full duplicate set per failed attempt with
+        // no record pointing at any of it.
+        await discardUploads(uploadedPaths);
 
-        if (insertError.message?.includes('row-level security policy')) {
-          toast.error("Access denied: You don't have permission to add records for this hospital. Please contact your administrator.");
-        } else if (
-          (insertError as any).code === '23505' &&
-          (insertError.message?.includes('patient_records_reference_number_key') ||
-            insertError.message?.includes('reference_number'))
-        ) {
-          toast.error("Could not generate a unique reference number. Please try again.");
+        // create_patient_record() raises these two classes itself, with
+        // wording written for this screen ("You are not assigned to this
+        // hospital"), so they are safe to show as-is. Everything else goes
+        // through describeError, which strips database detail.
+        const code = (insertError as { code?: string }).code;
+        if (code === '42501' || code === '22004') {
+          toast.error(insertError.message);
         } else {
           toast.error(describeError(insertError, 'Could not save the patient record. Please try again.'));
         }
         return;
       }
 
+      // The number the database actually stored, read back from the commit --
+      // never a locally generated guess.
+      const createdRow = Array.isArray(created) ? created[0] : created;
+      setReferenceNumber(createdRow?.created_reference_number ?? '');
       setIsSuccess(true);
       toast.success("Patient data saved successfully!");
     } catch (error) {
+      await discardUploads(uploadedPaths);
       toast.error(describeError(error, 'Could not save the patient record. Please try again.'));
     } finally {
       setIsProcessing(false);
@@ -698,12 +703,44 @@ const ScanPrescription = () => {
     setReferenceNumber("");
     setExtractedData(null);
     setIsSuccess(false);
-    setUploadedImageUrl(null);
+    setVerifiedFields(new Set());
+    setDraftId(null);
+    setExtractionRaw(null);
     setAdditionalDocs([]);
     setCurrentStep('upload');
     setShowDocProcessor(false);
     setRawPreview(null);
   };
+
+  // What still has to be confirmed before this record can be saved.
+  const outstandingChecks: string[] = extractedData
+    ? [
+        ...(verifiedFields.has('patient_name') ? [] : ['the patient name']),
+        ...(extractedData.medicines.length === 0
+          ? verifiedFields.has('medicines_none')
+            ? []
+            : ['that this prescription lists no medicines']
+          : extractedData.medicines
+              .map((_, i) => i)
+              .filter((i) => !verifiedFields.has(`medicine:${i}`))
+              .map((i) => `medicine ${i + 1}`)),
+      ]
+    : [];
+
+  const readyToSave =
+    !!extractedData &&
+    extractedData.patient_name.trim() !== '' &&
+    outstandingChecks.length === 0;
+
+  // Saving stamps today when the scan carried no date. The record should not
+  // acquire a visit date nobody chose without the operator having seen it.
+  const visitDateFallback = new Date().toISOString().split('T')[0];
+
+  // Patient ID and uhid are two readings of the same hospital UHID: the one the
+  // operator types and the one the model reads off the page. When they disagree
+  // one of them is wrong, and nothing used to say so.
+  const extractedUhid = extractedData?.uhid?.trim() || '';
+  const uhidMismatch = extractedUhid !== '' && extractedUhid !== patientId.trim();
 
   // Step indicator component
   const StepIndicator = () => (
@@ -730,6 +767,69 @@ const ScanPrescription = () => {
       </div>
     </div>
   );
+
+  // Refused here rather than at the last step. can_scan is enforced by the
+  // Edge Function, by the bucket's insert policy and by patient_records' insert
+  // policy, but ProtectedRoute only checks that the account is enabled and has
+  // finished onboarding -- so without this an account without the permission
+  // could fill in the whole of step 1 and the first thing to refuse it would be
+  // the upload at save time.
+  if (!roleLoading && !canScan) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col">
+        <header className="sticky top-0 z-50 bg-card border-b-2 border-border p-4">
+          <div className="max-w-7xl mx-auto flex items-center gap-4">
+            <Button variant="ghost" size="icon" onClick={() => router.push(asset("/dashboard"))}>
+              <ArrowLeft className="h-5 w-5" />
+            </Button>
+            <div className="flex items-center gap-2">
+              <div className="h-10 w-10 bg-primary flex items-center justify-center">
+                <Activity className="h-6 w-6 text-primary-foreground" />
+              </div>
+              <span className="font-bold text-xl tracking-tight">Scan Prescription</span>
+            </div>
+          </div>
+        </header>
+
+        <main className="flex-1 p-4 lg:p-8 flex items-center justify-center">
+          <Card className="max-w-lg w-full border-2">
+            <CardContent className="p-8 text-center space-y-4">
+              <div className="h-16 w-16 bg-secondary mx-auto flex items-center justify-center">
+                <AlertTriangle className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h2 className="text-xl font-bold">Scanning isn&apos;t enabled for your account</h2>
+              <p className="text-sm text-muted-foreground">
+                Prescription scanning needs the scan permission. Ask an administrator to grant it,
+                then reload this page.
+              </p>
+              <Button onClick={() => router.push(asset("/dashboard"))} className="w-full">
+                Back to Dashboard
+              </Button>
+            </CardContent>
+          </Card>
+        </main>
+      </div>
+    );
+  }
+
+  const VerifyCheck = ({ fieldKey, label = 'Confirm' }: { fieldKey: string; label?: string }) => {
+    const done = verifiedFields.has(fieldKey);
+    return (
+      <button
+        type="button"
+        onClick={() => toggleVerified(fieldKey)}
+        aria-pressed={done}
+        className={`inline-flex items-center gap-1 shrink-0 px-2 py-0.5 text-xs font-medium border transition-colors ${
+          done
+            ? 'border-green-600 text-green-700 bg-green-500/10'
+            : 'border-yellow-600 text-yellow-700 bg-yellow-500/10 hover:bg-yellow-500/20'
+        }`}
+      >
+        <CheckCircle className={`h-3 w-3 ${done ? '' : 'opacity-40'}`} />
+        {done ? 'Checked' : label}
+      </button>
+    );
+  };
 
   if (isSuccess) {
     return (
@@ -817,7 +917,7 @@ const ScanPrescription = () => {
 
       {/* Main Content */}
       <main className="flex-1 p-4 lg:p-8">
-        <div className="max-w-4xl mx-auto space-y-6">
+        <div className={`${currentStep === 'review' ? 'max-w-6xl' : 'max-w-4xl'} mx-auto space-y-6`}>
           <StepIndicator />
 
           {/* STEP 1: OCR Upload */}
@@ -847,14 +947,14 @@ const ScanPrescription = () => {
                     <input
                       ref={fileInputRef}
                       type="file"
-                      accept="image/jpeg,image/png,image/jpg,application/pdf"
+                      accept="image/jpeg,image/png,image/jpg"
                       className="hidden"
                       onChange={(e) => e.target.files?.[0] && handleFileSelect(e.target.files[0])}
                     />
                     <Upload className={`h-12 w-12 mx-auto mb-4 ${fileError ? "text-destructive" : "text-muted-foreground"}`} />
                     <p className="font-medium mb-2">Drag & drop your prescription here</p>
                     <p className="text-sm text-muted-foreground mb-4">
-                      Supports JPG, PNG, PDF (max 10MB)
+                      Supports JPG, PNG (max 10MB)
                     </p>
                     <div className="flex flex-col sm:flex-row gap-3 justify-center">
                       <Button type="button" variant="outline" className="gap-2">
@@ -867,47 +967,13 @@ const ScanPrescription = () => {
                         className="gap-2"
                         onClick={(e) => {
                           e.stopPropagation();
-                          openCamera();
+                          setIsCameraOpen(true);
                         }}
                       >
                         <Camera className="h-4 w-4" />
                         Take Photo
                       </Button>
                     </div>
-                    
-                    {/* Camera Modal */}
-                    {isCameraOpen && (
-                      <div 
-                        className="fixed inset-0 z-50 bg-background/95 flex flex-col"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <div className="flex items-center justify-between p-4 border-b border-border">
-                          <h3 className="font-semibold text-lg">Take Photo</h3>
-                          <Button variant="ghost" size="icon" onClick={closeCamera}>
-                            <X className="h-5 w-5" />
-                          </Button>
-                        </div>
-                        <div className="flex-1 flex items-center justify-center p-4 overflow-hidden">
-                          <video
-                            ref={videoRef}
-                            autoPlay
-                            playsInline
-                            muted
-                            className="max-w-full max-h-full object-contain border-2 border-border"
-                          />
-                          <canvas ref={canvasRef} className="hidden" />
-                        </div>
-                        <div className="p-4 border-t border-border flex justify-center gap-4">
-                          <Button variant="outline" onClick={closeCamera}>
-                            Cancel
-                          </Button>
-                          <Button onClick={capturePhoto} className="gap-2">
-                            <Camera className="h-4 w-4" />
-                            Capture
-                          </Button>
-                        </div>
-                      </div>
-                    )}
                   </div>
                 ) : (
                   <div className="space-y-3">
@@ -947,7 +1013,7 @@ const ScanPrescription = () => {
                     ) : (
                       <div className="relative w-full h-48 border-2 border-border bg-secondary flex flex-col items-center justify-center gap-2">
                         <FileText className="h-16 w-16 text-muted-foreground" />
-                        <p className="text-sm text-muted-foreground">PDF preview not available</p>
+                        <p className="text-sm text-muted-foreground">Preview unavailable</p>
                         <Button
                           variant="destructive"
                           size="icon"
@@ -979,7 +1045,7 @@ const ScanPrescription = () => {
                       <p className="text-sm font-semibold text-destructive">Upload failed</p>
                       <p className="text-sm text-destructive/90 break-words">{fileError}</p>
                       <p className="text-xs text-muted-foreground mt-1">
-                        Allowed: JPG, PNG, PDF · Max 10 MB
+                        Allowed: JPG, PNG · Max 10 MB
                       </p>
                     </div>
                     <Button
@@ -1015,13 +1081,19 @@ const ScanPrescription = () => {
                       <SelectValue placeholder="Choose hospital for this record" />
                     </SelectTrigger>
                     <SelectContent>
-                      {hospitalOptions.map((hospital) => (
+                      {permittedHospitals.map((hospital) => (
                         <SelectItem key={hospital.value} value={hospital.value}>
                           {hospital.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
+                  {permittedHospitals.length === 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      You aren&apos;t assigned to any hospital yet, so there is nowhere to file this
+                      record. Ask an administrator to assign you one.
+                    </p>
+                  )}
                 </div>
 
                 {/* Returning patient notice */}
@@ -1143,28 +1215,95 @@ const ScanPrescription = () => {
 
           {/* STEP 3: Review */}
           {currentStep === 'review' && extractedData && (
-            <Card className={`border-2 ${(extractedData.confidence_score || 0) < 70 ? 'border-yellow-500' : 'border-primary'}`}>
+            <div className="grid gap-6 lg:grid-cols-2 lg:items-start">
+              {/* The prescription itself. This step asked the operator to
+                  confirm extracted values against a page they could no longer
+                  see -- the one thing a review step has to show. */}
+              <Card className="border-2 lg:sticky lg:top-24">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="h-5 w-5" />
+                    The prescription
+                  </CardTitle>
+                  <CardDescription>
+                    Check each field against this image. Pinch, scroll or use the buttons to zoom.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {preview ? (
+                    <ImagePreviewViewer
+                      src={preview}
+                      alt="Prescription being reviewed"
+                      className="w-full h-[360px] lg:h-[560px]"
+                    />
+                  ) : (
+                    <div className="w-full h-[360px] border-2 border-border bg-secondary flex flex-col items-center justify-center gap-2">
+                      <FileText className="h-12 w-12 text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">Preview unavailable</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className={`border-2 ${readyToSave ? 'border-primary' : 'border-yellow-500'}`}>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <CheckCircle className="h-5 w-5 text-accent-foreground" />
                   Step 3: Review & Edit
                 </CardTitle>
                 <CardDescription>
-                  Review and correct the extracted information before saving
+                  Correct anything the scan misread, then confirm the patient name and every
+                  medicine before saving.
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
+                    {/* Anything the save would decide on its own, said out loud
+                        before it happens rather than discovered afterwards. */}
+                    {(!extractedData.visit_date || uhidMismatch) && (
+                      <div className="space-y-2">
+                        {!extractedData.visit_date && (
+                          <div role="alert" className="flex items-start gap-2 p-3 border-2 border-yellow-600 bg-yellow-500/10">
+                            <AlertTriangle className="h-4 w-4 text-yellow-700 shrink-0 mt-0.5" />
+                            <p className="text-sm">
+                              No visit date was read from this prescription. Saving now records{' '}
+                              <span className="font-medium">
+                                {new Date(visitDateFallback).toLocaleDateString()}
+                              </span>
+                              . Set the correct date below if you know it.
+                            </p>
+                          </div>
+                        )}
+                        {uhidMismatch && (
+                          <div role="alert" className="flex items-start gap-2 p-3 border-2 border-yellow-600 bg-yellow-500/10">
+                            <AlertTriangle className="h-4 w-4 text-yellow-700 shrink-0 mt-0.5" />
+                            <p className="text-sm">
+                              The scan reads UHID{' '}
+                              <span className="font-mono font-medium">{extractedUhid}</span>, which
+                              is not the Patient ID you entered (
+                              <span className="font-mono font-medium">{patientId.trim()}</span>).
+                              Check you are filing against the right patient.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                     <div className="grid sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="edit-patient-id">Patient ID</Label>
                         <Input id="edit-patient-id" value={patientId} disabled className="font-mono bg-muted" />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="edit-patient-name">Patient Name *</Label>
-                        <Input 
-                          id="edit-patient-name" 
-                          value={extractedData.patient_name} 
-                          onChange={(e) => setExtractedData({...extractedData, patient_name: e.target.value})}
+                        <div className="flex items-center justify-between gap-2">
+                          <Label htmlFor="edit-patient-name">Patient Name *</Label>
+                          <VerifyCheck fieldKey="patient_name" />
+                        </div>
+                        <Input
+                          id="edit-patient-name"
+                          value={extractedData.patient_name}
+                          onChange={(e) => {
+                            setExtractedData({...extractedData, patient_name: e.target.value});
+                            markVerified('patient_name');
+                          }}
                         />
                       </div>
                       <div className="space-y-2">
@@ -1239,15 +1378,22 @@ const ScanPrescription = () => {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label>Confidence Score</Label>
+                        <Label>Model self-report</Label>
                         <div className="flex items-center gap-2 h-10">
-                          <span className={`font-medium ${(extractedData.confidence_score || 0) >= 85 ? 'text-green-600' : (extractedData.confidence_score || 0) >= 70 ? 'text-yellow-600' : 'text-red-600'}`}>
-                            {extractedData.confidence_score || 0}%
+                          <span className="font-medium text-muted-foreground">
+                            {extractedData.confidence_score ?? 0}%
                           </span>
-                          {(extractedData.confidence_score || 0) < 70 && (
-                            <span className="text-xs text-muted-foreground">(Low - Please verify)</span>
-                          )}
                         </div>
+                        {/* Deliberately not colour-coded, and no longer a gate.
+                            The prompt instructs the model to score generously
+                            and to stay at or above 70 whenever it read a name
+                            and one medicine, so a high number here says nothing
+                            about whether the reading is right. The confirmations
+                            are the check that does. */}
+                        <p className="text-xs text-muted-foreground">
+                          The model&apos;s own estimate. Not a reliability measure &mdash; confirm the
+                          fields against the image regardless.
+                        </p>
                       </div>
                       <div className="sm:col-span-2 space-y-2">
                         <Label htmlFor="edit-diagnosis">Diagnosis</Label>
@@ -1277,61 +1423,85 @@ const ScanPrescription = () => {
                         </Button>
                       </div>
                       {extractedData.medicines && extractedData.medicines.length > 0 ? (
-                        extractedData.medicines.map((med, index) => (
-                          <div key={index} className="grid grid-cols-2 sm:grid-cols-5 gap-2 p-3 bg-secondary border border-border">
-                            <Input 
-                              placeholder="Medicine name"
-                              value={med.name} 
-                              onChange={(e) => {
-                                const newMeds = [...extractedData.medicines];
-                                newMeds[index] = {...newMeds[index], name: e.target.value};
-                                setExtractedData({...extractedData, medicines: newMeds});
-                              }}
-                              className="col-span-2 sm:col-span-1"
-                            />
-                            <Input 
-                              placeholder="Dosage"
-                              value={med.dosage} 
-                              onChange={(e) => {
-                                const newMeds = [...extractedData.medicines];
-                                newMeds[index] = {...newMeds[index], dosage: e.target.value};
-                                setExtractedData({...extractedData, medicines: newMeds});
-                              }}
-                            />
-                            <Input 
-                              placeholder="Frequency"
-                              value={med.frequency} 
-                              onChange={(e) => {
-                                const newMeds = [...extractedData.medicines];
-                                newMeds[index] = {...newMeds[index], frequency: e.target.value};
-                                setExtractedData({...extractedData, medicines: newMeds});
-                              }}
-                            />
-                            <Input 
-                              placeholder="Duration"
-                              value={med.duration} 
-                              onChange={(e) => {
-                                const newMeds = [...extractedData.medicines];
-                                newMeds[index] = {...newMeds[index], duration: e.target.value};
-                                setExtractedData({...extractedData, medicines: newMeds});
-                              }}
-                            />
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="icon"
-                              className="text-destructive hover:text-destructive"
-                              onClick={() => {
-                                const newMeds = extractedData.medicines.filter((_, i) => i !== index);
-                                setExtractedData({...extractedData, medicines: newMeds});
-                              }}
+                        extractedData.medicines.map((med, index) => {
+                          // Editing any part of a row counts as having checked
+                          // it -- you cannot retype a dose without reading it.
+                          const setField = (
+                            field: 'name' | 'dosage' | 'frequency' | 'duration',
+                            value: string,
+                          ) => {
+                            const newMeds = [...extractedData.medicines];
+                            newMeds[index] = { ...newMeds[index], [field]: value };
+                            setExtractedData({ ...extractedData, medicines: newMeds });
+                            markVerified(`medicine:${index}`);
+                          };
+                          const checked = verifiedFields.has(`medicine:${index}`);
+                          return (
+                            <div
+                              key={index}
+                              className={`p-3 bg-secondary border space-y-2 ${
+                                checked ? 'border-border' : 'border-yellow-600'
+                              }`}
                             >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        ))
+                              <div className="flex items-center justify-between gap-2">
+                                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                                  Medicine {index + 1}
+                                </span>
+                                <div className="flex items-center gap-1">
+                                  <VerifyCheck fieldKey={`medicine:${index}`} label="Confirm dose" />
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-7 w-7 text-destructive hover:text-destructive"
+                                    onClick={() => removeMedicine(index)}
+                                    aria-label={`Remove medicine ${index + 1}`}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-2 gap-2">
+                                <Input
+                                  placeholder="Medicine name"
+                                  value={med.name}
+                                  onChange={(e) => setField('name', e.target.value)}
+                                  className="col-span-2"
+                                />
+                                <Input
+                                  placeholder="Dosage"
+                                  value={med.dosage}
+                                  onChange={(e) => setField('dosage', e.target.value)}
+                                />
+                                <Input
+                                  placeholder="Frequency"
+                                  value={med.frequency}
+                                  onChange={(e) => setField('frequency', e.target.value)}
+                                />
+                                <Input
+                                  placeholder="Duration"
+                                  value={med.duration}
+                                  onChange={(e) => setField('duration', e.target.value)}
+                                  className="col-span-2"
+                                />
+                              </div>
+                            </div>
+                          );
+                        })
                       ) : (
-                        <p className="text-muted-foreground text-sm p-3 bg-secondary">No medicines extracted - click "Add Medicine" to add</p>
+                        // An empty list is a claim about the prescription, not
+                        // an absence of data, so it needs confirming too --
+                        // otherwise a failed read of the medicine block saves
+                        // as a prescription with no medicines on it.
+                        <div className="p-3 bg-secondary border-2 border-yellow-600 space-y-2">
+                          <p className="text-sm">The scan found no medicines on this prescription.</p>
+                          <div className="flex flex-wrap items-center gap-2">
+                            <VerifyCheck fieldKey="medicines_none" label="Confirm there are none" />
+                            <span className="text-xs text-muted-foreground">
+                              or add them with &ldquo;Add Medicine&rdquo; above.
+                            </span>
+                          </div>
+                        </div>
                       )}
                     </div>
 
@@ -1363,6 +1533,17 @@ const ScanPrescription = () => {
                   </div>
                 )}
 
+                {/* Still to confirm */}
+                {outstandingChecks.length > 0 && (
+                  <div className="flex items-start gap-2 p-3 border-2 border-yellow-600 bg-yellow-500/10">
+                    <AlertTriangle className="h-4 w-4 text-yellow-700 shrink-0 mt-0.5" />
+                    <p className="text-sm">
+                      Confirm against the image before saving:{' '}
+                      <span className="font-medium">{outstandingChecks.join(', ')}</span>.
+                    </p>
+                  </div>
+                )}
+
                 {/* Action buttons */}
                 <div className="flex flex-col sm:flex-row gap-3">
                   <Button
@@ -1375,7 +1556,7 @@ const ScanPrescription = () => {
                   <Button
                     className="flex-1 h-12"
                     onClick={saveToDatabase}
-                    disabled={isProcessing || !extractedData.patient_name.trim()}
+                    disabled={isProcessing || !readyToSave}
                   >
                     {isProcessing ? (
                       <>
@@ -1388,7 +1569,8 @@ const ScanPrescription = () => {
                   </Button>
                 </div>
               </CardContent>
-            </Card>
+              </Card>
+            </div>
           )}
         </div>
       </main>
@@ -1412,6 +1594,18 @@ const ScanPrescription = () => {
           </Button>
         </div>
       )}
+
+      <DocumentCamera
+        open={isCameraOpen}
+        title="Take Photo · Prescription"
+        hint="Line the prescription up inside the dashed guide."
+        fileName={() => `prescription-${Date.now()}.jpg`}
+        onCapture={(file) => {
+          handleFileSelect(file);
+          toast.success("Photo captured successfully!");
+        }}
+        onClose={() => setIsCameraOpen(false)}
+      />
 
       {/* Spacer for mobile fixed button */}
       {currentStep === 'upload' && selectedFile && selectedHospital && patientId.trim() && (

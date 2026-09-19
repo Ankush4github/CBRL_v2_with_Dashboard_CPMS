@@ -1,0 +1,15 @@
+// The .mts scripts in this folder run under `npx tsx` in Node, not in the
+// browser and not through Next's build. The root tsconfig's include
+// ("**/*.ts") never picks them up, so without this file an editor falls back
+// to an inferred project with no @types/node and reports `process` as an
+// unknown name.
+{
+  "extends": "../tsconfig.json",
+  "compilerOptions": {
+    // They import from src/ with an explicit .ts extension, which tsx
+    // resolves at runtime; nothing here is emitted, so allow it.
+    "allowImportingTsExtensions": true,
+    "types": ["node"]
+  },
+  "include": ["**/*.mts"]
+}

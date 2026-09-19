@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { PDFDocument, rgb, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
+import { CBRL_LOGO_PNG_BASE64 } from "./cbrl-logo.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -54,19 +55,14 @@ async function fetchImageAsBytes(supabase: any, filePath: string): Promise<Uint8
   }
 }
 
-async function fetchLogoFromUrl(url: string): Promise<Uint8Array | null> {
-  try {
-    const response = await fetch(url);
-    if (!response.ok) {
-      console.error("Error fetching logo:", response.status);
-      return null;
-    }
-    const arrayBuffer = await response.arrayBuffer();
-    return new Uint8Array(arrayBuffer);
-  } catch (err) {
-    console.error("Error fetching logo:", err);
-    return null;
+/** The bundled CBRL mark, as PNG bytes pdf-lib can embed. */
+function decodeLogoBytes(): Uint8Array {
+  const binary = atob(CBRL_LOGO_PNG_BASE64.replace(/\s+/g, ""));
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i);
   }
+  return bytes;
 }
 
 function wrapText(text: string, maxWidth: number, font: any, fontSize: number): string[] {
@@ -91,6 +87,66 @@ function wrapText(text: string, maxWidth: number, font: any, fontSize: number): 
   }
 
   return lines;
+}
+
+/**
+ * A `Content-Disposition` value that suggests `stem`.pdf as the download name.
+ *
+ * Every part of that name comes from the patient record, which is to say from
+ * Gemini's reading of whatever was on the prescription, or from an operator
+ * typing over it on the review screen. `patient_name`, `reference_number` and
+ * `patient_id` are all plain `text` with no constraints, so three separate
+ * things go wrong when the value reaches the header as-is:
+ *
+ *   - a `"` closes the quoted string early. `Asha" ; filename="x` yields
+ *     `filename="Asha"; filename="x_record.pdf"`, so the caller decides both
+ *     the download name and what other parameters are present.
+ *   - a CR or LF is rejected by the Headers constructor, which throws - and
+ *     that throw lands in the catch-all below, turning a download into a 500.
+ *   - a character above U+00FF cannot go in a header value at all ("Cannot
+ *     convert argument to a ByteString"), so it throws the same way. Patient
+ *     names in Bengali or Devanagari are routine here, which means those
+ *     records could not be exported at all.
+ *
+ * So the name is sent twice, which is what RFC 6266 prescribes: a plain
+ * `filename` reduced to characters every client can parse, and a
+ * `filename*=UTF-8''...` carrying the real one for clients that understand it -
+ * all current browsers. A name with nothing left after reduction falls back to
+ * a fixed stem rather than an empty `filename=""`.
+ */
+function pdfContentDisposition(stem: string): string {
+  // One line, bounded length: the pieces below are free text of any size, and a
+  // header is not the place to discover that. Path separators go here rather
+  // than in the ASCII pass below so that the percent-encoded `filename*` cannot
+  // carry a traversal either.
+  const clean =
+    stem
+      .replace(/[\\/]+/g, "_")
+      .replace(/\s+/g, " ")
+      .trim()
+      .slice(0, 120) || "patient_record";
+
+  const ascii =
+    clean
+      // Decompose first, so an accented "Jose" reduces to "Jose", not "Jos_".
+      .normalize("NFKD")
+      .replace(/[\u0300-\u036f]/g, "")
+      // Anything else - quotes, backslashes, semicolons, path separators, every
+      // non-Latin script - collapses to a single underscore.
+      .replace(/[^A-Za-z0-9._-]+/g, "_")
+      // No leading dot or dash: a name must not read as hidden, relative, or as
+      // a flag to whatever the file is later handed to.
+      .replace(/^[._-]+/, "")
+      .replace(/[._-]+$/, "") || "patient_record";
+
+  // encodeURIComponent leaves !'()* alone, which RFC 5987's ext-value grammar
+  // does not permit, so they are escaped too.
+  const encoded = encodeURIComponent(clean).replace(
+    /['()!*]/g,
+    (c) => `%${c.charCodeAt(0).toString(16).toUpperCase()}`
+  );
+
+  return `attachment; filename="${ascii}.pdf"; filename*=UTF-8''${encoded}.pdf`;
 }
 
 function getDocTypeLabel(docType?: string): string {
@@ -132,8 +188,21 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    // Checked rather than asserted with `!`: an absent variable used to reach
+    // createClient() and throw "supabaseKey is required", which the catch below
+    // then reported to the caller. Naming the failure here keeps the response
+    // generic and puts the real reason in the logs.
+    const supabaseUrl = Deno.env.get("SUPABASE_URL");
+    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
+
+    if (!supabaseUrl || !supabaseServiceKey || !supabaseAnonKey) {
+      console.error("[SERVER] Missing Supabase configuration");
+      return new Response(JSON.stringify({ error: "Service configuration error" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
 
     // Get auth header from request
     const authHeader = req.headers.get("Authorization");
@@ -145,7 +214,7 @@ Deno.serve(async (req) => {
     }
 
     // Create client with user's auth token to verify access
-    const supabaseUser = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY")!, {
+    const supabaseUser = createClient(supabaseUrl, supabaseAnonKey, {
       global: { headers: { Authorization: authHeader } },
     });
 
@@ -213,24 +282,20 @@ Deno.serve(async (req) => {
     let page = pdfDoc.addPage([pageWidth, pageHeight]);
     let y = pageHeight - margin;
 
-    // Try to add CBRL logo from storage
-    let logoWidth = 0;
+    // CBRL mark, left of the letterhead. 46pt tall and offset so its top sits
+    // on the cap line of "CPMS" across the page and its foot lands just above
+    // the title: the two halves of the header read as one band, and nothing
+    // reaches into "PATIENT RECORD" below. A logo that will not embed is not
+    // worth failing an export over, so the header simply goes out plain.
     try {
-      const logoBytes = await fetchImageAsBytes(supabaseAdmin, "cbrl-logo.png");
-      if (logoBytes) {
-        const logoImage = await pdfDoc.embedPng(logoBytes);
-        const logoHeight = 50;
-        logoWidth = (logoImage.width / logoImage.height) * logoHeight;
-        page.drawImage(logoImage, {
-          x: margin,
-          y: y - logoHeight + 15,
-          width: logoWidth,
-          height: logoHeight,
-        });
-        console.info("CBRL logo added successfully");
-      } else {
-        console.warn("Logo not found in storage, skipping");
-      }
+      const logoImage = await pdfDoc.embedPng(decodeLogoBytes());
+      const logoHeight = 42;
+      page.drawImage(logoImage, {
+        x: margin,
+        y: y - logoHeight + 20,
+        width: (logoImage.width / logoImage.height) * logoHeight,
+        height: logoHeight,
+      });
     } catch (logoErr) {
       console.error("Error embedding logo:", logoErr);
     }
@@ -293,9 +358,13 @@ Deno.serve(async (req) => {
     y -= 20;
 
     const metadata = [
-      ["Hospital", patient.hospital],
-      ["Reference No", patient.reference_number || "N/A"],
-      ["UHID", patient.uhid || patient.patient_id || "N/A"],
+      ["Hospital Name", patient.hospital],
+      ["CPMS No.", patient.reference_number || "N/A"],
+      // patient_id is the hospital UHID the operator typed and reconciled against
+      // the scan; uhid is only what the model read off the page. Preferring the
+      // verified reading means a misread the operator deliberately overrode does
+      // not resurface on the PDF.
+      ["Hospital UHID", patient.patient_id || patient.uhid || "N/A"],
       ["Created At", patient.created_at ? formatIST(new Date(patient.created_at)) + " IST" : "N/A"],
     ];
 
@@ -557,13 +626,15 @@ Deno.serve(async (req) => {
     console.log("PDF generated successfully, size:", pdfBytes.length);
 
     // Return PDF
-    const fileName = `${patient.patient_name.replace(/\s+/g, "_")}_${patient.reference_number || patient.patient_id}_record.pdf`;
+    const stem = [patient.patient_name, patient.reference_number || patient.patient_id, "record"]
+      .filter((part) => typeof part === "string" && part.trim() !== "")
+      .join("_");
 
     return new Response(new Uint8Array(pdfBytes).buffer, {
       headers: {
         ...corsHeaders,
         "Content-Type": "application/pdf",
-        "Content-Disposition": `attachment; filename="${fileName}"`,
+        "Content-Disposition": pdfContentDisposition(stem),
       },
     });
   } catch (error) {

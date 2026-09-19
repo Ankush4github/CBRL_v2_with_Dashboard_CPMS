@@ -121,7 +121,8 @@ const SECTIONS: Section[] = [
     id: "signin",
     title: "Signing in for the first time",
     icon: LogIn,
-    keywords: "login sign in google onboarding profile setup logout timeout inactivity",
+    keywords:
+      "login sign in google onboarding profile setup logout timeout inactivity invite invitation pending activation activate waiting approval",
     body: (
       <>
         <P>
@@ -129,7 +130,21 @@ const SECTIONS: Section[] = [
           your Google account isn't the one your administrator registered, sign out of Google first
           and retry.
         </P>
-        <P>The first time you sign in you'll complete a short setup form:</P>
+        <P>
+          Most people are <strong>invited</strong> before they ever open CPMS. A master
+          administrator registers the Google address you will sign in with, together with your role
+          and the hospitals you work at, and those are applied automatically the moment you first
+          sign in. You do not need the invitation in your inbox — there is nothing to click, and no
+          link to lose.
+        </P>
+        <P>
+          Signing in is not the same as having access. You will land on a{" "}
+          <strong>Pending activation</strong> screen, which shows the role and hospitals you were
+          given and stays there until an administrator switches the account on. Nothing is lost
+          while you wait: when they tell you it is done, press <strong>Check again</strong> on that
+          screen and you go straight in, without signing in a second time.
+        </P>
+        <P>Once the account is active, you complete a short setup form:</P>
         <UL>
           <li>
             <strong>Laboratory / Hospital Name</strong> — free text, up to 100 characters.
@@ -199,7 +214,9 @@ const SECTIONS: Section[] = [
         <UL>
           <li>Drag and drop a file, click to browse, or use Take Photo for the device camera.</li>
           <li>
-            Accepted: <strong>JPG, PNG, PDF</strong>. Maximum <strong>10 MB</strong>.
+            Accepted: <strong>JPG or PNG</strong>. Maximum <strong>10 MB</strong>. PDFs cannot be
+            read by the extraction step, so photograph or screenshot the prescription instead; PDFs
+            are still fine as additional documents in step 2.
           </li>
           <li>
             The document processor opens automatically for images — drag the corner handles to crop,
@@ -405,7 +422,8 @@ const SECTIONS: Section[] = [
     id: "roles",
     title: "Roles and what each can do",
     icon: Shield,
-    keywords: "roles permissions user admin master access enabled can scan can upload",
+    keywords:
+      "roles permissions user admin master access enabled can scan can upload invite invitation activate pending onboarding new staff",
     body: (
       <>
         <div className="overflow-x-auto">
@@ -440,6 +458,31 @@ const SECTIONS: Section[] = [
             </TableBody>
           </Table>
         </div>
+        <p className="font-semibold text-sm mb-2">Bringing someone new in (masters)</p>
+        <P>
+          User Management has an <strong>Invite</strong> button. Enter the Google address, pick a
+          role and at least one hospital, and the invitation waits until that person signs in — at
+          which point they receive exactly what was chosen and appear under{" "}
+          <strong>Awaiting approval</strong>. Press <strong>Activate</strong> there and they are in.
+        </P>
+        <UL>
+          <li>
+            Open invitations are listed under <strong>Invited, not signed in yet</strong>, and can
+            be revoked until they are taken up.
+          </li>
+          <li>
+            Inviting sends no email. Tell the person to open CPMS and sign in with Google.
+          </li>
+          <li>
+            An invitation only works for an address that has never signed in. For an existing
+            account, edit it in the table instead.
+          </li>
+          <li>
+            A new <strong>master</strong> cannot be invited directly — invite them as Admin,
+            activate the account, then change the role. Nobody can create permissions for an
+            account that already outranks them.
+          </li>
+        </UL>
         <P>Your administrator can additionally switch off individual permissions:</P>
         <UL>
           <li>
@@ -486,8 +529,9 @@ const SECTIONS: Section[] = [
           reload. As a fallback, take a photo with your normal camera app and upload the file.
         </Tip>
         <Tip q="&quot;Unsupported file type&quot; or &quot;File too large&quot;.">
-          Prescriptions must be JPG, PNG, or PDF under 10 MB. Additional documents must be under 5 MB
-          after automatic compression.
+          Prescriptions must be JPG or PNG under 10 MB — PDF is not accepted for the prescription
+          itself. Additional documents may be PDF, JPG or PNG, and must be under 5 MB after
+          automatic compression.
         </Tip>
         <Tip q="&quot;Service temporarily busy. Please try again in a moment.&quot;">
           The AI extraction service is rate-limited right now. Wait a few seconds and click Extract

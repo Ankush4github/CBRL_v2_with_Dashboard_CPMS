@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/cpms/useAuth";
 import { useRole } from "@/hooks/cpms/useRole";
 import { asset } from "@/lib/cpms/base-path";
+import { landingRouteFor, type LandingRoute } from "@/lib/cpms/access";
 
 /**
  * Route guards ported from the Vite app's App.tsx.
@@ -52,71 +53,111 @@ export const ProfileErrorScreen = () => {
   );
 };
 
-/** Requires auth AND completed onboarding. */
-export const ProtectedRoute = ({ children }: { children: ReactNode }) => {
+type Placement =
+  | { status: "loading" }
+  | { status: "signed-out" }
+  | { status: "profile-error" }
+  | { status: "resolved"; route: LandingRoute };
+
+/**
+ * Where this visitor belongs, or why we cannot say yet.
+ *
+ * Every guard below asks this and then compares the answer to the route it is
+ * standing on. Previously each spelled out its own share of the rule inline,
+ * which is how /onboarding and /dashboard could both decide the other one was
+ * right and bounce a user between them; there is now one rule, in
+ * lib/cpms/access.ts, and one place that reads the state it needs.
+ *
+ * Role is part of that state now, so the guards wait for `roleLoading` too.
+ * That is a third condition to settle before anything renders, but it is the
+ * one that separates "not activated yet" from "activated" — deciding without it
+ * would send every account to the pending screen for a frame, activated ones
+ * included.
+ */
+function usePlacement(): Placement {
   const { user, profile, loading, profileLoaded, profileError } = useAuth();
+  const { isAdmin, permissions, loading: roleLoading } = useRole();
+
+  if (loading) return { status: "loading" };
+  if (!user) return { status: "signed-out" };
+  if (profileError) return { status: "profile-error" };
+  // Wait for the profile fetch to settle — not merely for `profile` to be
+  // non-null. A null profile is otherwise indistinguishable from a pending one.
+  if (!profileLoaded || roleLoading) return { status: "loading" };
+
+  return {
+    status: "resolved",
+    route: landingRouteFor({
+      isAdminOrHigher: isAdmin,
+      // `=== true` so a null permissions object — a failed fetch, or no row at
+      // all — reads as not enabled, which is how the database reads it.
+      isEnabled: permissions?.is_enabled === true,
+      onboardingCompleted: profile?.onboarding_completed === true,
+    }),
+  };
+}
+
+/**
+ * Shared body for the three guards that gate one route each: send the visitor
+ * wherever they belong, and render the children only when that is here.
+ */
+const RouteFor = ({ here, children }: { here: LandingRoute; children: ReactNode }) => {
+  const placement = usePlacement();
   const router = useRouter();
 
-  const redirectTo = !loading && !user
-    ? "/"
-    : !loading && !profileError && profileLoaded && profile && !profile.onboarding_completed
-      ? "/onboarding"
-      : null;
+  const redirectTo =
+    placement.status === "signed-out"
+      ? "/"
+      : placement.status === "resolved" && placement.route !== here
+        ? placement.route
+        : null;
 
   useEffect(() => {
     if (redirectTo) router.replace(asset(redirectTo));
   }, [redirectTo, router]);
 
-  if (loading) return <LoadingSpinner />;
-  if (!user) return <LoadingSpinner />;
-  if (profileError) return <ProfileErrorScreen />;
-  // Wait for the profile fetch to settle — not merely for `profile` to be non-null
-  if (!profileLoaded) return <LoadingSpinner />;
-  if (redirectTo) return <LoadingSpinner />;
+  if (placement.status === "profile-error") return <ProfileErrorScreen />;
+  if (placement.status !== "resolved" || redirectTo) return <LoadingSpinner />;
 
   return <>{children}</>;
 };
 
-/** Requires auth but NOT completed onboarding. */
-export const OnboardingRoute = ({ children }: { children: ReactNode }) => {
-  const { user, profile, loading, profileLoaded, profileError } = useAuth();
-  const router = useRouter();
+/** Requires auth, an activated account, AND completed onboarding. */
+export const ProtectedRoute = ({ children }: { children: ReactNode }) => (
+  <RouteFor here="/dashboard">{children}</RouteFor>
+);
 
-  const redirectTo = !loading && !user
-    ? "/"
-    : !loading && !profileError && profileLoaded && profile && profile.onboarding_completed
-      ? "/dashboard"
-      : null;
+/** Requires auth and an activated account, but NOT completed onboarding. */
+export const OnboardingRoute = ({ children }: { children: ReactNode }) => (
+  <RouteFor here="/onboarding">{children}</RouteFor>
+);
 
-  useEffect(() => {
-    if (redirectTo) router.replace(asset(redirectTo));
-  }, [redirectTo, router]);
-
-  if (loading) return <LoadingSpinner />;
-  if (!user) return <LoadingSpinner />;
-  if (profileError) return <ProfileErrorScreen />;
-  if (!profileLoaded) return <LoadingSpinner />;
-  if (redirectTo) return <LoadingSpinner />;
-
-  return <>{children}</>;
-};
+/**
+ * Requires auth and an account that is not yet activated.
+ *
+ * Once an administrator enables the account this stops matching and the same
+ * comparison that kept them here moves them on, without the pending screen
+ * needing to navigate anywhere itself.
+ */
+export const PendingRoute = ({ children }: { children: ReactNode }) => (
+  <RouteFor here="/pending">{children}</RouteFor>
+);
 
 /** Redirects already-authenticated users away from the sign-in page. */
 export const PublicRoute = ({ children }: { children: ReactNode }) => {
-  const { user, profile, loading } = useAuth();
+  const { user, loading } = useAuth();
+  const placement = usePlacement();
   const router = useRouter();
 
-  const redirectTo = !loading && user
-    ? profile && !profile.onboarding_completed
-      ? "/onboarding"
-      : "/dashboard"
-    : null;
+  const redirectTo = placement.status === "resolved" ? placement.route : null;
 
   useEffect(() => {
     if (redirectTo) router.replace(asset(redirectTo));
   }, [redirectTo, router]);
 
   if (loading) return <LoadingSpinner />;
+  // A signed-in visitor never sees the sign-in page, including for the frame or
+  // two it takes their profile and role to load and the redirect to fire.
   if (user) return <LoadingSpinner />;
 
   return <>{children}</>;

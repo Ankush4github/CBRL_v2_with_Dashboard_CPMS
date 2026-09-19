@@ -225,6 +225,8 @@ export type Database = {
           created_at: string | null
           diagnosis: string | null
           doctor_name: string | null
+          draft_id: string | null
+          extraction_raw: Json | null
           gender: string | null
           height_cm: number | null
           hospital: string
@@ -248,6 +250,8 @@ export type Database = {
           created_at?: string | null
           diagnosis?: string | null
           doctor_name?: string | null
+          draft_id?: string | null
+          extraction_raw?: Json | null
           gender?: string | null
           height_cm?: number | null
           hospital: string
@@ -271,6 +275,8 @@ export type Database = {
           created_at?: string | null
           diagnosis?: string | null
           doctor_name?: string | null
+          draft_id?: string | null
+          extraction_raw?: Json | null
           gender?: string | null
           height_cm?: number | null
           hospital?: string
@@ -432,6 +438,45 @@ export type Database = {
         }
         Relationships: []
       }
+      staff_invitations: {
+        Row: {
+          accepted_at: string | null
+          accepted_by: string | null
+          created_at: string
+          email: string
+          hospitals: string[]
+          id: string
+          invited_by: string | null
+          revoked_at: string | null
+          revoked_by: string | null
+          role: Database["public"]["Enums"]["app_role"]
+        }
+        Insert: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email: string
+          hospitals: string[]
+          id?: string
+          invited_by?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
+        }
+        Update: {
+          accepted_at?: string | null
+          accepted_by?: string | null
+          created_at?: string
+          email?: string
+          hospitals?: string[]
+          id?: string
+          invited_by?: string | null
+          revoked_at?: string | null
+          revoked_by?: string | null
+          role?: Database["public"]["Enums"]["app_role"]
+        }
+        Relationships: []
+      }
       user_permissions: {
         Row: {
           can_scan: boolean | null
@@ -496,6 +541,36 @@ export type Database = {
         Args: { _admin_id: string; _target_user_id: string }
         Returns: boolean
       }
+      can_manage_user: {
+        Args: { _actor_id: string; _target_user_id: string }
+        Returns: boolean
+      }
+      create_patient_record: {
+        Args: {
+          _additional_documents?: Json
+          _age?: number
+          _bmi?: number
+          _confidence_score?: number
+          _diagnosis?: string
+          _doctor_name?: string
+          _draft_id: string
+          _extraction_raw?: Json
+          _gender?: string
+          _height_cm?: number
+          _hospital: string
+          _medicines?: Json
+          _patient_id: string
+          _patient_name: string
+          _prescription_image_url?: string
+          _uhid?: string
+          _visit_date?: string
+          _weight_kg?: number
+        }
+        Returns: {
+          created_id: string
+          created_reference_number: string
+        }[]
+      }
       generate_reference_number: {
         Args: { _hospital: string }
         Returns: string
@@ -511,6 +586,12 @@ export type Database = {
       is_admin_or_higher: { Args: { _user_id: string }; Returns: boolean }
       is_master: { Args: { _user_id: string }; Returns: boolean }
       is_site_editor: { Args: { _user_id: string }; Returns: boolean }
+      norm_audit_value: { Args: { _value: string }; Returns: string }
+      prescription_object_is_referenced: {
+        Args: { _path: string }
+        Returns: boolean
+      }
+      role_rank: { Args: { _role: string }; Returns: number }
       user_can_scan: { Args: { _user_id: string }; Returns: boolean }
       user_has_hospital_access: {
         Args: { _hospital: string; _user_id: string }
@@ -542,12 +623,12 @@ export type Tables<
   DefaultSchemaTableNameOrOptions extends
     | keyof (DefaultSchema["Tables"] & DefaultSchema["Views"])
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof (DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"] &
         DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Views"])
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -571,11 +652,11 @@ export type TablesInsert<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -596,11 +677,11 @@ export type TablesUpdate<
   DefaultSchemaTableNameOrOptions extends
     | keyof DefaultSchema["Tables"]
     | { schema: keyof DatabaseWithoutInternals },
-  TableName extends DefaultSchemaTableNameOrOptions extends {
+  TableName extends (DefaultSchemaTableNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaTableNameOrOptions["schema"]]["Tables"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaTableNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -621,11 +702,11 @@ export type Enums<
   DefaultSchemaEnumNameOrOptions extends
     | keyof DefaultSchema["Enums"]
     | { schema: keyof DatabaseWithoutInternals },
-  EnumName extends DefaultSchemaEnumNameOrOptions extends {
+  EnumName extends (DefaultSchemaEnumNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[DefaultSchemaEnumNameOrOptions["schema"]]["Enums"]
-    : never = never,
+    : never) = never,
 > = DefaultSchemaEnumNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
@@ -638,11 +719,11 @@ export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
     | keyof DefaultSchema["CompositeTypes"]
     | { schema: keyof DatabaseWithoutInternals },
-  CompositeTypeName extends PublicCompositeTypeNameOrOptions extends {
+  CompositeTypeName extends (PublicCompositeTypeNameOrOptions extends {
     schema: keyof DatabaseWithoutInternals
   }
     ? keyof DatabaseWithoutInternals[PublicCompositeTypeNameOrOptions["schema"]]["CompositeTypes"]
-    : never = never,
+    : never) = never,
 > = PublicCompositeTypeNameOrOptions extends {
   schema: keyof DatabaseWithoutInternals
 }
