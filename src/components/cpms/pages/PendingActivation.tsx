@@ -24,9 +24,19 @@ import { toast } from "sonner";
  * accounts that reached it were often the ones an administrator was in the
  * middle of setting up.
  *
- * The state it describes is the absence of an enabled `user_permissions` row.
- * That is also precisely what UserManagement.tsx lists under "Awaiting
- * approval", so the two screens are the two ends of the same queue.
+ * The state it describes is the absence of an *enabled* `user_permissions`
+ * row, and that covers two different situations:
+ *
+ *   - No row at all. This is the new-signup case, and it is exactly what
+ *     UserManagement.tsx lists under "Awaiting approval" -- the two screens are
+ *     the two ends of that one queue.
+ *   - A row with `is_enabled = false`. An administrator switched this account
+ *     off on purpose. It is deliberately *not* in the approval queue; it is in
+ *     the main user table, badged "Disabled", where it can be switched back on.
+ *
+ * The copy below tells them apart, because "an administrator still has to
+ * switch it on" is the wrong thing to say to somebody whose access was taken
+ * away, and it sends them to ask for something nobody is waiting to do.
  */
 
 const roleLabels: Record<string, string> = {
@@ -38,7 +48,12 @@ const roleLabels: Record<string, string> = {
 const PendingActivation = () => {
   const router = useRouter();
   const { user, signOut } = useAuth();
-  const { role, assignedHospitals, refetch } = useRole();
+  const { role, assignedHospitals, refetch, permissions, hasPermissionsRow } = useRole();
+
+  // A row that exists and says false was switched off; no row at all has never
+  // been switched on. `permissions` alone cannot tell these apart -- it reads a
+  // missing row as all-false, the way the database does.
+  const switchedOff = hasPermissionsRow && permissions?.is_enabled === false;
   const [checking, setChecking] = useState(false);
 
   /**
@@ -66,6 +81,10 @@ const PendingActivation = () => {
       if (data?.is_enabled === true) {
         toast.success("Your account is active. Taking you in…");
         await refetch();
+      } else if (switchedOff) {
+        toast("Your access is still switched off.", {
+          description: "Nothing has changed yet. You will not need to sign in again — just check back.",
+        });
       } else {
         toast("Still waiting on your administrator.", {
           description: "Nothing has changed yet. You will not need to sign in again — just check back.",
@@ -112,11 +131,13 @@ const PendingActivation = () => {
                 <Hourglass className="h-6 w-6 text-primary" />
               </div>
               <div className="space-y-1.5">
-                <CardTitle className="text-xl sm:text-2xl">Pending activation</CardTitle>
+                <CardTitle className="text-xl sm:text-2xl">
+                  {switchedOff ? "Access switched off" : "Pending activation"}
+                </CardTitle>
                 <CardDescription className="text-sm leading-relaxed">
-                  Your account has been created and your access is already set up. An
-                  administrator still has to switch it on before you can open patient records or
-                  check in for a shift.
+                  {switchedOff
+                    ? "Your account is set up, but an administrator has switched its access off. Until it is switched back on you cannot open patient records or check in for a shift."
+                    : "Your account has been created and your access is already set up. An administrator still has to switch it on before you can open patient records or check in for a shift."}
                 </CardDescription>
               </div>
             </CardHeader>
@@ -183,8 +204,9 @@ const PendingActivation = () => {
 
               <p className="text-xs text-muted-foreground leading-relaxed">
                 Nothing is lost while you wait — your account keeps the role and hospitals above.
-                If this is taking longer than you expected, contact the person who invited you or
-                write to{" "}
+                {switchedOff
+                  ? " If you were not expecting this, ask your administrator why the account was switched off, or write to "
+                  : " If this is taking longer than you expected, contact the person who invited you or write to "}
                 <a href="mailto:contact.cbrl@smst.iitkgp.ac.in" className="underline hover:text-foreground">
                   contact.cbrl@smst.iitkgp.ac.in
                 </a>

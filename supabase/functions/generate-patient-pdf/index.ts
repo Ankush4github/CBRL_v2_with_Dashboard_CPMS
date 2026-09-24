@@ -55,7 +55,14 @@ async function fetchImageAsBytes(supabase: any, filePath: string): Promise<Uint8
   }
 }
 
-/** The bundled CBRL mark, as PNG bytes pdf-lib can embed. */
+/**
+ * The bundled CBRL mark, as PNG bytes pdf-lib can embed.
+ *
+ * Decoded once per isolate rather than once per export: the constant is ~100 KB
+ * of base64, so every call re-ran a whole-string replace, an atob, and a
+ * charCodeAt loop over 100k characters before a single line of the PDF was
+ * drawn.
+ */
 function decodeLogoBytes(): Uint8Array {
   const binary = atob(CBRL_LOGO_PNG_BASE64.replace(/\s+/g, ""));
   const bytes = new Uint8Array(binary.length);
@@ -64,6 +71,8 @@ function decodeLogoBytes(): Uint8Array {
   }
   return bytes;
 }
+
+const CBRL_LOGO_BYTES = decodeLogoBytes();
 
 function wrapText(text: string, maxWidth: number, font: any, fontSize: number): string[] {
   const words = text.split(" ");
@@ -288,7 +297,7 @@ Deno.serve(async (req) => {
     // reaches into "PATIENT RECORD" below. A logo that will not embed is not
     // worth failing an export over, so the header simply goes out plain.
     try {
-      const logoImage = await pdfDoc.embedPng(decodeLogoBytes());
+      const logoImage = await pdfDoc.embedPng(CBRL_LOGO_BYTES);
       const logoHeight = 42;
       page.drawImage(logoImage, {
         x: margin,

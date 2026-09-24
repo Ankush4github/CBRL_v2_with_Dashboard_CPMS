@@ -10,6 +10,7 @@ import {
   ReactNode,
 } from "react";
 import { supabase } from "@/lib/supabase/cpms-client";
+import { describeError } from "@/lib/cpms/errors";
 import { useAuth } from "./useAuth";
 
 export type UserRole = "master" | "admin" | "user";
@@ -31,6 +32,21 @@ interface UseRoleReturn {
   isAdmin: boolean;
   isUser: boolean;
   permissions: UserPermissions | null;
+  /**
+   * Whether a `user_permissions` row exists at all, as opposed to one whose
+   * columns are false. `permissions` cannot answer this -- it COALESCEs a
+   * missing row to all-false the way the database does -- and the pending
+   * screen has to tell "nobody has set you up yet" apart from "an
+   * administrator switched you off".
+   */
+  hasPermissionsRow: boolean;
+  /**
+   * Set when the role or permissions read *failed*, as opposed to coming back
+   * empty. Both fail closed, but they are not the same thing to say to
+   * somebody: a blip must not be reported as "your administrator has not
+   * activated you yet".
+   */
+  error: string | null;
   assignedHospitals: string[];
   canAccessHospital: (hospital: string) => boolean;
   canScan: boolean;
@@ -47,18 +63,23 @@ export const RoleProvider = ({ children }: { children: ReactNode }) => {
   const [role, setRole] = useState<UserRole>("user");
   const [loading, setLoading] = useState(true);
   const [permissions, setPermissions] = useState<UserPermissions | null>(null);
+  const [hasPermissionsRow, setHasPermissionsRow] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [assignedHospitals, setAssignedHospitals] = useState<string[]>([]);
 
   const fetchRoleData = useCallback(async () => {
     if (!user) {
       setRole("user");
       setPermissions(null);
+      setHasPermissionsRow(false);
+      setError(null);
       setAssignedHospitals([]);
       setLoading(false);
       return;
     }
 
     setLoading(true);
+    setError(null);
     try {
       // Fetch user role using the database function
       const { data: roleData, error: roleError } = await supabase
@@ -66,6 +87,10 @@ export const RoleProvider = ({ children }: { children: ReactNode }) => {
 
       if (roleError) {
         console.error("Error fetching role:", roleError);
+        // Placement depends on this answer, so a failure has to be visible.
+        // Defaulting to "user" and carrying on is what sent an administrator
+        // to the staff dashboard on a bad network.
+        setError(describeError(roleError, "Could not read your role."));
       } else {
         setRole((roleData as UserRole) || "user");
       }
@@ -79,6 +104,11 @@ export const RoleProvider = ({ children }: { children: ReactNode }) => {
 
       if (permError) {
         console.error("Error fetching permissions:", permError);
+        // Same reasoning, and this one decides the pending screen. Leaving
+        // `permissions` null still fails closed; what changes is that the
+        // guards can now say "we could not check" instead of asserting that an
+        // administrator has not activated the account.
+        setError(describeError(permError, "Could not read your permissions."));
       } else {
         // Deny by default when no user_permissions row exists. handle_new_user()
         // creates profiles + user_roles but NOT user_permissions, so every new
@@ -95,6 +125,7 @@ export const RoleProvider = ({ children }: { children: ReactNode }) => {
           can_upload: permData?.can_upload ?? false,
           is_enabled: permData?.is_enabled ?? false,
         });
+        setHasPermissionsRow(permData !== null);
       }
 
       // Fetch hospital assignments
@@ -108,8 +139,9 @@ export const RoleProvider = ({ children }: { children: ReactNode }) => {
       } else {
         setAssignedHospitals((hospitalData || []).map((h: HospitalAssignment) => h.hospital));
       }
-    } catch (error) {
-      console.error("Error in useRole:", error);
+    } catch (caught) {
+      console.error("Error in useRole:", caught);
+      setError(describeError(caught, "Could not load your access."));
     } finally {
       setLoading(false);
     }
@@ -143,6 +175,8 @@ export const RoleProvider = ({ children }: { children: ReactNode }) => {
       isAdmin,
       isUser,
       permissions,
+      hasPermissionsRow,
+      error,
       assignedHospitals,
       canAccessHospital,
       canScan,
@@ -155,6 +189,8 @@ export const RoleProvider = ({ children }: { children: ReactNode }) => {
       isAdmin,
       isUser,
       permissions,
+      hasPermissionsRow,
+      error,
       assignedHospitals,
       canAccessHospital,
       canScan,

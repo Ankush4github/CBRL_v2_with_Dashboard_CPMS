@@ -71,7 +71,14 @@ interface ExtractedData {
   hospital_name: string; // Note: bmi is computed via calculateBMI, not stored in ExtractedData
   doctor_name: string | null;
   diagnosis: string | null;
-  medicines: Array<{ name: string; dosage: string; frequency: string; duration: string }>;
+  /**
+   * `_id` is client-side only and is stripped before saving. Confirmations are
+   * keyed to it rather than to an array index: a tick belongs to a medicine,
+   * not to a position, and keying by position meant every delete had to
+   * renumber the whole confirmation set by hand -- correct only for a delete,
+   * and silently wrong for an insert, a reorder or an undo.
+   */
+  medicines: Array<{ _id: string; name: string; dosage: string; frequency: string; duration: string }>;
   visit_date: string | null;
   uhid: string | null;
   reference_number: string | null;
@@ -79,6 +86,41 @@ interface ExtractedData {
 }
 
 type FlowStep = 'upload' | 'additional-docs' | 'review';
+
+/** The confirmation key for a medicine row. */
+const medicineKey = (id: string) => `medicine:${id}`;
+
+/**
+ * The confirm/checked toggle beside a reviewed field.
+ *
+ * Module scope, not the render body. Declared inside the component it was a new
+ * component *type* on every render, so React unmounted and remounted every one
+ * of these buttons whenever any review state changed -- which drops keyboard
+ * focus to <body> mid-review and loses the aria-pressed announcement.
+ */
+const VerifyCheck = ({
+  done,
+  label = 'Confirm',
+  onToggle,
+}: {
+  done: boolean;
+  label?: string;
+  onToggle: () => void;
+}) => (
+  <button
+    type="button"
+    onClick={onToggle}
+    aria-pressed={done}
+    className={`inline-flex items-center gap-1 shrink-0 px-2 py-0.5 text-xs font-medium border transition-colors ${
+      done
+        ? 'border-green-600 text-green-700 bg-green-500/10'
+        : 'border-yellow-600 text-yellow-700 bg-yellow-500/10 hover:bg-yellow-500/20'
+    }`}
+  >
+    <CheckCircle className={`h-3 w-3 ${done ? '' : 'opacity-40'}`} />
+    {done ? 'Checked' : label}
+  </button>
+);
 
 // Calculate BMI from height (cm) and weight (kg), rounded to 2 decimal places
 const calculateBMI = (heightCm: number | null, weightKg: number | null): number | null => {
@@ -132,6 +174,7 @@ const normalizeExtractedData = (raw: unknown, hospitalName: string): ExtractedDa
     medicines: rawMedicines.map((medicine) => {
       const med = (medicine ?? {}) as Record<string, unknown>;
       return {
+        _id: crypto.randomUUID(),
         name: asText(med.name),
         dosage: asText(med.dosage),
         frequency: asText(med.frequency),
@@ -174,7 +217,6 @@ const ScanPrescription = () => {
   // happened. Offer only the hospitals that will actually save.
   const permittedHospitals = hospitalOptions.filter((h) => canAccessHospital(h.value));
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
   
   // Camera state
   const [isCameraOpen, setIsCameraOpen] = useState(false);
@@ -207,6 +249,10 @@ const ScanPrescription = () => {
   // succeeded -- resolves to one record instead of two. create_patient_record()
   // keys on it through patient_records.draft_id.
   const [draftId, setDraftId] = useState<string | null>(null);
+  // How many documents the saved record actually holds. The success card used
+  // to render additionalDocs.length -- the local pick list, which includes any
+  // that failed validation and never went anywhere.
+  const [savedDocCount, setSavedDocCount] = useState(0);
 
   // What the model returned, before any correction. Sent with the commit so the
   // record carries its own provenance: without it a saved record cannot be told
@@ -489,8 +535,21 @@ const ScanPrescription = () => {
     }
   };
 
-  // Upload additional documents to storage
-  const uploadAdditionalDocs = async (): Promise<Array<{ name: string; url: string; type: string; docType: string }>> => {
+  /**
+   * Upload the attached documents, or fail the save.
+   *
+   * `uploadedPaths` is the caller's undo list and is appended to as each object
+   * lands, so a failure part-way through can still take back the ones that did.
+   *
+   * This used to `continue` past a failed upload: the record then committed
+   * without that document, and the success screen counted it as filed anyway.
+   * A supporting document silently missing from a clinical record is the one
+   * outcome this flow must not produce, so a failure now stops the save with
+   * the file named and nothing written.
+   */
+  const uploadAdditionalDocs = async (
+    uploadedPaths: string[],
+  ): Promise<Array<{ name: string; url: string; type: string; docType: string }>> => {
     const uploadedDocs: Array<{ name: string; url: string; type: string; docType: string }> = [];
     const readyDocs = additionalDocs.filter((d) => d.status === "ready");
     
@@ -504,9 +563,12 @@ const ScanPrescription = () => {
       
       if (error) {
         console.error(`Failed to upload ${doc.file.name}:`, error);
-        continue;
+        throw new Error(
+          `"${doc.file.name}" could not be uploaded, so nothing has been saved. Please try again.`,
+        );
       }
       
+      uploadedPaths.push(fileName);
       uploadedDocs.push({
         name: doc.file.name,
         url: fileName,
@@ -518,27 +580,19 @@ const ScanPrescription = () => {
     return uploadedDocs;
   };
 
-  const removeMedicine = (index: number) => {
+  const removeMedicine = (id: string) => {
     if (!extractedData) return;
     setExtractedData({
       ...extractedData,
-      medicines: extractedData.medicines.filter((_, i) => i !== index),
+      medicines: extractedData.medicines.filter((m) => m._id !== id),
     });
-    // A confirmation belongs to a row, not to a position. Without this,
-    // deleting the first row would hand its tick to the row that moves up into
-    // its place, and an unchecked medicine would count as checked.
+    // One delete, because the key names the row. The version this replaces had
+    // to regex every confirmation out of the set and shift the indices above
+    // the deleted one down by hand.
     setVerifiedFields((prev) => {
-      const next = new Set<string>();
-      prev.forEach((key) => {
-        const match = /^medicine:(\d+)$/.exec(key);
-        if (!match) {
-          next.add(key);
-          return;
-        }
-        const i = Number(match[1]);
-        if (i === index) return;
-        next.add(`medicine:${i > index ? i - 1 : i}`);
-      });
+      if (!prev.has(medicineKey(id))) return prev;
+      const next = new Set(prev);
+      next.delete(medicineKey(id));
       return next;
     });
   };
@@ -609,7 +663,39 @@ const ScanPrescription = () => {
     // back out again. Nothing was written before this point.
     const uploadedPaths: string[] = [];
 
+    // A draft id that already exists means an earlier attempt reached the
+    // upload stage. That attempt may well have committed -- a lost response
+    // looks exactly like a failure from here.
+    const isRetry = draftId !== null;
+
     try {
+      // So ask, before uploading anything. create_patient_record() is
+      // idempotent on _draft_id: it returns the existing row untouched, which
+      // means a blind retry uploads a whole second set of files that the saved
+      // record will never point at, and that the bucket's delete policy then
+      // refuses to clean up for anyone but an admin.
+      if (isRetry && draftId) {
+        const { data: alreadySaved, error: lookupError } = await supabase
+          .from('patient_records')
+          .select('reference_number, additional_documents')
+          .eq('draft_id', draftId)
+          .maybeSingle();
+
+        if (lookupError) {
+          // Not fatal: saving the record matters more than the orphans a
+          // duplicate upload would leave, and the check after the insert is a
+          // second chance at those.
+          console.error('[cpms] could not check for an existing draft:', lookupError.code);
+        } else if (alreadySaved) {
+          const stored = alreadySaved.additional_documents;
+          setSavedDocCount(Array.isArray(stored) ? stored.length : 0);
+          setReferenceNumber(alreadySaved.reference_number ?? '');
+          setIsSuccess(true);
+          toast.success('This record was already saved.');
+          return;
+        }
+      }
+
       // The prescription image, which the extraction step used to upload long
       // before the operator had agreed to save anything.
       const fileExt = selectedFile.name.split('.').pop();
@@ -624,9 +710,10 @@ const ScanPrescription = () => {
       let additionalDocsData: Array<{ name: string; url: string; type: string }> = [];
       if (additionalDocs.length > 0) {
         setIsUploadingDocs(true);
-        additionalDocsData = await uploadAdditionalDocs();
+        // Appends to uploadedPaths itself, so a throw part-way through still
+        // leaves the undo list complete.
+        additionalDocsData = await uploadAdditionalDocs(uploadedPaths);
         setIsUploadingDocs(false);
-        uploadedPaths.push(...additionalDocsData.map((d) => d.url).filter(Boolean));
       }
 
       // One call allocates the reference number and inserts the row inside a
@@ -649,12 +736,19 @@ const ScanPrescription = () => {
         _height_cm: extractedData.height_cm ?? undefined,
         _weight_kg: extractedData.weight_kg ?? undefined,
         _bmi: calculateBMI(extractedData.height_cm, extractedData.weight_kg) ?? undefined,
-        // Left null deliberately when the scan carried no date: the function
-        // defaults it to today, which is what the review step warned about.
-        _visit_date: extractedData.visit_date ?? undefined,
+        // The date the banner showed the operator, not null. The function
+        // still defaults a null to current_date, but that is the *server's*
+        // today -- a different day from the operator's for part of every day --
+        // and the review step made them an exact promise about which one.
+        _visit_date: extractedData.visit_date ?? visitDateFallback,
         _doctor_name: extractedData.doctor_name ?? undefined,
         _diagnosis: extractedData.diagnosis ?? undefined,
-        _medicines: extractedData.medicines as unknown as Json,
+        // Without the `_id`s: they are a client-side handle for the
+        // confirmation ticks. Storing them would both pollute the record and
+        // make every medicines provenance comparison read as a correction.
+        _medicines: extractedData.medicines.map(
+          ({ _id, ...medicine }) => medicine,
+        ) as unknown as Json,
         _additional_documents: additionalDocsData as unknown as Json,
         _prescription_image_url: mainImagePath,
         _confidence_score: extractedData.confidence_score ?? undefined,
@@ -684,6 +778,23 @@ const ScanPrescription = () => {
       // The number the database actually stored, read back from the commit --
       // never a locally generated guess.
       const createdRow = Array.isArray(created) ? created[0] : created;
+
+      // The pre-flight check above cannot see a row that committed while this
+      // attempt was in the air. If what came back is a record pointing at some
+      // earlier attempt's image, everything this attempt uploaded belongs to
+      // nothing -- and unlike the referenced files, it can still be removed.
+      if (isRetry && createdRow?.created_id) {
+        const { data: storedRow } = await supabase
+          .from('patient_records')
+          .select('prescription_image_url')
+          .eq('id', createdRow.created_id)
+          .maybeSingle();
+        if (storedRow && storedRow.prescription_image_url !== mainImagePath) {
+          await discardUploads(uploadedPaths);
+        }
+      }
+
+      setSavedDocCount(additionalDocsData.length);
       setReferenceNumber(createdRow?.created_reference_number ?? '');
       setIsSuccess(true);
       toast.success("Patient data saved successfully!");
@@ -705,6 +816,7 @@ const ScanPrescription = () => {
     setIsSuccess(false);
     setVerifiedFields(new Set());
     setDraftId(null);
+    setSavedDocCount(0);
     setExtractionRaw(null);
     setAdditionalDocs([]);
     setCurrentStep('upload');
@@ -721,9 +833,15 @@ const ScanPrescription = () => {
             ? []
             : ['that this prescription lists no medicines']
           : extractedData.medicines
-              .map((_, i) => i)
-              .filter((i) => !verifiedFields.has(`medicine:${i}`))
-              .map((i) => `medicine ${i + 1}`)),
+              .map((med, i) => ({ med, i }))
+              // A row with no name is outstanding whatever its tick says.
+              // Mis-clicking Add Medicine leaves a blank row whose most
+              // obvious dismissal is its own Confirm button, and that used to
+              // be enough to write `{name:'',dosage:'',...}` into the record.
+              .filter(({ med }) => !verifiedFields.has(medicineKey(med._id)) || med.name.trim() === '')
+              .map(({ med, i }) =>
+                med.name.trim() === '' ? `a name for medicine ${i + 1}` : `medicine ${i + 1}`,
+              )),
       ]
     : [];
 
@@ -734,7 +852,19 @@ const ScanPrescription = () => {
 
   // Saving stamps today when the scan carried no date. The record should not
   // acquire a visit date nobody chose without the operator having seen it.
-  const visitDateFallback = new Date().toISOString().split('T')[0];
+  //
+  // Built from local date parts, and sent explicitly rather than left to the
+  // function's `coalesce(_visit_date, current_date)`. Two separate ways the old
+  // one-liner could promise a day the record did not get: `toISOString()` is
+  // the UTC day, which is not the database server's day for several hours
+  // daily, and `new Date('YYYY-MM-DD')` parses as UTC midnight, so rendering it
+  // showed the day before for any viewer west of UTC.
+  const visitDateFallbackDate = new Date();
+  const visitDateFallback = [
+    visitDateFallbackDate.getFullYear(),
+    String(visitDateFallbackDate.getMonth() + 1).padStart(2, '0'),
+    String(visitDateFallbackDate.getDate()).padStart(2, '0'),
+  ].join('-');
 
   // Patient ID and uhid are two readings of the same hospital UHID: the one the
   // operator types and the one the model reads off the page. When they disagree
@@ -812,25 +942,6 @@ const ScanPrescription = () => {
     );
   }
 
-  const VerifyCheck = ({ fieldKey, label = 'Confirm' }: { fieldKey: string; label?: string }) => {
-    const done = verifiedFields.has(fieldKey);
-    return (
-      <button
-        type="button"
-        onClick={() => toggleVerified(fieldKey)}
-        aria-pressed={done}
-        className={`inline-flex items-center gap-1 shrink-0 px-2 py-0.5 text-xs font-medium border transition-colors ${
-          done
-            ? 'border-green-600 text-green-700 bg-green-500/10'
-            : 'border-yellow-600 text-yellow-700 bg-yellow-500/10 hover:bg-yellow-500/20'
-        }`}
-      >
-        <CheckCircle className={`h-3 w-3 ${done ? '' : 'opacity-40'}`} />
-        {done ? 'Checked' : label}
-      </button>
-    );
-  };
-
   if (isSuccess) {
     return (
       <div className="min-h-screen bg-background flex flex-col">
@@ -877,9 +988,9 @@ const ScanPrescription = () => {
                 <p className="text-sm">
                   <span className="font-semibold">Hospital:</span> {extractedData?.hospital_name}
                 </p>
-                {additionalDocs.length > 0 && (
+                {savedDocCount > 0 && (
                   <p className="text-sm">
-                    <span className="font-semibold">Additional Documents:</span> {additionalDocs.length} uploaded
+                    <span className="font-semibold">Additional Documents:</span> {savedDocCount} filed
                   </p>
                 )}
               </div>
@@ -1088,7 +1199,11 @@ const ScanPrescription = () => {
                       ))}
                     </SelectContent>
                   </Select>
-                  {permittedHospitals.length === 0 && (
+                  {/* `!roleLoading`: assignedHospitals starts empty and the
+                      master short-circuit in canAccessHospital needs a role
+                      that has not arrived yet, so without this the warning
+                      below flashed on every load, for every user. */}
+                  {!roleLoading && permittedHospitals.length === 0 && (
                     <p className="text-xs text-muted-foreground">
                       You aren&apos;t assigned to any hospital yet, so there is nowhere to file this
                       record. Ask an administrator to assign you one.
@@ -1267,7 +1382,7 @@ const ScanPrescription = () => {
                             <p className="text-sm">
                               No visit date was read from this prescription. Saving now records{' '}
                               <span className="font-medium">
-                                {new Date(visitDateFallback).toLocaleDateString()}
+                                {visitDateFallbackDate.toLocaleDateString()}
                               </span>
                               . Set the correct date below if you know it.
                             </p>
@@ -1295,7 +1410,10 @@ const ScanPrescription = () => {
                       <div className="space-y-2">
                         <div className="flex items-center justify-between gap-2">
                           <Label htmlFor="edit-patient-name">Patient Name *</Label>
-                          <VerifyCheck fieldKey="patient_name" />
+                          <VerifyCheck
+                            done={verifiedFields.has('patient_name')}
+                            onToggle={() => toggleVerified('patient_name')}
+                          />
                         </div>
                         <Input
                           id="edit-patient-name"
@@ -1416,7 +1534,10 @@ const ScanPrescription = () => {
                           size="sm"
                           onClick={() => setExtractedData({
                             ...extractedData,
-                            medicines: [...(extractedData.medicines || []), { name: '', dosage: '', frequency: '', duration: '' }]
+                            medicines: [
+                              ...(extractedData.medicines || []),
+                              { _id: crypto.randomUUID(), name: '', dosage: '', frequency: '', duration: '' },
+                            ]
                           })}
                         >
                           <Plus className="h-4 w-4 mr-1" /> Add Medicine
@@ -1433,12 +1554,12 @@ const ScanPrescription = () => {
                             const newMeds = [...extractedData.medicines];
                             newMeds[index] = { ...newMeds[index], [field]: value };
                             setExtractedData({ ...extractedData, medicines: newMeds });
-                            markVerified(`medicine:${index}`);
+                            markVerified(medicineKey(med._id));
                           };
-                          const checked = verifiedFields.has(`medicine:${index}`);
+                          const checked = verifiedFields.has(medicineKey(med._id));
                           return (
                             <div
-                              key={index}
+                              key={med._id}
                               className={`p-3 bg-secondary border space-y-2 ${
                                 checked ? 'border-border' : 'border-yellow-600'
                               }`}
@@ -1448,13 +1569,17 @@ const ScanPrescription = () => {
                                   Medicine {index + 1}
                                 </span>
                                 <div className="flex items-center gap-1">
-                                  <VerifyCheck fieldKey={`medicine:${index}`} label="Confirm dose" />
+                                  <VerifyCheck
+                                    done={checked}
+                                    onToggle={() => toggleVerified(medicineKey(med._id))}
+                                    label="Confirm dose"
+                                  />
                                   <Button
                                     type="button"
                                     variant="ghost"
                                     size="icon"
                                     className="h-7 w-7 text-destructive hover:text-destructive"
-                                    onClick={() => removeMedicine(index)}
+                                    onClick={() => removeMedicine(med._id)}
                                     aria-label={`Remove medicine ${index + 1}`}
                                   >
                                     <Trash2 className="h-4 w-4" />
@@ -1496,7 +1621,11 @@ const ScanPrescription = () => {
                         <div className="p-3 bg-secondary border-2 border-yellow-600 space-y-2">
                           <p className="text-sm">The scan found no medicines on this prescription.</p>
                           <div className="flex flex-wrap items-center gap-2">
-                            <VerifyCheck fieldKey="medicines_none" label="Confirm there are none" />
+                            <VerifyCheck
+                              done={verifiedFields.has('medicines_none')}
+                              onToggle={() => toggleVerified('medicines_none')}
+                              label="Confirm there are none"
+                            />
                             <span className="text-xs text-muted-foreground">
                               or add them with &ldquo;Add Medicine&rdquo; above.
                             </span>

@@ -74,7 +74,7 @@ const Onboarding = () => {
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <CardTitle className="text-2xl">Welcome!</CardTitle>
-          <CardDescription>Let's set up your profile to get started</CardDescription>
+          <CardDescription>Let&apos;s set up your profile to get started</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">

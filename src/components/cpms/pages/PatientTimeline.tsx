@@ -55,6 +55,13 @@ const PatientTimeline = () => {
 
   useEffect(() => {
     const fetchVisits = async () => {
+      // The guard lives here rather than at the call site so that the effect
+      // body itself never sets state -- one path in, one path out.
+      if (!hospitalName || !pid) {
+        setLoading(false);
+        return;
+      }
+
       setLoading(true);
       const { data, error } = await supabase
         .from("patient_records")
@@ -75,8 +82,7 @@ const PatientTimeline = () => {
       setLoading(false);
     };
 
-    if (hospitalName && pid) fetchVisits();
-    else setLoading(false);
+    fetchVisits();
   }, [hospitalName, pid]);
 
   // Visits are newest-first; compare each against the one before it in time
@@ -140,7 +146,7 @@ const PatientTimeline = () => {
             </div>
             {visits.length > 0 && (
               <p className="text-xs text-muted-foreground mt-3">
-                Shows records you have permission to view. Colleagues' records for this patient may
+                Shows records you have permission to view. Colleagues&apos; records for this patient may
                 not appear.
               </p>
             )}

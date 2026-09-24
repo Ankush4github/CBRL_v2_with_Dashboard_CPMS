@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/cpms/ui/button";
 import { Camera, X } from "lucide-react";
 import { toast } from "sonner";
@@ -81,6 +81,14 @@ const DocumentCamera = ({
     onCloseRef.current = onClose;
   });
 
+  // Stable identity (onClose is read through the ref), so the camera effect can
+  // call it without listing a value that changes on every parent render.
+  const close = useCallback(() => {
+    setCaptureCount(0);
+    setCaptureBox(null);
+    onCloseRef.current();
+  }, []);
+
   // Hold the stream for exactly as long as the viewfinder is up, so the camera
   // light never stays on behind a closed step.
   useEffect(() => {
@@ -90,7 +98,7 @@ const DocumentCamera = ({
     const start = async () => {
       if (!navigator.mediaDevices?.getUserMedia) {
         toast.error("This browser cannot open the camera here. Use file upload instead.");
-        onCloseRef.current();
+        close();
         return;
       }
       try {
@@ -112,9 +120,17 @@ const DocumentCamera = ({
         streamRef.current = media;
         if (videoRef.current) videoRef.current.srcObject = media;
       } catch (error) {
+        // Dismissing the viewfinder before the permission prompt resolves
+        // rejects this promise with AbortError. That is the operator closing
+        // the camera, not a camera fault, and reporting it drops an error toast
+        // over the form they have just gone back to.
+        if (cancelled) return;
         console.error("Camera access error:", error);
         toast.error("Unable to access camera. Please check permissions or use file upload instead.");
-        onCloseRef.current();
+        // close(), not onClose(): the counter and the capture window have to be
+        // reset too, or the next session resumes the previous one's page
+        // numbering.
+        close();
       }
     };
 
@@ -125,7 +141,7 @@ const DocumentCamera = ({
       streamRef.current?.getTracks().forEach((track) => track.stop());
       streamRef.current = null;
     };
-  }, [open]);
+  }, [open, close]);
 
   // Keep the outlined window lined up with the letterboxed video, so the
   // rectangle on screen is exactly the rectangle capturePhoto crops.
@@ -164,12 +180,6 @@ const DocumentCamera = ({
       observer.disconnect();
     };
   }, [open]);
-
-  const close = () => {
-    setCaptureCount(0);
-    setCaptureBox(null);
-    onClose();
-  };
 
   const capturePhoto = () => {
     const video = videoRef.current;

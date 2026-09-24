@@ -24,19 +24,28 @@ export const LoadingSpinner = () => (
   </div>
 );
 
-// Shown when the profile cannot be loaded. Without this the guards below would
-// wait on a profile that is never coming, leaving the user on a spinner with no
-// way out but clearing their session.
-export const ProfileErrorScreen = () => {
+// Shown when the profile or the role cannot be loaded. Without this the guards
+// below would wait on an answer that is never coming, leaving the user on a
+// spinner with no way out but clearing their session.
+export const ProfileErrorScreen = ({
+  title = "Couldn’t load your profile",
+  message,
+  onRetry,
+}: {
+  title?: string;
+  message?: string | null;
+  onRetry?: () => void;
+} = {}) => {
   const { profileError, refreshProfile, signOut } = useAuth();
+  const retry = onRetry ?? refreshProfile;
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-6">
       <div className="max-w-md text-center space-y-4">
-        <h2 className="text-xl font-bold">Couldn&apos;t load your profile</h2>
-        <p className="text-sm text-muted-foreground">{profileError}</p>
+        <h2 className="text-xl font-bold">{title}</h2>
+        <p className="text-sm text-muted-foreground">{message ?? profileError}</p>
         <div className="flex gap-2 justify-center">
           <button
-            onClick={() => refreshProfile()}
+            onClick={() => retry()}
             className="px-4 py-2 rounded-md bg-primary text-primary-foreground text-sm font-medium"
           >
             Try again
@@ -57,7 +66,33 @@ type Placement =
   | { status: "loading" }
   | { status: "signed-out" }
   | { status: "profile-error" }
+  // The role or permissions read failed. Distinct from a resolved placement of
+  // '/pending': both fail closed, but only one of them is true.
+  | { status: "account-error"; message: string }
   | { status: "resolved"; route: LandingRoute };
+
+/**
+ * The screen an unresolvable placement calls for, or null when it resolves.
+ *
+ * Shared by RouteFor and PublicRoute. PublicRoute used to skip this: it derived
+ * its redirect from `status === "resolved"` alone, so a profile error left a
+ * signed-in visitor on /cpms -- the OAuth redirect target, and the URL people
+ * type -- watching a spinner with no Try again and no Sign out. The only way
+ * out was clearing site data.
+ */
+function placementError(placement: Placement, retryAccount: () => void) {
+  if (placement.status === "profile-error") return <ProfileErrorScreen />;
+  if (placement.status === "account-error") {
+    return (
+      <ProfileErrorScreen
+        title="Couldn’t load your access"
+        message={placement.message}
+        onRetry={retryAccount}
+      />
+    );
+  }
+  return null;
+}
 
 /**
  * Where this visitor belongs, or why we cannot say yet.
@@ -76,11 +111,15 @@ type Placement =
  */
 function usePlacement(): Placement {
   const { user, profile, loading, profileLoaded, profileError } = useAuth();
-  const { isAdmin, permissions, loading: roleLoading } = useRole();
+  const { isAdmin, permissions, loading: roleLoading, error: roleError } = useRole();
 
   if (loading) return { status: "loading" };
   if (!user) return { status: "signed-out" };
   if (profileError) return { status: "profile-error" };
+  // A failed read is not an answer. Routing on it would tell an activated user
+  // that their administrator has not switched them on yet, which is both wrong
+  // and unactionable -- the fix is to retry, not to go and find somebody.
+  if (roleError) return { status: "account-error", message: roleError };
   // Wait for the profile fetch to settle — not merely for `profile` to be
   // non-null. A null profile is otherwise indistinguishable from a pending one.
   if (!profileLoaded || roleLoading) return { status: "loading" };
@@ -103,6 +142,7 @@ function usePlacement(): Placement {
  */
 const RouteFor = ({ here, children }: { here: LandingRoute; children: ReactNode }) => {
   const placement = usePlacement();
+  const { refetch: refetchAccount } = useRole();
   const router = useRouter();
 
   const redirectTo =
@@ -116,7 +156,8 @@ const RouteFor = ({ here, children }: { here: LandingRoute; children: ReactNode 
     if (redirectTo) router.replace(asset(redirectTo));
   }, [redirectTo, router]);
 
-  if (placement.status === "profile-error") return <ProfileErrorScreen />;
+  const blocked = placementError(placement, refetchAccount);
+  if (blocked) return blocked;
   if (placement.status !== "resolved" || redirectTo) return <LoadingSpinner />;
 
   return <>{children}</>;
@@ -147,6 +188,7 @@ export const PendingRoute = ({ children }: { children: ReactNode }) => (
 export const PublicRoute = ({ children }: { children: ReactNode }) => {
   const { user, loading } = useAuth();
   const placement = usePlacement();
+  const { refetch: refetchAccount } = useRole();
   const router = useRouter();
 
   const redirectTo = placement.status === "resolved" ? placement.route : null;
@@ -156,6 +198,11 @@ export const PublicRoute = ({ children }: { children: ReactNode }) => {
   }, [redirectTo, router]);
 
   if (loading) return <LoadingSpinner />;
+  // Before falling through to the spinner: a signed-in visitor whose profile or
+  // role cannot be read is going nowhere, and this is the page they land on.
+  // Without this they wait on a redirect that will never fire.
+  const blocked = placementError(placement, refetchAccount);
+  if (blocked) return blocked;
   // A signed-in visitor never sees the sign-in page, including for the frame or
   // two it takes their profile and role to load and the redirect to fire.
   if (user) return <LoadingSpinner />;

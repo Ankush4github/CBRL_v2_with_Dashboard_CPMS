@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { Button } from "@/components/cpms/ui/button";
 import {
   Loader2,
@@ -57,7 +57,6 @@ const DocumentProcessor = ({ imageSrc, onAccept, onSkip }: DocumentProcessorProp
   const [activeHandle, setActiveHandle] = useState<number | null>(null);
   const [selectedFilter, setSelectedFilter] = useState<ImageFilter>("none");
   const [croppedImageData, setCroppedImageData] = useState<ImageData | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [autoDetected, setAutoDetected] = useState(false);
 
   // ---- Phase 1: Load image & run edge detection ----
@@ -270,7 +269,6 @@ const DocumentProcessor = ({ imageSrc, onAccept, onSkip }: DocumentProcessorProp
     try {
       const corrected = await perspectiveCorrect(sourceImageData, corners);
       setCroppedImageData(corrected);
-      setPreviewUrl(imageDataToDataUrl(corrected));
       setStage("enhance");
     } catch (err) {
       console.warn("Crop failed:", err);
@@ -279,11 +277,13 @@ const DocumentProcessor = ({ imageSrc, onAccept, onSkip }: DocumentProcessorProp
     }
   };
 
-  // ---- Apply filter and update preview ----
-  useEffect(() => {
-    if (!croppedImageData) return;
-    const filtered = applyFilter(croppedImageData, selectedFilter);
-    setPreviewUrl(imageDataToDataUrl(filtered));
+  // ---- The filtered preview ----
+  // Derived, not stored: it is a pure function of the cropped image and the
+  // selected filter. Kept as state in sync by an effect, every filter change
+  // rendered one frame of the previous filter's image before the effect ran.
+  const previewUrl = useMemo(() => {
+    if (!croppedImageData) return null;
+    return imageDataToDataUrl(applyFilter(croppedImageData, selectedFilter));
   }, [selectedFilter, croppedImageData]);
 
   // ---- Accept processed image ----

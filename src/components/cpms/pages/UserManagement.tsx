@@ -489,8 +489,12 @@ const UserManagement = () => {
 
   // Only a master may change a role at all: RLS on user_roles requires it, and
   // an admin able to grant 'admin' would be minting peers it then cannot
-  // manage. A master may still grant 'master' — otherwise no second master
-  // could ever be created, since peers are out of each other's reach.
+  // manage. 'master' is on nobody's menu: assignableRoles() offers ranks
+  // strictly below the caller's, and the WITH CHECK added by
+  // 20260908075627_assign_below_own_role.sql refuses an equal rank at the
+  // database too. A second master is granted directly in the database — there
+  // is deliberately no route to one from this screen, and the comment that used
+  // to sit here claimed the opposite.
   const canChangeRole = isMaster && canManage(selectedUser);
 
   // The roles this account may hand out: strictly below its own.
@@ -659,7 +663,7 @@ const UserManagement = () => {
             <Shield className="h-12 w-12 mx-auto mb-4 text-destructive" />
             <h2 className="text-xl font-bold mb-2">Access Denied</h2>
             <p className="text-muted-foreground mb-4">
-              You don't have permission to access this page.
+              You don&apos;t have permission to access this page.
             </p>
             <Button onClick={() => router.push(asset("/dashboard"))}>Go to Dashboard</Button>
           </CardContent>
@@ -1155,7 +1159,9 @@ const UserManagement = () => {
                   and never save a record. */}
               <p className="text-xs text-muted-foreground">
                 A master cannot be invited: nothing outranks one, so nobody could ever activate the
-                account. Invite them as Admin, activate, then raise the role from the edit dialog.
+                account. Promoting one here is refused as well — a role has to rank below
+                your own, in this dialog and in the database. A second master is granted directly
+                in the database.
               </p>
             </div>
 

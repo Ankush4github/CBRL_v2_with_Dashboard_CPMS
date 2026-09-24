@@ -35,13 +35,20 @@ const DocumentPreviewModal = ({
   const isPdf = documentName.toLowerCase().endsWith(".pdf");
   const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(documentName);
 
-  useEffect(() => {
+  // Reset when the dialog opens, or when it is handed a different document
+  // while already open. Adjusting state during render rather than in an effect
+  // is what React recommends for deriving state from a changed prop: the effect
+  // version rendered the previous document's error and spinner state for one
+  // frame before correcting itself.
+  const [shown, setShown] = useState({ isOpen, documentUrl });
+  if (shown.isOpen !== isOpen || shown.documentUrl !== documentUrl) {
+    setShown({ isOpen, documentUrl });
     if (isOpen) {
       setLoading(true);
       setError(null);
       setIsFullscreen(false);
     }
-  }, [isOpen, documentUrl]);
+  }
 
   const toggleFullscreen = useCallback(() => {
     setIsFullscreen((prev) => !prev);

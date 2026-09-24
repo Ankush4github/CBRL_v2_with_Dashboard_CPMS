@@ -36,6 +36,12 @@ const ImagePreviewViewer = ({ src, alt, className, topRightSlot }: ImagePreviewV
 
   // Pointer / gesture state
   const pointers = useRef<Map<number, { x: number; y: number }>>(new Map());
+  // Mirrors `pointers.current.size > 0` as state. The transform transition has
+  // to be off while a gesture is in flight, and render cannot read a ref -- a
+  // ref carries no subscription, so the style it produced was whatever the last
+  // unrelated re-render happened to see. Two transitions per gesture, and the
+  // pan/pinch handlers already re-render on every move.
+  const [gesturing, setGesturing] = useState(false);
   const pinchStart = useRef<{ dist: number; scale: number } | null>(null);
   const panStart = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null);
   const lastTap = useRef<number>(0);
@@ -58,10 +64,15 @@ const ImagePreviewViewer = ({ src, alt, className, topRightSlot }: ImagePreviewV
 
   const rotate = () => setRotation((r) => (r + 90) % 360);
 
-  // Reset transform whenever the source changes
-  useEffect(() => {
+  // Reset the transform whenever the source changes. Adjusting state during
+  // render rather than in an effect is React's recommended shape for this: the
+  // effect version painted the new image once at the previous image's zoom,
+  // rotation and pan before correcting itself.
+  const [shownSrc, setShownSrc] = useState(src);
+  if (shownSrc !== src) {
+    setShownSrc(src);
     reset();
-  }, [src]);
+  }
 
   // Wheel zoom (desktop). Use non-passive listener so we can preventDefault.
   useEffect(() => {
@@ -82,6 +93,7 @@ const ImagePreviewViewer = ({ src, alt, className, topRightSlot }: ImagePreviewV
   const onPointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     (e.target as Element).setPointerCapture?.(e.pointerId);
     pointers.current.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    setGesturing(true);
 
     if (pointers.current.size === 2) {
       const [a, b] = Array.from(pointers.current.values());
@@ -121,7 +133,10 @@ const ImagePreviewViewer = ({ src, alt, className, topRightSlot }: ImagePreviewV
   const onPointerEnd = (e: React.PointerEvent<HTMLDivElement>) => {
     pointers.current.delete(e.pointerId);
     if (pointers.current.size < 2) pinchStart.current = null;
-    if (pointers.current.size === 0) panStart.current = null;
+    if (pointers.current.size === 0) {
+      panStart.current = null;
+      setGesturing(false);
+    }
   };
 
   const cursor = scale > 1 ? "grab" : "zoom-in";
@@ -146,7 +161,7 @@ const ImagePreviewViewer = ({ src, alt, className, topRightSlot }: ImagePreviewV
         className="absolute inset-0 m-auto max-w-full max-h-full object-contain pointer-events-none will-change-transform"
         style={{
           transform: `translate(${tx}px, ${ty}px) scale(${scale}) rotate(${rotation}deg)`,
-          transition: pointers.current.size === 0 ? "transform 120ms ease-out" : "none",
+          transition: gesturing ? "none" : "transform 120ms ease-out",
         }}
       />
 

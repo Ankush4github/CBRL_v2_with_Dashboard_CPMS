@@ -291,7 +291,24 @@ const AdditionalDocumentsUpload = ({ documents, onChange }: AdditionalDocumentsU
             PDF, JPG, PNG · Multi-page documents supported · Auto-compressed to ≤{MAX_FILE_SIZE_MB} MB
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <Button type="button" variant="outline" className="gap-2">
+            {/* Carries its own handler rather than relying on the click
+                bubbling to the drop zone, which is how its sibling below
+                works. Two adjacent buttons driven by opposite mechanisms is a
+                trap: anything that stops propagation between them turns this
+                one into a silent no-op. */}
+            <Button
+              type="button"
+              variant="outline"
+              className="gap-2"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!selectedDocType) {
+                  toast.error("Please select a document type first");
+                  return;
+                }
+                fileInputRef.current?.click();
+              }}
+            >
               <Upload className="h-4 w-4" />
               Choose Files
             </Button>

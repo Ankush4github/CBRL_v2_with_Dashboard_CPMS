@@ -377,7 +377,7 @@ const Attendance = () => {
             <Card className="border-2">
               <CardHeader>
                 <CardTitle className="flex items-center gap-2"><LogIn className="h-5 w-5" /> Check In</CardTitle>
-                <CardDescription>Your location is verified against the hospital's geofence.</CardDescription>
+                <CardDescription>Your location is verified against the hospital&apos;s geofence.</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>

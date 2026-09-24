@@ -80,7 +80,7 @@ const SECTIONS: Section[] = [
       <>
         <P>
           CPMS captures and manages patient prescription records across multiple hospitals, plus
-          GPS-verified staff attendance. The three things you'll use most:
+          GPS-verified staff attendance. The three things you&apos;ll use most:
         </P>
         <Table>
           <TableHeader>
@@ -104,7 +104,7 @@ const SECTIONS: Section[] = [
             <TableRow>
               <TableCell className="font-medium">Attendance</TableCell>
               <TableCell>
-                Check in and out at your assigned hospital, verified against the hospital's GPS
+                Check in and out at your assigned hospital, verified against the hospital&apos;s GPS
                 geofence and working hours.
               </TableCell>
             </TableRow>
@@ -127,7 +127,7 @@ const SECTIONS: Section[] = [
       <>
         <P>
           CPMS uses <strong>Google sign-in only</strong>. There is no username/password option — if
-          your Google account isn't the one your administrator registered, sign out of Google first
+          your Google account isn&apos;t the one your administrator registered, sign out of Google first
           and retry.
         </P>
         <P>
@@ -156,10 +156,10 @@ const SECTIONS: Section[] = [
         </UL>
         <Note>
           This is a descriptive profile only. It does <strong>not</strong> grant access to any
-          hospital's records — that comes from the hospital assignments your administrator gives you.
+          hospital&apos;s records — that comes from the hospital assignments your administrator gives you.
         </Note>
         <P>
-          <strong>Automatic logout:</strong> you're signed out after{" "}
+          <strong>Automatic logout:</strong> you&apos;re signed out after{" "}
           <strong>5 minutes of inactivity</strong>, with a warning one minute before. Any mouse
           movement, click, keypress, scroll, or touch resets the timer.
         </P>
@@ -179,7 +179,7 @@ const SECTIONS: Section[] = [
         </P>
         <P>
           <strong>Statistics cards</strong> show total patients, scans recorded today, and hospitals
-          configured. These counts reflect only records you're permitted to see.
+          configured. These counts reflect only records you&apos;re permitted to see.
         </P>
         <P>
           <strong>Action cards</strong> take you where you need to go:
@@ -225,11 +225,11 @@ const SECTIONS: Section[] = [
           </li>
           <li>
             Fill in <strong>Patient ID / UHID</strong> and <strong>Select Hospital</strong> (only
-            hospitals you're assigned to appear).
+            hospitals you&apos;re assigned to appear).
           </li>
         </UL>
         <P>
-          A <strong>Reference Number</strong> preview appears once you pick a hospital — hospital's
+          A <strong>Reference Number</strong> preview appears once you pick a hospital — hospital&apos;s
           first letter + month + year + sequence (e.g. <code>F0720261</code>). The final number is
           generated at save time, so the preview may shift by one if a colleague saves first.
         </P>
@@ -322,7 +322,7 @@ const SECTIONS: Section[] = [
         </P>
         <Note>
           You only ever see records you have permission to see. A standard user sees records they
-          uploaded themselves at hospitals they're assigned to. Admins see all records at their
+          uploaded themselves at hospitals they&apos;re assigned to. Admins see all records at their
           hospitals; masters see everything.
         </Note>
       </>
@@ -354,7 +354,7 @@ const SECTIONS: Section[] = [
           with the summary, prescription image, and every attachment merged in.
         </P>
         <P>
-          <strong>Delete</strong> <em>(masters only)</em> permanently removes the record. There's a
+          <strong>Delete</strong> <em>(masters only)</em> permanently removes the record. There&apos;s a
           confirmation dialog and it cannot be undone.
         </P>
       </>
@@ -369,16 +369,16 @@ const SECTIONS: Section[] = [
       <>
         <P>
           Pick your hospital, optionally add a note, click <strong>Check In</strong>, and allow the
-          browser's location prompt.
+          browser&apos;s location prompt.
         </P>
         <P>Check-in succeeds only when all of these hold:</P>
         <UL>
-          <li>You're assigned to that hospital (masters may check in anywhere).</li>
+          <li>You&apos;re assigned to that hospital (masters may check in anywhere).</li>
           <li>The hospital has GPS coordinates configured.</li>
-          <li>Today is a working day and the time is inside the hospital's window (in IST).</li>
+          <li>Today is a working day and the time is inside the hospital&apos;s window (in IST).</li>
           <li>
-            You're inside the geofence — if not, the message tells you how far off you are, e.g. "You
-            are 340 m from Fortis Hospital (limit 200 m)."
+            You&apos;re inside the geofence — if not, the message tells you how far off you are, e.g. &quot;You
+            are 340 m from Fortis Hospital (limit 200 m).&quot;
           </li>
         </UL>
         <Note>
@@ -406,13 +406,13 @@ const SECTIONS: Section[] = [
         </P>
         <P>
           <strong>Browser push:</strong> click <strong>Enable alerts</strong> and allow notifications.
-          Reminders then arrive even when CPMS isn't open. Push is per-device — enable it on each
-          device. Some browsers (notably older iOS Safari) don't support it, and the button is hidden
+          Reminders then arrive even when CPMS isn&apos;t open. Push is per-device — enable it on each
+          device. Some browsers (notably older iOS Safari) don&apos;t support it, and the button is hidden
           there.
         </P>
         <P>
           <strong>Email:</strong> you get an email at shift start, and at shift end if you checked in
-          but haven't checked out. The <strong>Test email</strong> button sends a sample to your own
+          but haven&apos;t checked out. The <strong>Test email</strong> button sends a sample to your own
           account email so you can confirm delivery and check your spam folder.
         </P>
       </>
@@ -478,9 +478,10 @@ const SECTIONS: Section[] = [
             account, edit it in the table instead.
           </li>
           <li>
-            A new <strong>master</strong> cannot be invited directly — invite them as Admin,
-            activate the account, then change the role. Nobody can create permissions for an
-            account that already outranks them.
+            A new <strong>master</strong> cannot be created from CPMS at all — not by
+            invitation, and not by editing an existing account. Every role you grant has to rank
+            below your own, which the database enforces as well as this screen. A second master
+            has to be granted directly in the database.
           </li>
         </UL>
         <P>Your administrator can additionally switch off individual permissions:</P>
@@ -507,21 +508,21 @@ const SECTIONS: Section[] = [
     body: (
       <>
         <Tip q="&quot;Access denied: You don't have permission to add records for this hospital.&quot;">
-          You're not assigned to the hospital you selected, or your account has been disabled. Ask
+          You&apos;re not assigned to the hospital you selected, or your account has been disabled. Ask
           your administrator to check your hospital assignments.
         </Tip>
         <Tip q="Nothing appears in the hospital dropdown.">
           No hospitals have been assigned to you yet. Contact your administrator.
         </Tip>
         <Tip q="&quot;Hospital location not set.&quot;">
-          A master admin hasn't configured that hospital's GPS coordinates yet. Only they can fix it.
+          A master admin hasn&apos;t configured that hospital&apos;s GPS coordinates yet. Only they can fix it.
         </Tip>
         <Tip q="&quot;Outside allowed area.&quot;">
-          You're further from the hospital than the configured radius. Move closer and try again.
+          You&apos;re further from the hospital than the configured radius. Move closer and try again.
           Indoors GPS drifts — near a window or outdoors works better.
         </Tip>
         <Tip q="&quot;Attendance not allowed now&quot; / &quot;Outside working hours.&quot;">
-          You're outside the hospital's configured working-hours window, or it's a non-working day.
+          You&apos;re outside the hospital&apos;s configured working-hours window, or it&apos;s a non-working day.
           The allowed window is shown on the same screen.
         </Tip>
         <Tip q="The camera won't open.">
@@ -595,7 +596,7 @@ const Help = () => {
         {filtered.length === 0 ? (
           <Card className="border-2 border-border">
             <CardContent className="p-8 text-center text-sm text-muted-foreground">
-              No sections match "{query}". Try a different word, or clear the search.
+              No sections match &quot;{query}&quot;. Try a different word, or clear the search.
             </CardContent>
           </Card>
         ) : (

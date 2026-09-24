@@ -278,7 +278,7 @@ const Dashboard = () => {
                 </div>
                 <CardTitle className="text-xl">Attendance Check-in</CardTitle>
                 <CardDescription>
-                  Check in and out at your assigned hospital. Location is verified against the hospital's geofence.
+                  Check in and out at your assigned hospital. Location is verified against the hospital&apos;s geofence.
                 </CardDescription>
               </CardHeader>
               <CardContent>
