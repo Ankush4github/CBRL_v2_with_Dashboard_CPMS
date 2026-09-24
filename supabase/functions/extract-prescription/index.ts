@@ -114,9 +114,19 @@ serve(async (req) => {
     console.log("[AUTH] User authenticated:", user.id);
 
     // Check user permissions using RPC function
-    const { data: canScan } = await supabaseClient.rpc("user_can_scan", { _user_id: user.id });
-    
-    if (canScan === false) {
+    // Fail closed: a failed lookup leaves data null, and null must not fall
+    // through to the paid model call. Only an explicit `true` passes.
+    const { data: canScan, error: canScanError } = await supabaseClient.rpc("user_can_scan", { _user_id: user.id });
+
+    if (canScanError) {
+      console.error("[AUTH] Scan permission check failed:", canScanError.message);
+      return new Response(
+        JSON.stringify({ error: "Could not verify scan permission. Please try again." }),
+        { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    if (canScan !== true) {
       console.log("[AUTH] User does not have scan permission:", user.id);
       return new Response(
         JSON.stringify({ error: "You do not have permission to scan prescriptions" }),

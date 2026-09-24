@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { jsonLd } from '@/lib/json-ld';
 import { getMembers } from '@/lib/content';
 import { generateMembersJsonLd } from './members-data';
 
@@ -79,7 +80,7 @@ export default async function MembersLayout({
         <script
           key={`jsonld-${index}`}
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }}
+          dangerouslySetInnerHTML={{ __html: jsonLd(schema) }}
         />
       ))}
       {children}

@@ -1,16 +1,24 @@
-project_id = "qjjyjrdcyjrkhhmdfywh"
+project_id = "rcqluqbrqiyyfrpfryvl"
+
+# Every verify_jwt below matches the live setting. A CLI deploy picks the value
+# up from here, so a `false` that differs from live silently drops JWT
+# verification on the next deploy.
 
 [functions.extract-prescription]
-verify_jwt = false
+# Reads patient data and calls a paid model; the in-code getUser() check is a
+# second layer, not a replacement for the gateway check.
+verify_jwt = true
 
 [functions.generate-patient-pdf]
-# Matches the live setting. This function reads patient records; a CLI deploy
-# picks the value up from here, so `false` here would silently drop JWT
-# verification on the next deploy.
+# This function reads patient records.
+verify_jwt = true
+
+[functions.send-test-attendance-email]
 verify_jwt = true
 
 [functions.attendance-notifications]
+# Called by pg_cron without a user JWT; protected by the CRON_SECRET header.
 verify_jwt = false
 
 [functions.vapid-public-key]
-verify_jwt = false
+verify_jwt = true

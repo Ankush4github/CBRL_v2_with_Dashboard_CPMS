@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import { jsonLd } from '@/lib/json-ld';
 import { MapPin, Phone, Mail } from 'lucide-react';
 
 import { getAbout, readPublicationsFile } from '@/lib/content';
@@ -88,7 +89,7 @@ export default async function About() {
       {/* JSON-LD Structured Data */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(personSchema) }}
+        dangerouslySetInnerHTML={{ __html: jsonLd(personSchema) }}
       />
 
       {/* Hero Section with Background Image */}

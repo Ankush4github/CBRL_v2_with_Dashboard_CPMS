@@ -1,4 +1,5 @@
 import { getProjects } from '@/lib/content';
+import { jsonLd } from '@/lib/json-ld';
 import ProjectsClient from './ProjectsClient';
 
 export default async function Projects() {
@@ -9,7 +10,7 @@ export default async function Projects() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
+          __html: jsonLd({
             '@context': 'https://schema.org',
             '@type': 'ItemList',
             name: 'CBRL Research Projects',

@@ -1,4 +1,5 @@
 import { getMetrics, readPublicationsFile } from '@/lib/content';
+import { jsonLd } from '@/lib/json-ld';
 import { parseBibTeX, type Publication } from '@/lib/bibtex-parser';
 import PublicationsClient, { type PublicationMetrics } from './PublicationsClient';
 import { generatePublicationsJsonLd } from './publications-jsonld';
@@ -29,7 +30,7 @@ export default async function PublicationsPage() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify(generatePublicationsJsonLd(publications)),
+          __html: jsonLd(generatePublicationsJsonLd(publications)),
         }}
       />
       <PublicationsClient publications={publications} metrics={metrics} />

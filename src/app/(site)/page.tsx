@@ -1,4 +1,5 @@
 import Image from 'next/image';
+import { jsonLd } from '@/lib/json-ld';
 import Link from 'next/link';
 import {
   ArrowRight,
@@ -185,7 +186,7 @@ export default async function Home() {
     <div className="min-h-screen bg-background">
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(homeJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLd(homeJsonLd) }}
       />
 
       {/* Hero Section with Carousel Background Images */}

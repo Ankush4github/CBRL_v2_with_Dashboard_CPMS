@@ -1,4 +1,5 @@
 import { getGallery } from '@/lib/content';
+import { jsonLd } from '@/lib/json-ld';
 import GalleryClient from './GalleryClient';
 
 export default async function Gallery() {
@@ -9,7 +10,7 @@ export default async function Gallery() {
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
+          __html: jsonLd({
             '@context': 'https://schema.org',
             '@type': 'CollectionPage',
             name: 'CBRL Lab Gallery',

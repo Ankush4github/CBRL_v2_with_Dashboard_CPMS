@@ -1,6 +1,7 @@
 ﻿import Script from 'next/script'
 import Navigation from '@/components/Navigation'
 import SiteFooter from '@/components/SiteFooter'
+import { jsonLd } from '@/lib/json-ld'
 
 /**
  * Chrome for the public site: navigation, footer, analytics and the site-wide
@@ -122,12 +123,12 @@ export default function SiteLayout({
       {/* JSON-LD: Organization */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(orgJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLd(orgJsonLd) }}
       />
       {/* JSON-LD: WebSite */}
       <script
         type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteJsonLd) }}
+        dangerouslySetInnerHTML={{ __html: jsonLd(websiteJsonLd) }}
       />
 
       <Navigation />

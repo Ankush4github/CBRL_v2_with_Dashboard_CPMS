@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import { jsonLd } from '@/lib/json-ld';
 import Image from 'next/image';
 import { Mail, ArrowUpRight } from 'lucide-react';
 
@@ -188,7 +189,7 @@ export default function FacilitiesClient({
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
-          __html: JSON.stringify({
+          __html: jsonLd({
             '@context': 'https://schema.org',
             '@type': 'ResearchOrganization',
             name: 'Clinical Biomarker Research Laboratory - Facilities',
