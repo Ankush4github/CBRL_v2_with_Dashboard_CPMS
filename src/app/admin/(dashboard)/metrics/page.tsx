@@ -1,13 +1,13 @@
 import type { Metadata } from 'next';
 
-import { getMetrics } from '@/lib/content';
+import { getMetricsForEdit } from '@/lib/content';
 import MetricsEditor from './MetricsEditor';
 
 export const metadata: Metadata = { title: 'Citation metrics' };
 export const dynamic = 'force-dynamic';
 
 export default async function AdminMetricsPage() {
-  const metrics = (await getMetrics()) ?? {
+  const metrics = (await getMetricsForEdit()) ?? {
     totalCitations: '',
     hIndex: 0,
     source: { name: 'Google Scholar', url: '' },

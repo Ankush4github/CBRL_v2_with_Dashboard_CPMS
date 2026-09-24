@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-import { readPublicationsFile, writePublicationsFile } from '@/lib/content';
+import { readPublicationsForEdit, writePublicationsFile } from '@/lib/content';
+import { contentUnavailable } from '@/lib/content-unavailable';
 import {
   duplicateKeys,
   findEntry,
@@ -19,7 +20,8 @@ type Params = { params: Promise<{ id: string }> };
 
 export async function GET(_request: NextRequest, { params }: Params) {
   const { id } = await params;
-  const source = await readPublicationsFile();
+  const source = await readPublicationsForEdit().catch(contentUnavailable);
+  if (source instanceof NextResponse) return source;
   const entries = splitEntries(source);
   const entry = entries.find((e) => e.id === decodeURIComponent(id));
 
@@ -50,7 +52,8 @@ export async function PUT(request: NextRequest, { params }: Params) {
     return NextResponse.json({ error: 'Malformed request.' }, { status: 400 });
   }
 
-  const source = await readPublicationsFile();
+  const source = await readPublicationsForEdit().catch(contentUnavailable);
+  if (source instanceof NextResponse) return source;
   if (!findEntry(source, entryId)) {
     return NextResponse.json({ error: 'That publication no longer exists.' }, { status: 404 });
   }
@@ -75,7 +78,8 @@ export async function PUT(request: NextRequest, { params }: Params) {
 export async function DELETE(_request: NextRequest, { params }: Params) {
   const { id } = await params;
   const entryId = decodeURIComponent(id);
-  const source = await readPublicationsFile();
+  const source = await readPublicationsForEdit().catch(contentUnavailable);
+  if (source instanceof NextResponse) return source;
 
   if (!findEntry(source, entryId)) {
     return NextResponse.json({ error: 'That publication no longer exists.' }, { status: 404 });

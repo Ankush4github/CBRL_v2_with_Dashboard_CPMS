@@ -325,7 +325,9 @@ serve(async (req) => {
       }
     } catch (parseError) {
       console.error("[SERVER] Failed to parse AI response:", parseError);
-      console.error("[SERVER] Raw content for debugging:", content.substring(0, 500));
+      // The model's reply is transcribed prescription text (names, diagnoses),
+      // so only its shape goes to the logs, never its content.
+      console.error("[SERVER] Unparseable AI reply, length:", content.length, "fenced:", /```/.test(content));
       
       // Return generic error - don't expose raw AI content
       return new Response(

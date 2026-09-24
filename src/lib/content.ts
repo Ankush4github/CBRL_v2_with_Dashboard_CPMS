@@ -141,6 +141,69 @@ async function fetchRow<T>(collection: string, column: 'data' | 'raw'): Promise<
   return ((data as Record<string, unknown> | null)?.[column] as T) ?? null;
 }
 
+/**
+ * Thrown by the *ForEdit readers when the database cannot be read.
+ *
+ * The public site falls back to disk on a read failure; the dashboard must not.
+ * An editor seeded from the committed copy saves the whole document back, which
+ * silently replaces every dashboard edit made since that commit. Refusing to
+ * open the editor is the safe answer — "try again" costs nothing, a revert
+ * through site_content_versions does.
+ */
+export class ContentUnavailableError extends Error {
+  constructor(collection: string, options?: { cause?: unknown }) {
+    super(
+      `Could not load "${collection}" from the database. Nothing was changed — ` +
+        `try again in a moment.`,
+      options
+    );
+    this.name = 'ContentUnavailableError';
+  }
+}
+
+/**
+ * The dashboard's read: the database row, or the disk seed only when the
+ * collection has never been migrated (there is then nothing newer to lose).
+ */
+async function readForEdit<T>(
+  collection: string,
+  column: 'data' | 'raw',
+  parse: boolean
+): Promise<T> {
+  let row: T | null;
+  try {
+    row = await fetchRow<T>(collection, column);
+  } catch (reason) {
+    console.error(`[content] Refusing to edit "${collection}": database read failed.`, reason);
+    throw new ContentUnavailableError(collection, { cause: reason });
+  }
+  if (row !== null) return row;
+  warnNotMigrated(collection);
+  return fromDisk<T>(collection, parse);
+}
+
+export function readContentForEdit<K extends ContentCollection>(
+  collection: K
+): Promise<ContentMap[K]> {
+  if (!isContentCollection(collection)) {
+    throw new Error(`unknown content collection: ${String(collection)}`);
+  }
+  return readForEdit<ContentMap[K]>(collection, 'data', true);
+}
+
+export async function getMetricsForEdit(): Promise<MetricsContent | null> {
+  try {
+    return await readForEdit<MetricsContent>('metrics', 'data', true);
+  } catch (error) {
+    if (error instanceof ContentUnavailableError) throw error;
+    return null; // no row and no disk copy: nothing to edit yet
+  }
+}
+
+export function readPublicationsForEdit(): Promise<string> {
+  return readForEdit<string>('publications', 'raw', false);
+}
+
 /* --------------------------------------------------------------- reading */
 
 /**

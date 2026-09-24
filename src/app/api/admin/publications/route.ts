@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-import { readPublicationsFile, writePublicationsFile } from '@/lib/content';
+import { readPublicationsForEdit, writePublicationsFile } from '@/lib/content';
+import { contentUnavailable } from '@/lib/content-unavailable';
 import {
   duplicateKeys,
   formatEntry,
@@ -14,7 +15,9 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
-  const entries = splitEntries(await readPublicationsFile());
+  const source = await readPublicationsForEdit().catch(contentUnavailable);
+  if (source instanceof NextResponse) return source;
+  const entries = splitEntries(source);
   const duplicates = duplicateKeys(entries);
 
   return NextResponse.json(
@@ -31,7 +34,8 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Malformed request.' }, { status: 400 });
   }
 
-  const source = await readPublicationsFile();
+  const source = await readPublicationsForEdit().catch(contentUnavailable);
+  if (source instanceof NextResponse) return source;
   const payload = (body ?? {}) as Record<string, unknown>;
 
   // Two ways in: a filled-in form, or BibTeX pasted straight from the publisher.

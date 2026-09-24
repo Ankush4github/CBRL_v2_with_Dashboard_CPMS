@@ -1,6 +1,7 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-import { readContent, writeContent } from '@/lib/content';
+import { readContentForEdit, writeContent } from '@/lib/content';
+import { contentUnavailable } from '@/lib/content-unavailable';
 import { validateContent } from '@/lib/content-schema';
 import { isContentCollection } from '@/lib/content-types';
 
@@ -15,8 +16,11 @@ export async function GET(_request: NextRequest, { params }: Params) {
     return NextResponse.json({ error: 'Unknown content section.' }, { status: 404 });
   }
 
+  const data = await readContentForEdit(collection).catch(contentUnavailable);
+  if (data instanceof NextResponse) return data;
+
   return NextResponse.json(
-    { data: await readContent(collection) },
+    { data },
     { headers: { 'Cache-Control': 'no-store' } }
   );
 }

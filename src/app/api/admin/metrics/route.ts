@@ -1,14 +1,18 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-import { getMetrics, writeMetrics } from '@/lib/content';
+import { getMetricsForEdit, writeMetrics } from '@/lib/content';
+import { contentUnavailable } from '@/lib/content-unavailable';
 import { validateMetrics } from '@/lib/content-schema';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
+  const data = await getMetricsForEdit().catch(contentUnavailable);
+  if (data instanceof NextResponse) return data;
+
   return NextResponse.json(
-    { data: await getMetrics() },
+    { data },
     { headers: { 'Cache-Control': 'no-store' } }
   );
 }

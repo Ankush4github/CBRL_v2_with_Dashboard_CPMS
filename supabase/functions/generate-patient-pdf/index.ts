@@ -275,7 +275,8 @@ Deno.serve(async (req) => {
       });
     }
 
-    console.log("Generating PDF for patient:", patient.patient_name);
+    // Log the record id, never the name: function logs are not patient storage.
+    console.log("Generating PDF for record:", patient.id);
 
     // Create PDF document
     const pdfDoc = await PDFDocument.create();
