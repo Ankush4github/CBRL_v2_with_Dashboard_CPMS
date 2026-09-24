@@ -10,8 +10,8 @@ export const dynamic = 'force-dynamic';
  *
  * `TRUSTED_PROXY_HOPS` and `ADMIN_ALLOWED_IPS` are otherwise configured blind:
  * you cannot tell from outside whether nginx is appending to `X-Forwarded-For`
- * or passing the caller's value through, and getting it wrong silently
- * disables the login throttle. Check here first, then set the allowlist.
+ * or passing the caller's value through, and getting it wrong lets a spoofed
+ * X-Forwarded-For past the allowlist. Check here first, then set the allowlist.
  *
  * Behind the session gate like every other admin endpoint.
  */
@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
     {
       clientIp: ip,
       allowed: isAllowedIp(ip),
-      allowlist: isAllowlistEnabled() ? 'on' : 'off (password only)',
+      allowlist: isAllowlistEnabled() ? 'on' : 'off (sign-in only)',
       trustedProxyHops: Number(process.env.TRUSTED_PROXY_HOPS ?? 1),
       expectedOrigin: expectedOrigin(request, request.nextUrl.origin),
       // The raw headers, so a mismatch between what the proxy sends and what

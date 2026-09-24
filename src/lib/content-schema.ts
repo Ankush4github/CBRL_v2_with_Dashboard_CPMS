@@ -146,8 +146,10 @@ class Ctx {
   link(value: unknown, path: string): string | undefined {
     const s = this.opt(value, path);
     if (!s) return undefined;
-    if (/^(https?:\/\/|mailto:|\/)/i.test(s)) return s;
-    this.fail(path, 'must start with https://, mailto: or /');
+    // A site path must not be `//host` or `/\host`: browsers resolve both as
+    // protocol-relative, to another origin, the same hole assetPath closes.
+    if (/^(https?:\/\/|mailto:|\/(?![/\\]))/i.test(s)) return s;
+    this.fail(path, 'must start with https://, mailto: or a single /');
     return undefined;
   }
 

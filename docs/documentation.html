@@ -194,6 +194,8 @@
     <li class="sub"><span class="n">5.6</span> Gallery</li>
     <li class="sub"><span class="n">5.7</span> Facilities</li>
     <li class="sub"><span class="n">5.8</span> Citation metrics</li>
+    <li class="sub"><span class="n">5.9</span> Home page</li>
+    <li class="sub"><span class="n">5.10</span> About the PI</li>
     <li><span class="n">6</span> Field limits and formats</li>
     <li><span class="n">7</span> When something goes wrong</li>
   </ol>
@@ -205,12 +207,13 @@
     <li><span class="n">10</span> Environment variables</li>
     <li><span class="n">11</span> How content is stored and revalidated</li>
     <li><span class="n">12</span> Authentication and session model</li>
-    <li class="sub"><span class="n">12.1</span> The session cookie</li>
-    <li class="sub"><span class="n">12.2</span> Absolute expiry and idle timeout</li>
-    <li class="sub"><span class="n">12.3</span> The activity heartbeat</li>
+    <li class="sub"><span class="n">12.1</span> Google sign-in and the editor grant</li>
+    <li class="sub"><span class="n">12.2</span> The activity cookie</li>
+    <li class="sub"><span class="n">12.3</span> Absolute expiry and idle timeout</li>
+    <li class="sub"><span class="n">12.4</span> The activity heartbeat</li>
     <li><span class="n">13</span> Security layers</li>
     <li><span class="n">14</span> Reverse proxy configuration</li>
-    <li><span class="n">15</span> Deployment and keeping git in step</li>
+    <li><span class="n">15</span> Deployment and the committed fallback copy</li>
     <li><span class="n">16</span> Deploying elsewhere (Vercel and other hosts)</li>
     <li><span class="n">17</span> API reference</li>
     <li><span class="n">18</span> Backup and restore</li>
@@ -228,8 +231,9 @@
   recording a publication, publishing photographs from a conference — without touching any code.</p>
   <div class="who">
     <strong>Who this part is for</strong>
-    Anyone given the dashboard password: research scholars, staff, or the PI. No programming
-    knowledge is assumed. You will need a web browser and the address of the site.
+    Anyone whose Google account has been granted editor access: research scholars, staff, or the
+    PI. No programming knowledge is assumed. You will need a web browser, the address of the site,
+    and that Google account.
   </div>
 </section>
 
@@ -244,7 +248,9 @@ waiting for a developer.</p>
   <thead><tr><th style="width:31%">Dashboard section</th><th style="width:26%">Public page</th><th>What you can change</th></tr></thead>
   <tbody>
     <tr><td><strong>Overview</strong></td><td>—</td><td>A summary of what is currently on the site. Nothing is edited here.</td></tr>
+    <tr><td><strong>Home page</strong></td><td><span class="path">/</span></td><td>The background images behind the homepage banner, and the collaborator logos.</td></tr>
     <tr><td><strong>Members</strong></td><td><span class="path">/members</span></td><td>Faculty, postdoctoral fellows, research scholars, staff and alumni — including photographs and profile links.</td></tr>
+    <tr><td><strong>About the PI</strong></td><td><span class="path">/about-the-pi</span></td><td>The PI's banner, portrait and profile, headline figures, biography, awards, research impact and office address.</td></tr>
     <tr><td><strong>Publications</strong></td><td><span class="path">/publications</span></td><td>The list of peer-reviewed papers. Add by DOI, paste BibTeX, or fill in a form.</td></tr>
     <tr><td><strong>Projects</strong></td><td><span class="path">/projects</span></td><td>Ongoing funded projects, their objectives, the completed-projects PDF, and sponsor logos.</td></tr>
     <tr><td><strong>Research areas</strong></td><td><span class="path">/research</span></td><td>The research areas and the disease topics written up under each.</td></tr>
@@ -256,8 +262,8 @@ waiting for a developer.</p>
 
 <div class="note">
   <span class="lbl">Everything else</span>
-  <p>Page wording outside these sections — the homepage introduction, the contact details in the
-  footer, the About&nbsp;the&nbsp;PI biography — is part of the site's code and needs a developer.
+  <p>Page wording outside these sections — the homepage text, the contact details in the footer —
+  is part of the site's code and needs a developer.
   If you are unsure whether something is editable, look for it in the sidebar; if it is not there,
   it is not editable from the dashboard.</p>
 </div>
@@ -266,27 +272,34 @@ waiting for a developer.</p>
 
 <ol class="steps">
   <li>Go to <span class="path">https://cbrl.iitkgp.ac.in/admin</span> in any modern browser.</li>
-  <li>Enter the dashboard password. There is one shared password for everybody — there are no
-      individual user accounts.</li>
-  <li>You arrive at the Overview screen. If you were trying to reach a particular section before
-      signing in, you are returned to it automatically.</li>
+  <li>Press <strong>Continue with Google</strong> and choose the Google account that has been
+      granted editor access. There is no dashboard password.</li>
+  <li>Google sends you back to the site and you arrive at the Overview screen. If you were trying
+      to reach a particular section before signing in, you are returned to it automatically.</li>
 </ol>
 
-<h4>If the password is refused</h4>
-<p>The message tells you how many attempts remain. After <strong>five</strong> wrong attempts your
-network address is blocked for <strong>ten minutes</strong>; waiting is the only way through, so
-find the correct password rather than guessing again.</p>
+<p>Access is granted <strong>per account</strong>, by your administrator. Being able to sign in to
+Google is not enough on its own: the account must also be on the list of website editors.</p>
+
+<h4>If you see "That account is not a website editor"</h4>
+<p>Google signed you in, but that account has not been given editor access. Check that you chose
+the right Google account. If you did, ask your administrator to grant it access (section&nbsp;12.1
+for them), then sign in again. If you also use the lab's patient system (CPMS) with the same
+account, this refusal does not sign you out of it.</p>
+
+<h4>If you see "Sign-in did not complete"</h4>
+<p>The round trip through Google was interrupted or cancelled. Press <strong>Continue with
+Google</strong> again.</p>
 
 <h4>If you see "The dashboard is not configured yet"</h4>
-<p>The server has not been given a password. This is not something you can fix from the browser —
+<p>The server has not been set up for sign-in. This is not something you can fix from the browser —
 contact your system administrator and point them at section&nbsp;10 of this document.</p>
 
-<div class="warn">
-  <span class="lbl">Sharing the password</span>
-  <p>Because there is a single shared password and no per-person accounts, the site cannot show who
-  made a given change. Treat the password as you would a key to the lab: share it only with people
-  who need to edit the site, and ask your administrator to change it whenever somebody with access
-  leaves the group.</p>
+<div class="note">
+  <span class="lbl">Every change is attributable</span>
+  <p>Because everyone signs in with their own account, the site records which account made each
+  save. Never sign in on someone else's behalf, and tell your administrator when somebody with
+  access leaves the group so their access can be withdrawn.</p>
 </div>
 
 <h2 class="sec"><span class="num">3</span>Sessions and the inactivity timeout</h2>
@@ -344,8 +357,9 @@ and your administrator can raise it — see section&nbsp;10.</p>
 
 <h2 class="sec"><span class="num">4</span>How every editor screen works</h2>
 
-<p class="lead">All seven editable sections share the same layout and the same controls. Learn them
-once and every screen behaves the same way.</p>
+<p class="lead">The editable sections share the same layout and the same controls. Learn them once
+and every screen behaves the same way. (Publications is the one variation: it saves one entry at a
+time — see section&nbsp;5.3.)</p>
 
 <h3><span class="num">4.1</span>The sidebar and the save bar</h3>
 
@@ -360,7 +374,7 @@ committed. It always tells you the current state:</p>
   <tbody>
     <tr><td><strong>No changes yet</strong></td><td>Nothing has been touched since the page loaded.</td></tr>
     <tr><td><strong>Unsaved changes</strong></td><td>You have edited something. It exists only in your browser.</td></tr>
-    <tr><td><strong>Saving…</strong></td><td>The change is being written on the server.</td></tr>
+    <tr><td><strong>Saving…</strong></td><td>The change is being written to the site's database.</td></tr>
     <tr><td><strong>Saved — the live page is updated</strong></td><td>Done. The public page already reflects it.</td></tr>
     <tr><td><strong>Last saved 5 minutes ago</strong></td><td>Everything is saved; this is when it happened.</td></tr>
   </tbody>
@@ -422,13 +436,14 @@ path, and an <strong>Upload image</strong> button (<strong>Replace image</strong
 <ol class="steps">
   <li>Click <strong>Upload image</strong> and choose a file. JPEG, PNG, WebP, AVIF and GIF are
       accepted, up to <strong>12&nbsp;MB</strong>.</li>
-  <li>The server converts it to WebP, rotates it upright, and resizes it to a sensible width for
-      where it will appear. The path fills in automatically.</li>
+  <li>The server converts it to WebP, rotates it upright, resizes it to a sensible width for where
+      it will appear, and stores it in the site's image store. The image's address fills in
+      automatically — a full <code>https://…/site-media/…</code> address.</li>
   <li>Press <strong>Save changes</strong>. The upload alone does not publish anything.</li>
 </ol>
 
 <p><strong>Clear</strong> removes the image from the entry. It does not delete the uploaded file
-from the server.</p>
+from the image store.</p>
 
 <div class="note">
   <span class="lbl">Why replaced photos appear instantly</span>
@@ -437,16 +452,18 @@ from the server.</p>
   see an updated photograph.</p>
 </div>
 
-<p>You may also type a path directly into the box — useful for an image already on the server. It
-must begin with <code>/</code> and point inside the site, for example
-<code>/images/MembersDP/koel-chaudhury-a1b2c3d4.webp</code>. Full web addresses beginning
-<code>http://</code> or <code>https://</code> are rejected.</p>
+<p>You may also type a path directly into the box — useful for one of the older images that ship
+with the site itself. It must begin with <code>/</code> and point inside the site, for example
+<code>/images/MembersDP/ankush-das.webp</code>. Other full web addresses beginning
+<code>http://</code> or <code>https://</code> are rejected; the only ones accepted are the
+addresses of images uploaded from the dashboard.</p>
 
 <h2 class="sec"><span class="num">5</span>Section by section</h2>
 
 <h3><span class="num">5.1</span>Overview</h3>
 <p>The landing screen after signing in. It reports how many members, publications, projects, albums
-and instruments are currently published, and links to each section. Nothing is editable here — it is
+and instruments are currently published, gives a one-line count for every section, and links to
+each. Nothing is editable here — it is
 a place to confirm the site holds what you expect.</p>
 
 <h3><span class="num">5.2</span>Members</h3>
@@ -502,8 +519,9 @@ Alumni, and re-enter their details — adding <strong>Current position</strong> 
 <h3><span class="num">5.3</span>Publications</h3>
 
 <p>The publications page is generated from a BibTeX record of roughly 180 entries. The editor works
-on <strong>one entry at a time</strong> — every other entry in the file is left untouched, byte for
-byte — so there is no risk of a stray edit disturbing the rest of the list.</p>
+on <strong>one entry at a time</strong> — every other entry in the record is left untouched, byte
+for byte — so there is no risk of a stray edit disturbing the rest of the list. Each add, edit or
+delete is saved on its own as soon as you confirm it, rather than through the save bar.</p>
 
 <h4>Three ways to add a paper</h4>
 
@@ -526,7 +544,7 @@ byte — so there is no risk of a stray edit disturbing the rest of the list.</p
 </table>
 
 <p>New entries are added at the <strong>top</strong> of the record. The public page groups everything
-by year regardless, so position within the file does not affect what visitors see.</p>
+by year regardless, so position within the record does not affect what visitors see.</p>
 
 <h4>Editing and deleting</h4>
 <p>Existing entries are listed with their title, authors and year. Open one to edit its fields, or
@@ -546,7 +564,7 @@ delete it outright. Fields the public page does not display — <code>keywords</
   <tbody>
     <tr><td>"That does not look like a DOI"</td><td>The DOI must start <code>10.</code> followed by four or more digits, a slash, then the suffix. Remove any surrounding text.</td></tr>
     <tr><td>"No record found for that DOI"</td><td>The DOI is not registered. Check it against the publisher's page; very new papers sometimes take days to appear.</td></tr>
-    <tr><td>"Could not reach doi.org"</td><td>The server has no internet access, or doi.org is down. Paste the BibTeX instead — that works entirely offline.</td></tr>
+    <tr><td>"Could not reach doi.org"</td><td>The server has no internet access, or doi.org is down. Paste the BibTeX instead — that does not need doi.org.</td></tr>
   </tbody>
 </table>
 
@@ -592,7 +610,7 @@ in the list is rejected when you save.</p>
 
 <p>Each album needs a title and a <strong>cover image</strong> (both required), and may also carry a
 caption, a date, a longer description and any number of additional photographs. Gallery uploads may
-be filed into a sub-folder, which keeps large albums tidy on the server.</p>
+be filed into a sub-folder, which keeps large albums tidy in the image store.</p>
 
 <div class="warn">
   <span class="lbl">Removing a category</span>
@@ -635,6 +653,45 @@ be filed into a sub-folder, which keeps large albums tidy on the server.</p>
 <p>These figures are typed in by hand; nothing fetches them automatically. Refreshing them once a
 term is a sensible habit.</p>
 
+<h3><span class="num">5.9</span>Home page</h3>
+
+<p>Two lists:</p>
+
+<ul>
+  <li><strong>Background images</strong> — the photographs behind the homepage banner. Each needs an
+      image and alt text (up to 200 characters) describing it for screen readers. At least one image
+      is required. Uploads are resized to 2400&nbsp;px wide; landscape photographs work best, because
+      the banner crops to fill.</li>
+  <li><strong>Collaborators</strong> — each logo needs a name (the caption under the logo), the logo
+      image and its alt text. An optional <strong>Website</strong> turns the card into a link. You also
+      choose the <strong>Row</strong> it sits in (1 or 2), a <strong>Display width</strong> between 20
+      and 400&nbsp;px, and the file's <strong>source width and height</strong> in pixels — these are
+      filled in for you when you upload the logo.</li>
+</ul>
+
+<div class="note">
+  <span class="lbl">SVG logos</span>
+  <p>SVG files cannot be uploaded. An SVG logo has to be placed in
+  <span class="path">public/images/Collab/</span> by your administrator, after which you type its path
+  into the logo box.</p>
+</div>
+
+<h3><span class="num">5.10</span>About the PI</h3>
+
+<p>One page, edited in blocks:</p>
+
+<table class="compact">
+  <thead><tr><th style="width:26%">Block</th><th>What it holds</th></tr></thead>
+  <tbody>
+    <tr><td><strong>Banner</strong></td><td>The full-width band at the top: background image and its description (both required), an optional eyebrow line, the heading (required) and a standfirst.</td></tr>
+    <tr><td><strong>Profile</strong></td><td>Portrait and its description, name and email (all required), plus position, institution and phone. The portrait is cropped to 4:5, so keep the face towards the top.</td></tr>
+    <tr><td><strong>Headline figures</strong></td><td>Value and label pairs beside the portrait, both required. Type <code>{publications}</code> as a value to show the live publication count.</td></tr>
+    <tr><td><strong>Biography</strong></td><td>Eyebrow, heading, and paragraphs — one box per paragraph.</td></tr>
+    <tr><td><strong>Awards &amp; recognition</strong>, <strong>Research impact</strong></td><td>Eyebrow, heading, and a list of entries, each a title with an optional description. Entries left completely blank are dropped on save.</td></tr>
+    <tr><td><strong>Contact</strong></td><td>Eyebrow, heading and the office address, one line per line break. The email and phone rows come from Profile.</td></tr>
+  </tbody>
+</table>
+
 <h2 class="sec"><span class="num">6</span>Field limits and formats</h2>
 
 <p class="lead">A reference for the formats the server insists on. Getting one of these wrong is the
@@ -646,7 +703,7 @@ most common reason a save is rejected.</p>
     <tr><td><strong>Dates as <code>YYYY-MM</code></strong></td><td>Member "Joined" — <code>2023-08</code>, not <code>Aug 2023</code>.</td></tr>
     <tr><td><strong>Dates as <code>YYYY-MM-DD</code></strong></td><td>Citation metrics "Last updated" — <code>2026-07-27</code>.</td></tr>
     <tr><td><strong>Links</strong></td><td>Must start with <code>https://</code>, <code>http://</code>, <code>mailto:</code> or <code>/</code>. A bare <code>www.example.com</code> is rejected.</td></tr>
-    <tr><td><strong>Image and file paths</strong></td><td>Must start with a single <code>/</code> and stay inside the site. Full web addresses and <code>..</code> are rejected.</td></tr>
+    <tr><td><strong>Image and file paths</strong></td><td>Either the address of an image uploaded from the dashboard, or a path that starts with a single <code>/</code> and stays inside the site. Any other full web address, and anything containing <code>..</code>, is rejected.</td></tr>
     <tr><td><strong>Email addresses</strong></td><td>Must contain <code>@</code> and a dot in the domain. Two addresses may be separated by a comma.</td></tr>
     <tr><td><strong>Uploads</strong></td><td>JPEG, PNG, WebP, AVIF or GIF, maximum 12&nbsp;MB. Everything becomes WebP.</td></tr>
     <tr><td><strong>Blank rows</strong></td><td>Silently dropped from lists such as objectives, features and topic paragraphs.</td></tr>
@@ -664,8 +721,12 @@ most common reason a save is rejected.</p>
       <td>Validation failed and <em>nothing</em> was written. Each listed line names the field. Fix them and save again — see section&nbsp;4.3.</td>
     </tr>
     <tr>
-      <td><strong>"Could not write the file on the server. Check file permissions."</strong></td>
-      <td>The server could not save to disk. Nothing was lost from your screen — do not reload. Copy your work somewhere safe and contact your administrator; this is section&nbsp;20 for them.</td>
+      <td><strong>"Could not save your changes. If this keeps happening, the signed-in account may no longer be a site editor."</strong></td>
+      <td>The database refused or did not receive the save. Nothing was lost from your screen — do not reload. Try once more; if it fails again, copy your work somewhere safe and contact your administrator (section&nbsp;20 for them). The usual cause is that your editor access has been withdrawn.</td>
+    </tr>
+    <tr>
+      <td><strong>"This section could not be loaded"</strong></td>
+      <td>The site's database could not be read, so the editor was deliberately not opened — editing an out-of-date copy would overwrite recent changes. Nothing has been changed. Press <strong>Try again</strong> after a moment. The same cause can show as "Could not load … from the database. Nothing was changed — try again in a moment."</td>
     </tr>
     <tr>
       <td><strong>"Could not reach the server."</strong></td>
@@ -676,12 +737,16 @@ most common reason a save is rejected.</p>
       <td>The session expired — five minutes idle or eight hours total. Sign in again. Unsaved work is gone; see section&nbsp;3.</td>
     </tr>
     <tr>
-      <td><strong>"Signed out after a period of inactivity."</strong></td>
+      <td><strong>"You were signed out after a period of inactivity."</strong></td>
       <td>Confirmation of the five-minute timeout. Sign in and continue.</td>
     </tr>
     <tr>
-      <td><strong>"Too many attempts. Try again in N minutes."</strong></td>
-      <td>Five wrong passwords. Wait it out — there is no way to shorten it from the browser.</td>
+      <td><strong>"That account is not a website editor."</strong></td>
+      <td>The Google account you chose has no editor access, or its access has been withdrawn. Check you picked the right account; otherwise ask your administrator — see section&nbsp;2.</td>
+    </tr>
+    <tr>
+      <td><strong>"Could not store the image."</strong></td>
+      <td>The upload was converted but could not be saved to the image store. Try again; if it persists, the likely cause is that your editor access has been withdrawn.</td>
     </tr>
     <tr>
       <td><strong>"The dashboard is not available from your network."</strong></td>
@@ -723,7 +788,7 @@ most common reason a save is rejected.</p>
   something breaks.</p>
   <div class="who">
     <strong>Who this part is for</strong>
-    Whoever operates the server. Assumes a working knowledge of the command line, Node.js and nginx.
+    Whoever operates the server. Assumes a working knowledge of the command line, Node.js, nginx and the Supabase dashboard.
     Read sections&nbsp;12 to&nbsp;14 before exposing the dashboard to a network.
   </div>
 </section>
@@ -738,40 +803,58 @@ most common reason a save is rejected.</p>
     <tr><td>UI</td><td>React 19, Tailwind CSS 3, Radix primitives</td></tr>
     <tr><td>Images</td><td>Next.js Image, Sharp for upload re-encoding</td></tr>
     <tr><td>Contact form</td><td>EmailJS, entirely client-side</td></tr>
-    <tr><td>Content store</td><td>JSON and BibTeX files on disk — no database</td></tr>
-    <tr><td>Auth</td><td>Single shared password, HMAC-SHA256 signed cookie, Web Crypto</td></tr>
+    <tr><td>Content store</td><td>Supabase Postgres — table <code>public.site_content</code>, one row per collection, with every previous version kept in <code>public.site_content_versions</code></td></tr>
+    <tr><td>Image store</td><td>Supabase Storage — public bucket <code>site-media</code>, WebP only</td></tr>
+    <tr><td>Auth</td><td>Google sign-in through Supabase Auth, a per-account grant in <code>public.site_editors</code>, and an HMAC-SHA256 signed activity cookie (Web Crypto) for the idle timeout and absolute cap</td></tr>
   </tbody>
 </table>
 
+<p>The Supabase project is the one shared with CPMS, the lab's patient system, which runs in the
+same Next.js application under <span class="path">/cpms</span>. The application holds only the
+project's <strong>publishable</strong> key. There is no service-role key anywhere in the app:
+row-level security is what keeps website editors away from patient records, and a service-role key
+would bypass it.</p>
+
 <h3><span class="num">8.1</span>Directories that matter</h3>
 
-<pre><code>content/                     Editable content, written by the dashboard
+<pre><code>content/                     Committed fallback copy of each JSON collection
+├── home.json                Hero images, collaborator logos
 ├── members.json             Faculty, postdocs, scholars, staff, alumni
+├── about.json               About-the-PI page
 ├── projects.json            Ongoing projects, completed-projects PDF, sponsors
 ├── research.json            Research areas and their topics
 ├── gallery.json             Albums and categories
-├── facilities.json          Instruments, in-charges, stats, slot charges
-└── .backups/                Rolling snapshots before each save (gitignored)
+└── facilities.json          Instruments, in-charges, stats, slot charges
 
 public/
-├── data/publications.bib    ~180 BibTeX entries
-├── data/metrics.json        Citations, h-index, source, lastUpdated
-└── images/                  Uploads land here, by destination folder
+├── data/publications.bib    Committed fallback copy of the publications record
+├── data/metrics.json        Committed fallback copy of the citation metrics
+└── images/                  Images that ship with the site (older content)
 
 src/
-├── proxy.ts                 Auth + network gate on /admin and /api/admin
-├── lib/admin-auth.ts        Session tokens, password check, cookie options
+├── proxy.ts                 Network, origin, sign-in and activity gate on /admin and /api/admin
+├── app/admin/auth/callback/ Where Google returns to; issues the activity cookie
+├── lib/admin-auth.ts        Activity cookie: signing, idle timeout, absolute cap
 ├── lib/admin-network.ts     X-Forwarded-For parsing, CIDR allowlist, origin
-├── lib/content.ts           Atomic reads/writes, backups, revalidation
+├── lib/site-editor.ts       The site_editors lookup
+├── lib/content.ts           Database reads and writes, disk fallback, revalidation
 ├── lib/content-schema.ts    Validation and normalisation of every write
-└── components/admin/        Dashboard shell, fields, session timeout</code></pre>
+└── components/admin/        Dashboard shell, fields, session timeout
+
+supabase/migrations/         Schema, including site_content, site_editors and site-media</code></pre>
+
+<p>The files under <span class="path">content/</span> and <span class="path">public/data/</span>
+are <strong>not</strong> what the dashboard edits. They are the seed the database was first filled
+from (section&nbsp;9.4, <code>migrate:content</code>) and a last-resort fallback for the public site
+when the database cannot be read — see section&nbsp;11.</p>
 
 <div class="note">
   <span class="lbl">One gate, no per-route checks</span>
   <p><span class="path">src/proxy.ts</span> runs ahead of every <span class="path">/admin</span> page
-  and <span class="path">/api/admin</span> endpoint. Address allowlist, <code>Origin</code> check and
-  session validation all live there, which is why no individual route can ship without them. Read it
-  first when auditing.</p>
+  and <span class="path">/api/admin</span> endpoint. Address allowlist, <code>Origin</code> check,
+  Supabase sign-in with its <code>site_editors</code> grant, and the activity cookie all live there,
+  which is why no individual route can ship without them. Read it first when auditing. It is the
+  gate, not the authorisation: writes are authorised again by the database itself (section&nbsp;13).</p>
 </div>
 
 <h2 class="sec"><span class="num">9</span>Installation and the build</h2>
@@ -779,35 +862,63 @@ src/
 <h3><span class="num">9.1</span>Requirements</h3>
 <ul>
   <li><strong>Node.js 20.9 or newer</strong> — required by Next.js 16.</li>
-  <li><strong>npm</strong>, or pnpm (a <code>pnpm-lock.yaml</code> is committed).</li>
+  <li><strong>npm</strong> (a <code>package-lock.json</code> is committed).</li>
   <li>A build host able to compile Sharp, or one of its prebuilt binaries.</li>
+  <li>Access to the Supabase project, with Google enabled as a sign-in provider under
+      Authentication, and <span class="path">https://&lt;your-host&gt;/admin/auth/callback</span>
+      registered under Authentication → URL Configuration — otherwise Google answers with a redirect
+      mismatch.</li>
+  <li>Outbound HTTPS from the server to the Supabase project, and to doi.org for DOI imports.</li>
 </ul>
 
 <h3><span class="num">9.2</span>First run</h3>
-<pre><code>git clone https://github.com/Ankush4github/CBRL-Website-v2-With-CMS.git
-cd CBRL-Website-v2-With-CMS
+<pre><code>git clone https://github.com/Ankush4github/CBRL_v2_with_Dashboard_CPMS.git
+cd CBRL_v2_with_Dashboard_CPMS
 npm install
 
 cp .env.example .env.local     # then edit it — see section 10
-npm run dev                    # http://localhost:3000</code></pre>
+npm run dev                    # http://localhost:3200</code></pre>
+
+<p>On a brand-new Supabase project, apply the migrations in
+<span class="path">supabase/migrations/</span> and seed the content once with
+<code>npm run migrate:content</code> (section&nbsp;9.4). Then grant yourself editor access
+(section&nbsp;12.1).</p>
 
 <h3><span class="num">9.3</span>Production</h3>
-<pre><code>npm run build
-npm start                      # serves the build, default port 3000</code></pre>
+<pre><code>npm run build                  # clears Next's persisted fetch cache, then builds
+npm start                      # serves the build on port 3200</code></pre>
 
 <h3><span class="num">9.4</span>Scripts</h3>
 <table class="compact">
   <thead><tr><th style="width:34%">Command</th><th>Purpose</th></tr></thead>
   <tbody>
-    <tr><td><code>npm run dev</code></td><td>Development server with Turbopack.</td></tr>
-    <tr><td><code>npm run build</code></td><td>Production build. Fails on type errors.</td></tr>
-    <tr><td><code>npm start</code></td><td>Serve the production build.</td></tr>
+    <tr><td><code>npm run dev</code></td><td>Development server on port 3200.</td></tr>
+    <tr><td><code>npm run build</code></td><td>Deletes Next's persisted fetch cache (<span class="path">scripts/clear-data-cache.js</span>) so the prerendered pages read the current database, then runs the production build. Fails on type errors.</td></tr>
+    <tr><td><code>npm start</code></td><td>Serve the production build on port 3200.</td></tr>
     <tr><td><code>npm run lint</code></td><td>ESLint over <span class="path">src</span>.</td></tr>
-    <tr><td><code>npm run typecheck</code></td><td>TypeScript, no emit.</td></tr>
+    <tr><td><code>npm run typecheck</code></td><td>TypeScript, no emit, over the app and the scripts.</td></tr>
     <tr><td><code>npm run optimize-images</code></td><td>Batch-compress <span class="path">public/images</span> with Sharp.</td></tr>
-    <tr><td><code>npm run test:network</code></td><td>Exercises IP parsing and CIDR matching — the logic the throttle and allowlist depend on. Run after changing proxy settings.</td></tr>
+    <tr><td><code>npm test</code></td><td>Runs <code>test:network</code>, <code>test:errors</code>, <code>test:uploads</code> and <code>test:access</code> in turn.</td></tr>
+    <tr><td><code>npm run test:network</code></td><td>Exercises IP parsing, CIDR matching and origin derivation — the logic the allowlist and <code>Origin</code> check depend on. Run after changing proxy settings.</td></tr>
+    <tr><td><code>npm run test:uploads</code></td><td>Everything the upload endpoint refuses, and why.</td></tr>
+    <tr><td><code>npm run test:errors</code>, <code>test:access</code></td><td>CPMS checks: error-message mapping and route-access rules.</td></tr>
+    <tr><td><code>npm run test:api</code></td><td>Probes every admin API route on a <em>running production build</em> (<code>BASE_URL=…</code>) for leaked stack traces, paths, database text or secrets. Not part of <code>npm test</code>.</td></tr>
+    <tr><td><code>npm run migrate:content</code></td><td>Copies the committed files in <span class="path">content/</span> and <span class="path">public/data/</span> into <code>site_content</code>. One-time seeding; see the warning below.</td></tr>
   </tbody>
 </table>
+
+<div class="warn">
+  <span class="lbl">migrate:content overwrites live content</span>
+  <p>It is the only thing in the repository that uses the Supabase <strong>service-role</strong> key,
+  because there is no editor to sign in as before the first grant exists. Pass the key for that one
+  command only — never put it in <span class="path">.env.local</span>, where the app would pick it
+  up:</p>
+  <pre><code>SUPABASE_SERVICE_ROLE_KEY=&lt;key&gt; npm run migrate:content            # bash
+$env:SUPABASE_SERVICE_ROLE_KEY = "&lt;key&gt;"; npm run migrate:content   # PowerShell</code></pre>
+  <p>Once editors have started saving, a full run rolls every collection back to its last committed
+  copy (recoverable from <code>site_content_versions</code>, but not something to do by accident).
+  To seed a single newly added collection, name it: <code>npm run migrate:content -- about</code>.</p>
+</div>
 
 <h2 class="sec"><span class="num">10</span>Environment variables</h2>
 
@@ -820,23 +931,33 @@ template.</p>
   <thead><tr><th style="width:31%">Variable</th><th>Purpose</th></tr></thead>
   <tbody>
     <tr>
-      <td><code>ADMIN_PASSWORD</code></td>
-      <td>The single shared dashboard password. Make it long — it is the entire perimeter. Compared by SHA-256 digest, so its length never leaks through timing.</td>
+      <td><code>NEXT_PUBLIC_SUPABASE_URL</code></td>
+      <td>The Supabase project URL, <code>https://&lt;ref&gt;.supabase.co</code>. The same project backs the dashboard and CPMS.</td>
+    </tr>
+    <tr>
+      <td><code>NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code></td>
+      <td>The project's <strong>publishable</strong> key. It is visible in the browser bundle by design; an anonymous holder can read the public website content and nothing more. Never add a service-role key to the app's environment.</td>
     </tr>
     <tr>
       <td><code>ADMIN_SESSION_SECRET</code></td>
-      <td>Signs the session cookie. <strong>Minimum 16 characters</strong>; the app refuses to issue sessions below that. Changing it signs everybody out immediately.</td>
+      <td>Signs the activity cookie that enforces the idle timeout and the 8-hour cap. <strong>Minimum 16 characters</strong>; below that the dashboard counts as unconfigured. Changing it signs every editor out of the dashboard immediately.</td>
     </tr>
   </tbody>
 </table>
+
+<p>There is no dashboard password variable. Who may edit is decided per account by
+<code>public.site_editors</code> (section&nbsp;12.1), not by configuration.</p>
 
 <p>Generate a secret with:</p>
 <pre><code>node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"</code></pre>
 
 <div class="danger">
   <span class="lbl">If these are unset</span>
-  <p>The dashboard refuses every sign-in and shows a setup notice instead of a login form. This is a
-  deliberate fail-closed default: an unconfigured deployment is locked, never open.</p>
+  <p>If either Supabase value is missing, or <code>ADMIN_SESSION_SECRET</code> is missing or too
+  short, the sign-in page shows "The dashboard is not configured yet" with the three variables to
+  add, and <span class="path">/admin/auth/callback</span> redirects there rather than issuing a
+  session. This is a deliberate fail-closed default: an unconfigured deployment is locked, never
+  open.</p>
 </div>
 
 <h3><span class="num">10.2</span>Session timing</h3>
@@ -851,9 +972,10 @@ template.</p>
   </tbody>
 </table>
 
-<p>The 8-hour absolute cap is a compile-time constant
-(<code>SESSION_MAX_AGE_SECONDS</code> in <span class="path">src/lib/admin-auth.ts</span>) and is not
-configurable by environment.</p>
+<p>This variable is read by <span class="path">src/lib/admin-auth.ts</span> but is not listed in
+<span class="path">.env.example</span>; add it to <span class="path">.env.local</span> by hand if
+you need it. The 8-hour absolute cap is a compile-time constant
+(<code>SESSION_MAX_AGE_SECONDS</code> in the same file) and is not configurable by environment.</p>
 
 <div class="note">
   <span class="lbl">Raising the idle timeout</span>
@@ -869,12 +991,12 @@ configurable by environment.</p>
     <tr>
       <td><code>TRUSTED_PROXY_HOPS</code></td>
       <td class="nowrap">1</td>
-      <td>How many reverse proxies sit in front of the app. <code>1</code> for a single nginx; <code>0</code> if Node is exposed directly, which makes <code>X-Forwarded-For</code> ignored entirely. Getting this wrong silently disables the login throttle — see section&nbsp;14.</td>
+      <td>How many reverse proxies sit in front of the app. <code>1</code> for a single nginx; <code>0</code> if Node is exposed directly, which makes <code>X-Forwarded-For</code> ignored entirely. It decides which address the IP allowlist checks and <span class="path">/api/admin/whoami</span> reports; getting it wrong lets a caller spoof their way past the allowlist, or locks you out of it — see section&nbsp;14.</td>
     </tr>
     <tr>
       <td><code>ADMIN_ALLOWED_IPS</code></td>
       <td class="nowrap">unset</td>
-      <td>Optional. Comma-separated IPs and CIDR ranges, IPv4 and IPv6, e.g. <code>10.111.0.0/16, 203.0.113.5</code>. Restricts <span class="path">/admin</span> and <span class="path">/api/admin</span> only; the public site is untouched. Unset means password-only.</td>
+      <td>Optional. Comma-separated IPs and CIDR ranges, IPv4 and IPv6, e.g. <code>10.111.0.0/16, 203.0.113.5</code>. Restricts <span class="path">/admin</span> and <span class="path">/api/admin</span> only; the public site is untouched. Unset means any address may reach the sign-in page, and sign-in alone is the gate.</td>
     </tr>
     <tr>
       <td><code>ADMIN_ORIGIN</code></td>
@@ -894,67 +1016,168 @@ configurable by environment.</p>
   </tbody>
 </table>
 
+<p>The commented-out block at the end of <span class="path">.env.example</span> (<code>APP_URL</code>,
+<code>GEMINI_API_KEY</code>, <code>VAPID_*</code>, <code>CRON_SECRET</code>,
+<code>RESEND_API_KEY</code> and so on) belongs to CPMS's Supabase Edge Functions. This application
+does not read any of them; they take effect only when set with <code>supabase secrets set</code>.</p>
+
 <h2 class="sec"><span class="num">11</span>How content is stored and revalidated</h2>
 
-<p class="lead">There is no database. Pages read JSON from disk on the server, so a dashboard save
-writes a file and the change is live on the next request — no rebuild, no redeploy.</p>
+<p class="lead">Content lives in the Supabase database, not on the server's disk. The public pages
+are statically generated from it, and a dashboard save drops the cached render of the pages that
+depend on what changed — so the change is live on the next request, with no rebuild and no
+redeploy.</p>
 
-<h3><span class="num">11.1</span>The write path</h3>
+<h3><span class="num">11.1</span>Where each thing lives</h3>
+<table class="compact">
+  <thead><tr><th style="width:30%">What</th><th>Where</th></tr></thead>
+  <tbody>
+    <tr><td>Each JSON collection</td><td>One row in <code>public.site_content</code>, keyed by <code>collection</code> (<code>home</code>, <code>members</code>, <code>projects</code>, <code>research</code>, <code>gallery</code>, <code>facilities</code>, <code>about</code>, <code>metrics</code>), document in the <code>data</code> jsonb column.</td></tr>
+    <tr><td>Publications</td><td>The row <code>publications</code>, stored as BibTeX text in the <code>raw</code> column so it survives byte for byte.</td></tr>
+    <tr><td>Who saved last, and when</td><td><code>site_content.updated_by</code> (the editor's Supabase user id) and <code>updated_at</code>, stamped by the database.</td></tr>
+    <tr><td>Every previous version</td><td><code>public.site_content_versions</code> — see section&nbsp;18.</td></tr>
+    <tr><td>Uploaded images</td><td>The public Supabase Storage bucket <code>site-media</code> — section&nbsp;11.5.</td></tr>
+  </tbody>
+</table>
+
+<h3><span class="num">11.2</span>The write path</h3>
 <ol class="steps">
   <li><strong>Validate.</strong> The whole document is checked and normalised. A single bad field
       rejects the entire save with a 422 and a per-field issue list; nothing is written.</li>
-  <li><strong>Back up.</strong> The current file is copied to
-      <span class="path">content/.backups/&lt;collection&gt;/&lt;timestamp&gt;.json</span>. The most
-      recent <strong>20</strong> are kept per collection; older ones are pruned automatically.</li>
-  <li><strong>Write atomically.</strong> Content goes to a temporary file in the same directory and
-      is then renamed over the target. A crash or a concurrent read can never observe a
-      half-written file.</li>
+  <li><strong>Write as the editor.</strong> The row is upserted through the editor's
+      <em>own</em> Supabase session. The row-level security policy on <code>site_content</code>
+      re-checks <code>is_site_editor()</code> for that account, so the database — not the proxy — is
+      what authorises the write.</li>
+  <li><strong>Snapshot.</strong> A <code>BEFORE UPDATE</code> trigger copies the row as it was into
+      <code>site_content_versions</code> and stamps the new row's <code>updated_at</code> and
+      <code>updated_by</code>.</li>
   <li><strong>Revalidate.</strong> <code>revalidatePath()</code> drops the cached render of the
       pages that depend on the collection.</li>
 </ol>
 
-<h3><span class="num">11.2</span>Which pages each collection revalidates</h3>
+<h3><span class="num">11.3</span>Reads, and the committed fallback copy</h3>
+
+<p>The public pages read <code>site_content</code> with the publishable key and no session — the
+table is world-readable because the site it renders is public. If a collection has no row yet, or
+the database cannot be read, the public site falls back to the committed copy on disk
+(<span class="path">content/&lt;collection&gt;.json</span>,
+<span class="path">public/data/metrics.json</span>,
+<span class="path">public/data/publications.bib</span>) and logs a <code>[content]</code> warning.
+That copy is only as fresh as the last commit, so a page rendered from it may be showing content
+the dashboard has since changed.</p>
+
+<div class="danger">
+  <span class="lbl">The dashboard never falls back</span>
+  <p>An editor seeded from the disk copy would save the whole document back and silently replace
+  every edit made since that commit. So when the database read fails, each editor page shows
+  "This section could not be loaded" instead of opening, and the admin API answers
+  <code>503</code> with <code>Retry-After: 5</code>. The only case in which an editor opens on the
+  disk copy is a collection that has never had a row, where there is nothing newer to lose.</p>
+</div>
+
+<h3><span class="num">11.4</span>Which pages each collection revalidates</h3>
 <table class="compact">
   <thead><tr><th style="width:30%">Collection</th><th>Paths revalidated</th></tr></thead>
   <tbody>
+    <tr><td><code>home</code></td><td><span class="path">/</span></td></tr>
     <tr><td><code>members</code></td><td><span class="path">/members</span>, <span class="path">/facilities</span></td></tr>
+    <tr><td><code>about</code></td><td><span class="path">/about-the-pi</span></td></tr>
     <tr><td><code>projects</code></td><td><span class="path">/projects</span></td></tr>
     <tr><td><code>research</code></td><td><span class="path">/research</span></td></tr>
     <tr><td><code>gallery</code></td><td><span class="path">/gallery</span></td></tr>
     <tr><td><code>facilities</code></td><td><span class="path">/facilities</span></td></tr>
     <tr><td><code>metrics</code></td><td><span class="path">/publications</span>, <span class="path">/about-the-pi</span></td></tr>
-    <tr><td><code>publications.bib</code></td><td><span class="path">/publications</span>, <span class="path">/about-the-pi</span>, <span class="path">/</span></td></tr>
+    <tr><td><code>publications</code></td><td><span class="path">/publications</span>, <span class="path">/about-the-pi</span>, <span class="path">/</span></td></tr>
   </tbody>
 </table>
 
-<h3><span class="num">11.3</span>Uploads</h3>
+<p>Only a save through the dashboard triggers revalidation. A change made directly in the database
+(a restore from section&nbsp;18, for instance) appears on the public site after the next dashboard
+save of that collection, or after the next build and restart.</p>
+
+<h3><span class="num">11.5</span>Uploads</h3>
 <p>Uploaded bytes are re-encoded through Sharp to WebP at quality 82 and given a content-hashed
-filename. <strong>Re-encoding is the validation</strong> — the caller's <code>Content-Type</code> and
-filename are never trusted, and anything Sharp cannot decode is refused, so no caller-chosen file can
-be served back from this origin.</p>
+filename, then stored in the <code>site-media</code> bucket through the editor's own session, so
+the bucket's policies re-check the <code>site_editors</code> grant. <strong>Re-encoding is the
+validation</strong> — the caller's <code>Content-Type</code> and filename are never trusted, and
+anything Sharp cannot decode is refused. The bucket itself accepts <code>image/webp</code> only.
+Objects are stored with a one-year cache lifetime, which is why a replaced image always gets a new
+address. The response carries the object's public URL, which is what the editor saves.</p>
 
 <table class="compact">
-  <thead><tr><th style="width:20%">Destination</th><th style="width:36%">Folder</th><th style="width:16%">Max width</th><th>Sub-folders</th></tr></thead>
+  <thead><tr><th style="width:20%">Destination</th><th style="width:36%">Object key prefix</th><th style="width:16%">Max width</th><th>Sub-folders</th></tr></thead>
   <tbody>
-    <tr><td><code>members</code></td><td><span class="path">public/images/MembersDP</span></td><td>900 px</td><td>No</td></tr>
-    <tr><td><code>alumni</code></td><td><span class="path">public/images/AlumniDP</span></td><td>900 px</td><td>No</td></tr>
-    <tr><td><code>facilities</code></td><td><span class="path">public/images/facilities</span></td><td>1600 px</td><td>No</td></tr>
-    <tr><td><code>gallery</code></td><td><span class="path">public/images/gallery</span></td><td>2000 px</td><td>Yes</td></tr>
-    <tr><td><code>sponsors</code></td><td><span class="path">public/images/sponsors</span></td><td>800 px</td><td>No</td></tr>
+    <tr><td><code>members</code></td><td><span class="path">images/MembersDP</span></td><td>900 px</td><td>No</td></tr>
+    <tr><td><code>alumni</code></td><td><span class="path">images/AlumniDP</span></td><td>900 px</td><td>No</td></tr>
+    <tr><td><code>facilities</code></td><td><span class="path">images/facilities</span></td><td>1600 px</td><td>No</td></tr>
+    <tr><td><code>gallery</code></td><td><span class="path">images/gallery</span></td><td>2000 px</td><td>Yes</td></tr>
+    <tr><td><code>sponsors</code></td><td><span class="path">images/sponsors</span></td><td>800 px</td><td>No</td></tr>
+    <tr><td><code>hero</code></td><td><span class="path">images/photo</span></td><td>2400 px</td><td>No</td></tr>
+    <tr><td><code>collab</code></td><td><span class="path">images/Collab</span></td><td>800 px</td><td>No</td></tr>
+    <tr><td><code>pi</code></td><td><span class="path">images/pi</span></td><td>1600 px</td><td>No</td></tr>
   </tbody>
 </table>
 
 <p>Maximum accepted size is 12&nbsp;MB, checked against <code>Content-Length</code> before the body
-is read into memory. Editing the JSON and BibTeX files by hand still works exactly as before — the
-dashboard is another way in, not a replacement.</p>
+is read into memory. Older content still points at <span class="path">/images/…</span> files
+committed under <span class="path">public/</span>; those keep working alongside the bucket. Editing
+the files under <span class="path">content/</span> or <span class="path">public/data/</span> by hand
+no longer changes the live site — it only changes the fallback copy.</p>
 
 <h2 class="sec"><span class="num">12</span>Authentication and session model</h2>
 
-<h3><span class="num">12.1</span>The session cookie</h3>
+<p class="lead">Two independent things must both be true for a dashboard request to get through:
+Supabase says who you are and <code>site_editors</code> says you may edit, and a signed activity
+cookie says you have been here recently. Neither alone is enough.</p>
 
-<p>One shared password buys an HMAC-SHA256 signed cookie. Signing uses Web Crypto rather than
-<code>node:crypto</code>, so identical code verifies the cookie in the Edge-runtime proxy and inside
-Node route handlers.</p>
+<h3><span class="num">12.1</span>Google sign-in and the editor grant</h3>
+
+<ol class="steps">
+  <li>The sign-in page starts Supabase's Google OAuth flow, with
+      <span class="path">/admin/auth/callback</span> as the return address (carrying
+      <code>next=</code> so a deep link survives the round trip; only paths under
+      <span class="path">/admin</span> are honoured).</li>
+  <li>Google returns to <span class="path">/admin/auth/callback</span>, which exchanges the one-time
+      code for a Supabase session and fetches the user.</li>
+  <li>It checks for a row in <code>public.site_editors</code> for that user with
+      <code>is_enabled = true</code>. Without one it redirects to
+      <span class="path">/admin/login?reason=denied</span>. The Supabase session is deliberately
+      <strong>left in place</strong>: the project is shared with CPMS, and signing the account out
+      here would sign a clinician out of the patient system too.</li>
+  <li>With a grant, it issues the activity cookie (section&nbsp;12.2) and redirects to the requested
+      page. A failed exchange redirects to <span class="path">/admin/login?reason=failed</span>; an
+      unconfigured dashboard redirects to the sign-in page, which says what is missing.</li>
+</ol>
+
+<p>The proxy repeats the check on every request: <code>supabase.auth.getUser()</code>, which
+validates the session against the auth server rather than trusting the cookie, then the
+<code>site_editors</code> lookup. Both fail closed — if Supabase cannot be reached, the request is
+refused. Revoking a grant therefore takes effect on the editor's next request, whatever their
+cookies say.</p>
+
+<h4>Granting and withdrawing access</h4>
+<p>Grants are managed in the Supabase dashboard, not from the website. The account must exist in
+<code>auth.users</code> first; the simplest way is to have the person press <strong>Continue with
+Google</strong> once — they will be turned away as not an editor, but the account then exists
+(assuming the project allows new sign-ups). Then, in the SQL editor:</p>
+<pre><code>-- grant
+insert into public.site_editors (user_id, note)
+select id, 'Name — reason for access' from auth.users
+ where email = 'person@example.org';
+
+-- suspend without losing the record
+update public.site_editors set is_enabled = false
+ where user_id = (select id from auth.users where email = 'person@example.org');</code></pre>
+<p>From inside the application, row-level security lets an account read only its own
+<code>site_editors</code> row; managing other people's rows is restricted to master accounts.</p>
+
+<h3><span class="num">12.2</span>The activity cookie</h3>
+
+<p>Supabase refreshes its token indefinitely, so on its own a session left open on an unattended
+machine never ends. The activity cookie supplies what Supabase does not: a real idle timeout and an
+absolute cap. It is an HMAC-SHA256 signed token, keyed with <code>ADMIN_SESSION_SECRET</code>.
+Signing uses Web Crypto rather than <code>node:crypto</code>, so identical code verifies the cookie
+in the Edge-runtime proxy and inside Node route handlers.</p>
 
 <table class="compact">
   <thead><tr><th style="width:26%">Property</th><th>Value</th></tr></thead>
@@ -962,7 +1185,7 @@ Node route handlers.</p>
     <tr><td>Name (production)</td><td><code>__Host-cbrl_admin_session</code></td></tr>
     <tr><td>Name (development)</td><td><code>cbrl_admin_session</code></td></tr>
     <tr><td>Flags</td><td><code>httpOnly</code>, <code>SameSite=Lax</code>, <code>Secure</code> in production, <code>Path=/</code></td></tr>
-    <tr><td><code>Max-Age</code></td><td>The idle timeout, re-issued on every authenticated request</td></tr>
+    <tr><td><code>Max-Age</code></td><td>The idle timeout (never past the absolute expiry), re-issued on every authenticated request</td></tr>
   </tbody>
 </table>
 
@@ -972,11 +1195,11 @@ with <code>Secure</code>, <code>Path=/</code> and no <code>Domain</code>, so no 
 <code>__Host-</code> cookie without <code>Secure</code> is refused outright and <code>npm run dev</code>
 serves plain HTTP.</p>
 
-<p>The cookie carries no secret of its own — only two timestamps and a signature over them. A stolen
-cookie therefore expires on its own, and rotating <code>ADMIN_SESSION_SECRET</code> invalidates every
-session at once.</p>
+<p>The cookie carries no secret of its own and no identity — only two timestamps and a signature
+over them. A stolen cookie is useless without the matching Supabase session, it expires on its own,
+and rotating <code>ADMIN_SESSION_SECRET</code> invalidates every one at once.</p>
 
-<h3><span class="num">12.2</span>Absolute expiry and idle timeout</h3>
+<h3><span class="num">12.3</span>Absolute expiry and idle timeout</h3>
 
 <p>The signed payload holds two clocks, and the session dies to whichever fires first:</p>
 
@@ -1001,12 +1224,17 @@ than decorative: the browser cannot move it, so a client that never runs the in-
 signed out by the server. The <code>Max-Age</code> on the cookie is set to the idle timeout as a
 second line of defence — a browser closed for longer than that has nothing left to send.</p>
 
-<p>The proxy distinguishes an expired-by-idle session from an absent or invalid one. Page requests
-are redirected to <span class="path">/admin/login?reason=timeout</span> (preserving the page they
-were on via <code>next=</code>), and API requests receive <code>401</code> with
-<code>{"reason":"timeout"}</code>. Both responses clear the cookie.</p>
+<p>The proxy tells the cases apart. Page requests are redirected to
+<span class="path">/admin/login</span> (preserving the page they were on via <code>next=</code>)
+with <code>reason=timeout</code> for an idle session or <code>reason=denied</code> for an account
+without a grant. API requests receive <code>401</code> with <code>{"reason":"timeout"}</code> or
+<code>{"reason":"unauthenticated"}</code>, or <code>403</code> with
+<code>{"reason":"forbidden"}</code> for a non-editor. All of these clear the activity cookie; none
+of them signs the account out of Supabase. The dashboard's <strong>Sign out</strong> button does
+both, through <span class="path">/api/admin/logout</span>, using a local-scope Supabase sign-out
+so the account's sessions elsewhere are not revoked.</p>
 
-<h3><span class="num">12.3</span>The activity heartbeat</h3>
+<h3><span class="num">12.4</span>The activity heartbeat</h3>
 
 <p>The editors keep drafts in the browser and only contact the server on save, so somebody typing a
 long abstract generates no requests for minutes — indistinguishable, to a request-counting timeout,
@@ -1014,7 +1242,7 @@ from an empty chair. <span class="path">src/components/admin/SessionTimeout.tsx<
 gap:</p>
 
 <ul>
-  <li>Pointer, keyboard, wheel, scroll and touch events count as activity, throttled to once a
+  <li>Pointer, keyboard, wheel, scroll and touch events count as activity, recorded at most once a
       second.</li>
   <li>When activity has occurred, a <code>POST /api/admin/heartbeat</code> slides the server-side
       clock, at most about once every quarter of the idle timeout.</li>
@@ -1034,42 +1262,47 @@ gap:</p>
 
 <h2 class="sec"><span class="num">13</span>Security layers</h2>
 
-<p class="lead">The password is the perimeter, so the layers around it carry the weight.</p>
+<p class="lead">Sign-in decides who reaches the dashboard; the database decides what they may
+change. The layers, outermost first:</p>
 
 <table>
   <thead><tr><th style="width:24%">Layer</th><th>What it does</th></tr></thead>
   <tbody>
     <tr>
-      <td><strong>Session cookie</strong></td>
-      <td>HMAC-SHA256 signed, <code>httpOnly</code>, <code>Secure</code>, 8-hour absolute cap and 5-minute idle timeout. Host-bound by the <code>__Host-</code> prefix.</td>
-    </tr>
-    <tr>
-      <td><strong>Login throttle</strong></td>
-      <td>5 attempts per address, then a 10-minute block. The address is read from the <em>right-hand</em> end of <code>X-Forwarded-For</code> — reading from the left would let a caller mint a fresh identity per request and guess indefinitely. An unidentifiable address falls into one shared bucket, so a misconfigured proxy throttles everyone together rather than nobody.</td>
+      <td><strong>IP allowlist</strong></td>
+      <td>Optional <code>ADMIN_ALLOWED_IPS</code>, applied ahead of everything else, including the sign-in page and the OAuth callback. With the allowlist on, an address that cannot be established is refused. An allowlist consisting only of unparseable entries is treated as unset, so a typo cannot lock everybody out permanently.</td>
     </tr>
     <tr>
       <td><strong>Origin check</strong></td>
-      <td>Writes to <span class="path">/api/admin/*</span> must carry an <code>Origin</code> matching the site. <code>SameSite=Lax</code> alone is insufficient here because it treats every <code>*.iitkgp.ac.in</code> host as same-site, so a compromised neighbour could otherwise drive authenticated writes.</td>
+      <td>Every non-GET request to <span class="path">/api/admin/*</span> must carry an <code>Origin</code> matching the site. <code>SameSite=Lax</code> alone is insufficient here because it treats every <code>*.iitkgp.ac.in</code> host as same-site, so a compromised neighbour could otherwise drive authenticated writes.</td>
     </tr>
     <tr>
-      <td><strong>IP allowlist</strong></td>
-      <td>Optional <code>ADMIN_ALLOWED_IPS</code>, applied ahead of everything else including the login endpoint. An allowlist consisting only of unparseable entries is treated as unset, so a typo cannot lock everybody out permanently.</td>
+      <td><strong>Sign-in and grant</strong></td>
+      <td>A Supabase session validated with <code>getUser()</code> on every request, plus an enabled <code>site_editors</code> row. Both fail closed.</td>
+    </tr>
+    <tr>
+      <td><strong>Activity cookie</strong></td>
+      <td>HMAC-SHA256 signed, <code>httpOnly</code>, <code>Secure</code>, 8-hour absolute cap and 5-minute idle timeout. Host-bound by the <code>__Host-</code> prefix.</td>
+    </tr>
+    <tr>
+      <td><strong>Row-level security</strong></td>
+      <td>The real authorisation. Inserts and updates on <code>site_content</code>, and writes to the <code>site-media</code> bucket, require <code>is_site_editor(auth.uid())</code> for the editor's own JWT. <code>site_content</code> has no delete policy. <code>site_content_versions</code> is readable by editors only and written only by the trigger. The app holds the publishable key only, so a flaw in the app yields no more than an anonymous visitor already has.</td>
     </tr>
     <tr>
       <td><strong>Upload hardening</strong></td>
-      <td>Re-encoded through Sharp to <code>.webp</code>; the declared type and filename are never trusted. Destination folders are chosen from a fixed set, so no request can write outside <span class="path">public/images</span>.</td>
+      <td>Re-encoded through Sharp to <code>.webp</code>; the declared type and filename are never trusted. Destinations are chosen from a fixed set of folders in the bucket, and the bucket accepts <code>image/webp</code> only, up to 12&nbsp;MB.</td>
     </tr>
     <tr>
       <td><strong>Write safety</strong></td>
-      <td>Validated, then temp-file-and-rename, with the previous 20 versions retained.</td>
+      <td>Validated before writing; editors refuse to open when the database cannot be read, so a stale copy is never saved over live content; every update is snapshotted into <code>site_content_versions</code>.</td>
     </tr>
     <tr>
       <td><strong>Path validation</strong></td>
-      <td>Saved asset paths must begin with a single <code>/</code> and may not contain <code>..</code>, so no record can point the site at another origin or escape <span class="path">public/</span>.</td>
+      <td>Saved asset paths must be a site path beginning with a single <code>/</code>, or begin with the project's <code>site-media</code> public URL; <code>..</code> is rejected in both. No record can point the site's images at another origin.</td>
     </tr>
     <tr>
       <td><strong>Response headers</strong></td>
-      <td>A strict CSP, HSTS, <code>X-Frame-Options: DENY</code>, <code>nosniff</code> and a restrictive <code>Permissions-Policy</code> are set site-wide in <span class="path">next.config.js</span>. Everything under <span class="path">/admin</span> is additionally <code>no-store</code>.</td>
+      <td>A strict CSP, HSTS, <code>X-Frame-Options: DENY</code>, <code>nosniff</code>, a <code>Referrer-Policy</code> and a restrictive <code>Permissions-Policy</code> are set site-wide in <span class="path">next.config.js</span>. The proxy additionally marks every <span class="path">/admin</span> and <span class="path">/api/admin</span> response <code>no-store</code>.</td>
     </tr>
   </tbody>
 </table>
@@ -1082,12 +1315,14 @@ gap:</p>
 
 <h2 class="sec"><span class="num">14</span>Reverse proxy configuration</h2>
 
-<p class="lead">The login throttle and the IP allowlist both depend on nginx replacing or appending
-to <code>X-Forwarded-For</code> rather than passing the caller's value through untouched. Next.js 16
-exposes no socket address in either runtime, so this header is the only source of a client address.</p>
+<p class="lead">The IP allowlist depends on nginx replacing or appending to
+<code>X-Forwarded-For</code> rather than passing the caller's value through untouched. Next.js 16
+exposes no socket address in either runtime, so this header is the only source of a client address.
+The <code>Origin</code> check depends on <code>X-Forwarded-Proto</code> and
+<code>X-Forwarded-Host</code>, unless <code>ADMIN_ORIGIN</code> is pinned.</p>
 
 <pre><code>location / {
-    proxy_pass         http://127.0.0.1:3000;
+    proxy_pass         http://127.0.0.1:3200;
     proxy_http_version 1.1;
 
     proxy_set_header   Host              $host;
@@ -1100,34 +1335,38 @@ exposes no socket address in either runtime, so this header is the only source o
 }</code></pre>
 
 <p><code>$proxy_add_x_forwarded_for</code> is the important one: it <em>appends</em> the peer nginx
-actually spoke to, which is what makes the right-hand end of the list trustworthy.</p>
+actually spoke to, which is what makes the right-hand end of the list trustworthy. The app reads
+the address <code>TRUSTED_PROXY_HOPS</code> entries from the right.</p>
 
 <h3><span class="num">14.1</span>Verifying it end to end</h3>
 
 <p>Do this after every proxy change, and <strong>before</strong> setting
-<code>ADMIN_ALLOWED_IPS</code>, so you allowlist the address the server really sees. Sign in, then:</p>
+<code>ADMIN_ALLOWED_IPS</code>, so you allowlist the address the server really sees. Sign in, copy
+the site's cookies from your browser (the Supabase auth cookies as well as the activity cookie —
+the endpoint is behind the same gate as everything else), then:</p>
 
-<pre><code>curl -H "Cookie: &lt;session cookie&gt;" \
+<pre><code>curl -H "Cookie: &lt;your dashboard cookies&gt;" \
      -H "X-Forwarded-For: 1.2.3.4" \
      https://cbrl.iitkgp.ac.in/api/admin/whoami</code></pre>
 
 <p>The <code>clientIp</code> in the response must be <strong>your real address</strong>. If it comes
-back as <code>1.2.3.4</code>, nginx is forwarding the caller's header unchanged, the throttle is
-protecting nothing, and an allowlist would be trivially bypassed. Fix the proxy configuration before
-relying on either.</p>
+back as <code>1.2.3.4</code>, nginx is forwarding the caller's header unchanged and an allowlist
+would be trivially bypassed. Fix the proxy configuration before relying on it.</p>
 
-<p>The same endpoint reports <code>trustedProxyHops</code>, whether the allowlist is on, the expected
-origin, and the raw forwarded headers — enough to diagnose a mismatch from one response.</p>
+<p>The same endpoint reports whether that address is <code>allowed</code>, whether the allowlist is
+on, <code>trustedProxyHops</code>, the expected origin, and the raw forwarded headers — enough to
+diagnose a mismatch from one response.</p>
 
 <div class="danger">
   <span class="lbl">Setting TRUSTED_PROXY_HOPS wrongly</span>
-  <p>Too high and the app reads an entry the caller supplied, so every request appears to come from a
-  different address and the throttle never fires. Too low and it reads nginx's own address, so all
-  users share one bucket and five failures anywhere lock out everybody. Confirm with
-  <span class="path">/api/admin/whoami</span> rather than assuming.</p>
+  <p>Too high and the app reads an entry the caller supplied, so anyone can claim an allowlisted
+  address and walk past the allowlist. Too low and it reads nginx's own address, so every user
+  appears to come from the proxy — the allowlist then admits everyone or no one, depending on
+  whether that address is on it. Confirm with <span class="path">/api/admin/whoami</span> rather than
+  assuming.</p>
 </div>
 
-<h2 class="sec"><span class="num">15</span>Deployment and keeping git in step</h2>
+<h2 class="sec"><span class="num">15</span>Deployment and the committed fallback copy</h2>
 
 <h3><span class="num">15.1</span>Deploying an update</h3>
 <pre><code>git pull
@@ -1136,127 +1375,133 @@ npm run build
 # restart the process manager, e.g.
 sudo systemctl restart cbrl-website</code></pre>
 
-<div class="danger">
-  <span class="lbl">Production edits live on the server's disk</span>
-  <p>Everything the dashboard writes — <span class="path">content/*.json</span>,
-  <span class="path">public/data/publications.bib</span>,
-  <span class="path">public/data/metrics.json</span> and new files under
-  <span class="path">public/images/</span> — exists only on the server until somebody copies it back.
-  <strong>A redeploy from a stale checkout will overwrite months of editorial work.</strong></p>
+<p>Nothing the dashboard saves lives on the server — content is in <code>site_content</code> and
+uploads are in the <code>site-media</code> bucket — so a redeploy, even from an old checkout, cannot
+overwrite editorial work. <code>npm run build</code> prerenders the public pages from the database;
+it clears Next's persisted fetch cache first so that each build reads the current content rather
+than whatever an earlier build saw.</p>
+
+<div class="warn">
+  <span class="lbl">Build while the database is reachable</span>
+  <p>If the build cannot read the database, the pages are prerendered from the committed fallback
+  copy and the build log carries <code>[content] Could not read …</code> warnings. The site then
+  shows that older copy until the next dashboard save of each collection, or the next build. Rebuild
+  once the database is reachable.</p>
 </div>
 
-<h3><span class="num">15.2</span>Pulling editorial changes back into git</h3>
-<p>Do this regularly, and always immediately before a deployment:</p>
-<pre><code># on your workstation, from the repository root
-scp -r user@server:/srv/cbrl/content/*.json            ./content/
-scp    user@server:/srv/cbrl/public/data/publications.bib ./public/data/
-scp    user@server:/srv/cbrl/public/data/metrics.json     ./public/data/
-rsync -av user@server:/srv/cbrl/public/images/          ./public/images/
-
-git add content public/data public/images
-git commit -m "Sync editorial content from production"
-git push</code></pre>
-
-<p>A weekly cron job doing the same thing and committing on a branch removes the risk of forgetting.</p>
+<h3><span class="num">15.2</span>Keeping the fallback copy reasonably current</h3>
+<p>The files under <span class="path">content/</span> and <span class="path">public/data/</span>
+are not updated by the dashboard and drift further from the live content with every save. Nothing
+depends on them being current, but a fresher copy makes an outage less visible. To refresh one,
+read the row in the Supabase SQL editor and paste the value into the matching file:</p>
+<pre><code>select data from public.site_content where collection = 'members';      -- content/members.json
+select raw  from public.site_content where collection = 'publications'; -- public/data/publications.bib</code></pre>
+<p>Commit the result like any other change. Never refresh them the other way — running
+<code>migrate:content</code> against a live project pushes the old copy over the database
+(section&nbsp;9.4).</p>
 
 <h2 class="sec"><span class="num">16</span>Deploying elsewhere (Vercel and other hosts)</h2>
 
-<p class="lead">The application assumes a <strong>writable, persistent filesystem</strong>. That
-assumption holds on a conventional server and fails on most serverless platforms.</p>
+<p class="lead">Because content and uploads are stored in Supabase, the application no longer needs
+a writable, persistent filesystem for the dashboard to save.</p>
 
-<div class="danger">
-  <span class="lbl">The dashboard cannot save on Vercel</span>
-  <p>Vercel's filesystem is read-only outside <span class="path">/tmp</span>, and instances are
-  ephemeral and not shared. Content saves and image uploads both write into the project directory at
-  runtime, so on Vercel every save returns <em>"Could not write the file on the server"</em> and
-  every upload returns <em>"Could not write the image on the server"</em>. The public site is
-  unaffected — its pages are generated at build time from the committed
-  <span class="path">content/*.json</span>.</p>
-</div>
+<p>What any host does need:</p>
+<ul>
+  <li>A Node.js runtime able to load Sharp, which the upload route uses.</li>
+  <li>Outbound access to the Supabase project, and to doi.org for DOI imports.</li>
+  <li>Its public address registered as a redirect URL in Supabase Authentication, as
+      <span class="path">https://&lt;host&gt;/admin/auth/callback</span>.</li>
+  <li>The environment variables of section&nbsp;10. On a host whose proxy chain differs from a
+      single nginx, re-check <code>TRUSTED_PROXY_HOPS</code> with
+      <span class="path">/api/admin/whoami</span> before turning the allowlist on.</li>
+</ul>
 
-<table class="compact">
-  <thead><tr><th style="width:30%">Host type</th><th>Public site</th><th>Dashboard</th></tr></thead>
-  <tbody>
-    <tr><td>VPS / bare metal / campus server</td><td>Works</td><td>Works</td></tr>
-    <tr><td>Docker with a persistent volume</td><td>Works</td><td>Works — mount <span class="path">content/</span> and <span class="path">public/images/</span></td></tr>
-    <tr><td>Vercel, Netlify Functions, Cloudflare Workers</td><td>Works</td><td><strong>Saves and uploads fail</strong></td></tr>
-  </tbody>
-</table>
-
-<p>Two secondary effects are worth knowing on any serverless host. The login throttle keeps its
-counters in memory, so separate instances do not share them and the effective attempt limit is
-higher than five. And <code>revalidatePath()</code> only affects the instance that handled the
-request.</p>
-
-<p>Making the dashboard work on such a platform means replacing the storage layer — moving
-<span class="path">content/</span> to a database or object store such as Vercel Blob, and uploads to
-the same, which touches <span class="path">src/lib/content.ts</span>, the upload route and the
-publications and metrics writers. If you deploy to Vercel as a preview, leave
-<code>ADMIN_PASSWORD</code> and <code>ADMIN_SESSION_SECRET</code> unset so the dashboard is locked
-rather than half-working.</p>
+<p>If you deploy somewhere only as a preview, leave <code>ADMIN_SESSION_SECRET</code> unset so the
+dashboard shows its "not configured" screen rather than accepting sign-ins against the live
+database.</p>
 
 <h2 class="sec"><span class="num">17</span>API reference</h2>
 
 <p class="lead">Every endpoint sits behind the proxy gate: address allowlist, then <code>Origin</code>
-on writes, then a valid non-idle session. <span class="path">/api/admin/login</span> and
-<span class="path">/api/admin/logout</span> are reachable without a session; everything else is not.</p>
+on writes, then a Supabase session with an editor grant, then a non-idle activity cookie. Only
+<span class="path">/api/admin/logout</span> (and the page route
+<span class="path">/admin/auth/callback</span>) is reachable without a session, and both still sit
+behind the allowlist and, for logout, the <code>Origin</code> check.</p>
 
 <table class="compact">
   <thead><tr><th style="width:9%">Method</th><th style="width:34%">Path</th><th>Purpose</th></tr></thead>
   <tbody>
-    <tr><td>POST</td><td><span class="path">/api/admin/login</span></td><td>Exchange the password for a session. Throttled. <code>401</code> wrong, <code>429</code> blocked, <code>503</code> unconfigured.</td></tr>
-    <tr><td>POST</td><td><span class="path">/api/admin/logout</span></td><td>Clear the session cookie.</td></tr>
+    <tr><td>POST</td><td><span class="path">/api/admin/logout</span></td><td>Sign this browser out of Supabase (local scope) and clear the activity cookie.</td></tr>
     <tr><td>POST</td><td><span class="path">/api/admin/heartbeat</span></td><td>Report activity; slides the idle clock. Returns the idle timeout in seconds.</td></tr>
-    <tr><td>GET</td><td><span class="path">/api/admin/whoami</span></td><td>Diagnostics: client IP, allowlist state, trusted hops, expected origin, raw forwarded headers.</td></tr>
-    <tr><td>GET</td><td><span class="path">/api/admin/content/[collection]</span></td><td>Read one collection.</td></tr>
-    <tr><td>PUT</td><td><span class="path">/api/admin/content/[collection]</span></td><td>Validate and write one collection. <code>422</code> with a per-field issue list on failure.</td></tr>
+    <tr><td>GET</td><td><span class="path">/api/admin/whoami</span></td><td>Diagnostics: client IP, whether it is allowed, allowlist state, trusted hops, expected origin, raw forwarded headers.</td></tr>
+    <tr><td>GET</td><td><span class="path">/api/admin/content/[collection]</span></td><td>Read one collection. <code>404</code> for an unknown collection.</td></tr>
+    <tr><td>PUT</td><td><span class="path">/api/admin/content/[collection]</span></td><td>Validate and write one collection. <code>422</code> with a per-field issue list on failure; <code>500</code> if the database refuses the write.</td></tr>
     <tr><td>GET</td><td><span class="path">/api/admin/publications</span></td><td>List BibTeX entries with duplicate-key flags.</td></tr>
-    <tr><td>POST</td><td><span class="path">/api/admin/publications</span></td><td>Add an entry, from a form payload or pasted BibTeX.</td></tr>
+    <tr><td>POST</td><td><span class="path">/api/admin/publications</span></td><td>Add an entry, from a form payload or pasted BibTeX (several entries keep their order).</td></tr>
+    <tr><td>GET</td><td><span class="path">/api/admin/publications/[id]</span></td><td>Read one entry, with its fields and raw BibTeX.</td></tr>
     <tr><td>PUT / DELETE</td><td><span class="path">/api/admin/publications/[id]</span></td><td>Edit or remove one entry, leaving the rest byte-identical.</td></tr>
     <tr><td>POST</td><td><span class="path">/api/admin/publications/doi</span></td><td>Fetch BibTeX from doi.org by DOI. 12-second timeout.</td></tr>
     <tr><td>GET / PUT</td><td><span class="path">/api/admin/metrics</span></td><td>Read or write citation metrics.</td></tr>
-    <tr><td>POST</td><td><span class="path">/api/admin/upload</span></td><td>Upload an image. Multipart, 12&nbsp;MB cap, re-encoded to WebP.</td></tr>
+    <tr><td>POST</td><td><span class="path">/api/admin/upload</span></td><td>Upload an image to <code>site-media</code>. Multipart, 12&nbsp;MB cap, re-encoded to WebP. Returns the public URL and the pixel dimensions.</td></tr>
   </tbody>
 </table>
+
+<p>Every endpoint that reads content before acting — the content, publications and metrics
+routes — answers <code>503</code> with <code>Retry-After: 5</code> when the database cannot be read,
+rather than working from the disk copy. The gate's own refusals are <code>403</code> (network,
+origin, or not an editor) and <code>401</code> (not signed in, or idle).</p>
 
 <h2 class="sec"><span class="num">18</span>Backup and restore</h2>
 
 <h3><span class="num">18.1</span>What the application keeps for you</h3>
-<p>Before every save the previous version of the file is copied to
-<span class="path">content/.backups/&lt;collection&gt;/&lt;ISO-timestamp&gt;.json</span>, and the most
-recent 20 per collection are retained. Publications are kept the same way as <code>.bib</code> files.
-This is an "undo the last few edits" facility, <strong>not</strong> a backup strategy — it lives on
-the same disk and is excluded from git.</p>
+<p>Every update to a <code>site_content</code> row first copies the previous version into
+<code>public.site_content_versions</code>: <code>id</code>, <code>collection</code>,
+<code>data</code>, <code>raw</code>, <code>saved_at</code> (when that version had been saved) and
+<code>saved_by</code> (who saved it). The migrations in this repository do not prune the table. This is an "undo" facility inside the same database, <strong>not</strong> a backup strategy.</p>
 
 <h3><span class="num">18.2</span>Restoring a previous version</h3>
-<pre><code>ls -lt content/.backups/members/            # newest first
-cp content/.backups/members/2026-07-27T09-14-22-431Z.json content/members.json</code></pre>
-<p>Changes appear on the next request; no restart is needed. Copy rather than move, so the backup
-survives.</p>
+<p>In the Supabase SQL editor, find the version you want, then copy it back into
+<code>site_content</code>:</p>
+<pre><code>select id, saved_at, saved_by
+  from public.site_content_versions
+ where collection = 'members'
+ order by saved_at desc
+ limit 20;
+
+update public.site_content c
+   set data = v.data, raw = v.raw
+  from public.site_content_versions v
+ where v.id = &lt;id&gt; and c.collection = v.collection;</code></pre>
+<p>The restore is itself an update, so the trigger snapshots the version it replaces — a restore can
+be undone the same way. Because it is run from the SQL editor rather than by an editor, the
+restored row's <code>updated_by</code> will be empty. The public pages pick it up after the next
+dashboard save of that collection, or the next build (section&nbsp;11.4).</p>
 
 <h3><span class="num">18.3</span>A real backup</h3>
-<p>Back up nightly, off the machine, covering:</p>
+<p>The content no longer lives on the application server, so backing that server up does not back
+up the website. Cover, off the machine:</p>
 <ul>
-  <li><span class="path">content/</span> — including <span class="path">.backups/</span></li>
-  <li><span class="path">public/data/</span> — publications and metrics</li>
-  <li><span class="path">public/images/</span> — every upload ever made</li>
-  <li><span class="path">.env.local</span> — store this with your secrets, not alongside the content</li>
+  <li>The Supabase project's database — in particular <code>site_content</code>,
+      <code>site_content_versions</code> and <code>site_editors</code>. The project also holds CPMS's
+      patient records; treat any database export accordingly.</li>
+  <li>The <code>site-media</code> storage bucket — every image uploaded from the dashboard.</li>
+  <li><span class="path">.env.local</span> — store this with your secrets, not alongside the content.</li>
 </ul>
-<pre><code>tar czf cbrl-$(date +%F).tar.gz \
-    content public/data public/images</code></pre>
+<p><span class="path">content/</span>, <span class="path">public/data/</span> and
+<span class="path">public/images/</span> are in git and need no separate backup.</p>
 
 <h2 class="sec"><span class="num">19</span>Routine maintenance</h2>
 
 <table>
   <thead><tr><th style="width:24%">Task</th><th style="width:16%">Frequency</th><th>Notes</th></tr></thead>
   <tbody>
-    <tr><td>Sync content into git</td><td>Weekly</td><td>Section 15.2. Mandatory before any redeploy.</td></tr>
+    <tr><td>Review <code>site_editors</code></td><td>On personnel change</td><td>Set <code>is_enabled = false</code> (or delete the row) for anyone who no longer edits. Takes effect on their next request — section&nbsp;12.1.</td></tr>
     <tr><td>Verify backups restore</td><td>Quarterly</td><td>A backup never test-restored is a guess.</td></tr>
-    <tr><td>Rotate <code>ADMIN_PASSWORD</code></td><td>On personnel change</td><td>Anyone who has ever had it retains access until it changes.</td></tr>
-    <tr><td>Rotate <code>ADMIN_SESSION_SECRET</code></td><td>Yearly, or on suspicion</td><td>Signs everyone out immediately. Safe to do at any time.</td></tr>
+    <tr><td>Rotate <code>ADMIN_SESSION_SECRET</code></td><td>Yearly, or on suspicion</td><td>Signs every editor out of the dashboard immediately. Safe to do at any time.</td></tr>
+    <tr><td>Refresh the fallback copy</td><td>Occasionally</td><td>Optional — section&nbsp;15.2.</td></tr>
     <tr><td>Re-verify <span class="path">/api/admin/whoami</span></td><td>After proxy changes</td><td>Section 14.1.</td></tr>
-    <tr><td><code>npm audit</code> / dependency updates</td><td>Quarterly</td><td>Run <code>npm run build</code>, <code>lint</code> and <code>typecheck</code> before deploying.</td></tr>
-    <tr><td>Prune <span class="path">public/images/</span></td><td>Yearly</td><td>Replaced uploads are never deleted automatically. Cross-check against the JSON before removing anything.</td></tr>
+    <tr><td><code>npm audit</code> / dependency updates</td><td>Quarterly</td><td>Run <code>npm run build</code>, <code>lint</code>, <code>typecheck</code> and <code>npm test</code> before deploying.</td></tr>
+    <tr><td>Prune <code>site-media</code></td><td>Yearly</td><td>Replaced uploads are never deleted automatically. Cross-check against <code>site_content</code> (including recent versions you may want to restore) before removing anything.</td></tr>
   </tbody>
 </table>
 
@@ -1266,20 +1511,28 @@ survives.</p>
   <thead><tr><th style="width:31%">Symptom</th><th>Cause and remedy</th></tr></thead>
   <tbody>
     <tr>
-      <td><strong>"The dashboard is not configured"</strong></td>
-      <td><code>ADMIN_PASSWORD</code> is missing, or <code>ADMIN_SESSION_SECRET</code> is shorter than 16 characters. Set both in <span class="path">.env.local</span> and restart.</td>
+      <td><strong>"The dashboard is not configured yet"</strong></td>
+      <td><code>NEXT_PUBLIC_SUPABASE_URL</code> or <code>NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code> is missing, or <code>ADMIN_SESSION_SECRET</code> is missing or shorter than 16 characters. Set them in <span class="path">.env.local</span> and restart. <code>NEXT_PUBLIC_</code> values are also baked into the build, so rebuild after changing them.</td>
     </tr>
     <tr>
-      <td><strong>Editors report "Could not write the file on the server"</strong></td>
-      <td>The process cannot write to <span class="path">content/</span> or <span class="path">public/</span>. Check ownership and permissions, and free disk space with <code>df -h</code>. On a serverless host this is expected — section&nbsp;16.</td>
+      <td><strong>Google shows a redirect error, or "Sign-in did not complete"</strong></td>
+      <td>Google is not enabled as a provider, or <span class="path">https://&lt;host&gt;/admin/auth/callback</span> is not in Supabase → Authentication → URL Configuration. A code exchange that fails lands on <span class="path">/admin/login?reason=failed</span>.</td>
     </tr>
     <tr>
-      <td><strong>Everyone is locked out by the throttle</strong></td>
-      <td><code>TRUSTED_PROXY_HOPS</code> is too low, so all users share one bucket. Verify with <span class="path">/api/admin/whoami</span>. Restarting the process clears the in-memory counters.</td>
+      <td><strong>"That account is not a website editor" for someone who should have access</strong></td>
+      <td>No <code>site_editors</code> row for that account, <code>is_enabled</code> is false, or they chose a different Google account from the one granted. The lookup fails closed, so it can also appear when the <code>site_editors</code> read itself fails.</td>
     </tr>
     <tr>
-      <td><strong>The throttle never blocks anyone</strong></td>
-      <td><code>TRUSTED_PROXY_HOPS</code> is too high, or nginx is passing the caller's <code>X-Forwarded-For</code> through. Section&nbsp;14 — treat as urgent, since the password is then exposed to unlimited guessing.</td>
+      <td><strong>Editors report "Could not save your changes"</strong></td>
+      <td>The database refused the write — usually a withdrawn grant, which row-level security enforces independently of the proxy — or could not be reached. The server log has a <code>Failed to save</code> entry with the database's own error code.</td>
+    </tr>
+    <tr>
+      <td><strong>"This section could not be loaded", or 503 from the admin API</strong></td>
+      <td>The database read failed and the editors refused to open on the disk copy, by design. Check that the Supabase project is up — projects on the free tier pause after a period of inactivity — and that the server can reach it.</td>
+    </tr>
+    <tr>
+      <td><strong>Uploads fail with "Could not store the image"</strong></td>
+      <td>The <code>site-media</code> bucket refused the object — a withdrawn grant, or the bucket or its policies missing from the project. The server log has <code>Failed to store upload</code>.</td>
     </tr>
     <tr>
       <td><strong>Sessions end far sooner than expected</strong></td>
@@ -1295,7 +1548,7 @@ survives.</p>
     </tr>
     <tr>
       <td><strong>Legitimate users get "not available from your network"</strong></td>
-      <td><code>ADMIN_ALLOWED_IPS</code> excludes them, or the allowlist is on while the address cannot be established — which is refused by design. The message names the address the server saw; add it, or unset the variable to fall back to password-only.</td>
+      <td><code>ADMIN_ALLOWED_IPS</code> excludes them, or the allowlist is on while the address cannot be established — which is refused by design. The message names the address the server saw; add it, or unset the variable to fall back to sign-in alone.</td>
     </tr>
     <tr>
       <td><strong>Uploads fail with "could not be read as an image"</strong></td>
@@ -1303,11 +1556,11 @@ survives.</p>
     </tr>
     <tr>
       <td><strong>A saved change is not on the public page</strong></td>
-      <td>Confirm the file on disk actually changed. If it did, the cached render was not dropped — restart the process to clear it, then check for errors from <code>revalidatePath</code> in the logs.</td>
+      <td>Check the row's <code>updated_at</code> in <code>site_content</code>. If it changed, the cached render was not dropped — look for <code>revalidatePath</code> errors in the log, and rebuild and restart to clear it. If the log shows <code>[content] Could not read …</code>, the public site is serving the fallback copy because it cannot reach the database.</td>
     </tr>
     <tr>
-      <td><strong>Content reverted after a deployment</strong></td>
-      <td>A stale checkout overwrote production edits. Restore from <span class="path">content/.backups/</span> or your off-machine backup, then adopt the sync routine in section&nbsp;15.2.</td>
+      <td><strong>The public site shows old content after a deployment</strong></td>
+      <td>The build could not read the database and prerendered from the committed fallback copy (section&nbsp;15.1). Rebuild once the database is reachable. The live content itself is unaffected.</td>
     </tr>
   </tbody>
 </table>
@@ -1315,8 +1568,9 @@ survives.</p>
 <div class="note">
   <span class="lbl">First diagnostic to reach for</span>
   <p><span class="path">GET /api/admin/whoami</span>, signed in, answers most networking questions in
-  one response: the address the server attributes to the caller, whether the allowlist is active, the
-  trusted-hop count, the expected origin, and the raw forwarded headers behind all of it.</p>
+  one response: the address the server attributes to the caller, whether it is allowed, whether the
+  allowlist is active, the trusted-hop count, the expected origin, and the raw forwarded headers
+  behind all of it.</p>
 </div>
 
 </body>

@@ -2,8 +2,8 @@
  * Supabase client for Server Components, Server Actions and route handlers.
  *
  * Server-only — it reads the request's cookies through `next/headers`. Client
- * components want `./browser` instead, and the proxy wants `./edge`, which has
- * to thread cookies through the request/response pair by hand.
+ * components want `./browser` instead, and the proxy and the auth callback want
+ * `./request`, which threads cookies through the request/response pair by hand.
  */
 
 import { cookies } from 'next/headers';

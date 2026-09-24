@@ -1,6 +1,11 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
-import { createSessionToken, idleTimeoutSeconds, sessionCookie } from '@/lib/admin-auth';
+import {
+  createSessionToken,
+  idleTimeoutSeconds,
+  isAdminConfigured,
+  sessionCookie,
+} from '@/lib/admin-auth';
 import { isSiteEditor } from '@/lib/site-editor';
 import { createRequestClient } from '@/lib/supabase/request';
 
@@ -36,6 +41,11 @@ export async function GET(request: NextRequest) {
     url.searchParams.set('reason', reason);
     return NextResponse.redirect(url);
   };
+
+  // Without the signing secret createSessionToken throws, which surfaced as an
+  // unhandled 500 after a successful Google sign-in. The login page explains
+  // what is missing when the dashboard is not configured.
+  if (!isAdminConfigured()) return NextResponse.redirect(new URL('/admin/login', request.url));
 
   if (!code) return fail('failed');
 

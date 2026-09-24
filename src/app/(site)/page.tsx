@@ -11,9 +11,9 @@ import {
   ShieldCheck,
 } from 'lucide-react';
 import HeroCarousel from '@/components/HeroCarousel';
-import PublicationsCount from '@/components/PublicationsCount';
 import { Button } from '@/components/ui/button';
-import { getHome } from '@/lib/content';
+import { splitEntries } from '@/lib/bibtex-entries';
+import { getHome, readPublicationsFile } from '@/lib/content';
 import type { Collaborator } from '@/lib/content-types';
 
 function SectionHeading({
@@ -125,10 +125,13 @@ const researchAreas = [
   },
 ];
 
-const achievements = [
+// The publication count is read at render time from the same source as
+// /publications, and counted the way /about-the-pi counts it. Publication saves
+// revalidate '/', so it stays current without a client-side fetch.
+const achievementsFor = (publications: number) => [
   {
     icon: BookOpen,
-    value: <PublicationsCount />,
+    value: String(publications),
     label: 'Publications',
     description: 'High-impact research papers in leading journals',
   },
@@ -153,7 +156,8 @@ const achievements = [
 ];
 
 export default async function Home() {
-  const { hero, collaborators } = await getHome();
+  const [{ hero, collaborators }, bibtex] = await Promise.all([getHome(), readPublicationsFile()]);
+  const achievements = achievementsFor(splitEntries(bibtex).length);
   const collabRowOne = collaborators.filter((logo) => logo.row === 1);
   const collabRowTwo = collaborators.filter((logo) => logo.row === 2);
 

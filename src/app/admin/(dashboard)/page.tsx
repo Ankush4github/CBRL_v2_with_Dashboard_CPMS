@@ -147,7 +147,7 @@ export default async function AdminOverview() {
         </p>
         <ul className="mt-3 space-y-2 text-sm leading-relaxed text-muted-foreground">
           <li>
-            Every save keeps the previous 20 versions of each section in{' '}
+            Every save keeps the previous version of the section in{' '}
             <code className="font-mono text-xs">site_content_versions</code>, so a mistake can be
             undone.
           </li>

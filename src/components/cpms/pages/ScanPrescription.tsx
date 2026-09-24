@@ -249,6 +249,10 @@ const ScanPrescription = () => {
   // succeeded -- resolves to one record instead of two. create_patient_record()
   // keys on it through patient_records.draft_id.
   const [draftId, setDraftId] = useState<string | null>(null);
+  // The draft whose save last reached create_patient_record. draftId alone cannot
+  // say whether a save is a retry: it is minted at extraction, so it is already
+  // set on the very first press of Save.
+  const attemptedDraftRef = useRef<string | null>(null);
   // How many documents the saved record actually holds. The success card used
   // to render additionalDocs.length -- the local pick list, which includes any
   // that failed validation and never went anywhere.
@@ -663,17 +667,17 @@ const ScanPrescription = () => {
     // back out again. Nothing was written before this point.
     const uploadedPaths: string[] = [];
 
-    // A draft id that already exists means an earlier attempt reached the
-    // upload stage. That attempt may well have committed -- a lost response
-    // looks exactly like a failure from here.
-    const isRetry = draftId !== null;
+    // An earlier save of this same draft reached create_patient_record. That attempt
+    // may well have committed -- a lost response looks exactly like a failure
+    // from here.
+    const isRetry = draftId !== null && attemptedDraftRef.current === draftId;
 
     try {
       // So ask, before uploading anything. create_patient_record() is
       // idempotent on _draft_id: it returns the existing row untouched, which
       // means a blind retry uploads a whole second set of files that the saved
-      // record will never point at, and that the bucket's delete policy then
-      // refuses to clean up for anyone but an admin.
+      // record will never point at -- and once a record references its files,
+      // no one but an admin can remove them.
       if (isRetry && draftId) {
         const { data: alreadySaved, error: lookupError } = await supabase
           .from('patient_records')
@@ -724,6 +728,9 @@ const ScanPrescription = () => {
       // the client, that now decides permissions and stamps uploaded_by.
       const draft = draftId ?? crypto.randomUUID();
       if (!draftId) setDraftId(draft);
+      // From here on a lost response could mean a committed record, so the
+      // next press of Save for this draft must check before uploading.
+      attemptedDraftRef.current = draft;
 
       const { data: created, error: insertError } = await supabase.rpc('create_patient_record', {
         _draft_id: draft,
@@ -783,18 +790,23 @@ const ScanPrescription = () => {
       // attempt was in the air. If what came back is a record pointing at some
       // earlier attempt's image, everything this attempt uploaded belongs to
       // nothing -- and unlike the referenced files, it can still be removed.
+      let savedCount = additionalDocsData.length;
       if (isRetry && createdRow?.created_id) {
         const { data: storedRow } = await supabase
           .from('patient_records')
-          .select('prescription_image_url')
+          .select('prescription_image_url, additional_documents')
           .eq('id', createdRow.created_id)
           .maybeSingle();
         if (storedRow && storedRow.prescription_image_url !== mainImagePath) {
           await discardUploads(uploadedPaths);
+          // The record that exists is the earlier attempt's, so count its
+          // documents, not the ones just thrown away.
+          const stored = storedRow.additional_documents;
+          savedCount = Array.isArray(stored) ? stored.length : 0;
         }
       }
 
-      setSavedDocCount(additionalDocsData.length);
+      setSavedDocCount(savedCount);
       setReferenceNumber(createdRow?.created_reference_number ?? '');
       setIsSuccess(true);
       toast.success("Patient data saved successfully!");
@@ -816,6 +828,7 @@ const ScanPrescription = () => {
     setIsSuccess(false);
     setVerifiedFields(new Set());
     setDraftId(null);
+    attemptedDraftRef.current = null;
     setSavedDocCount(0);
     setExtractionRaw(null);
     setAdditionalDocs([]);

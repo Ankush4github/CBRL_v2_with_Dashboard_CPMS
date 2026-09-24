@@ -117,9 +117,9 @@ export function isIpAddress(value: string): boolean {
 /**
  * The caller's address, or null when it cannot be established.
  *
- * Null is not "allow" — callers treat it as a single shared bucket, so a
- * misconfigured proxy throttles everyone together rather than throttling
- * nobody.
+ * Null is not "allow": with the allowlist on, isAllowedIp refuses an address it
+ * cannot establish, so a misconfigured proxy locks the dashboard rather than
+ * opening it.
  */
 export function clientIp(request: Request): string | null {
   const hops = trustedHops();
@@ -201,7 +201,7 @@ function allowRules(): Rule[] | null {
     .filter((rule): rule is Rule => rule !== null);
 
   // An allowlist of nothing but typos would lock everyone out with no way back
-  // in short of editing the env — treat it as unset and let the password stand.
+  // in short of editing the env — treat it as unset and let sign-in stand.
   return rules.length > 0 ? rules : null;
 }
 
@@ -212,9 +212,9 @@ export function isAllowlistEnabled(): boolean {
 /**
  * Whether this address may reach the dashboard at all.
  *
- * With no `ADMIN_ALLOWED_IPS` set, everything is allowed and the password is the
- * only gate — the deployed default, so switching the allowlist on later is
- * purely additive.
+ * With no `ADMIN_ALLOWED_IPS` set, everything is allowed and sign-in (Google plus
+ * a site_editors grant) is the only gate — the deployed default, so switching
+ * the allowlist on later is purely additive.
  */
 export function isAllowedIp(ip: string | null): boolean {
   const rules = allowRules();
