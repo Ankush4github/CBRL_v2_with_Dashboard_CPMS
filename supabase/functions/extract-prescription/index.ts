@@ -188,9 +188,9 @@ serve(async (req) => {
       }
     }
 
-    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-    if (!LOVABLE_API_KEY) {
-      console.error("[SERVER] LOVABLE_API_KEY is not configured");
+    const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
+    if (!GEMINI_API_KEY) {
+      console.error("[SERVER] GEMINI_API_KEY is not configured");
       return new Response(
         JSON.stringify({ error: "Service configuration error" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -246,14 +246,16 @@ serve(async (req) => {
 
     console.log("[SERVER] Sending request to AI service");
 
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    // Gemini's OpenAI-compatible endpoint, so the messages above (including
+    // the image_url data URI) are sent as-is.
+    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        Authorization: `Bearer ${GEMINI_API_KEY}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "gemini-2.5-flash",
         messages,
       }),
     });
@@ -269,7 +271,10 @@ serve(async (req) => {
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      if (response.status === 402) {
+      // Gemini answers a bad or unauthorised key with 400/403; the caller
+      // can't fix either, so treat them like a billing failure.
+      if (response.status === 402 || response.status === 403 ||
+          (response.status === 400 && errorText.includes("API_KEY_INVALID"))) {
         return new Response(
           JSON.stringify({ error: "Service unavailable. Please contact support." }),
           { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
