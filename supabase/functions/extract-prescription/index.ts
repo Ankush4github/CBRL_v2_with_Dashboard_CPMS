@@ -42,6 +42,18 @@ Typical scores should be:
 
 IMPORTANT: If you can extract patient name and at least one medicine, score should be at least 70.
 
+UNCERTAIN READINGS (be honest here, unlike the score above):
+A human checks your reading against the image. Tell them where to look hardest.
+- "uncertain_fields": list the top-level fields whose value you returned but could
+  not read with certainty -- ambiguous handwriting, a letter or digit that could be
+  another, text that is smudged, cut off or partly hidden. Use only these names:
+  patient_name, age, gender, height_cm, weight_kg, doctor_name, diagnosis,
+  visit_date, uhid.
+- Each medicine has its own "uncertain" list naming which of its parts you are
+  unsure of: name, dosage, frequency, duration. A medicine name you had to guess
+  between look-alike drugs is always uncertain.
+- Do not list a field you returned as null. Use [] when you are sure of everything.
+
 Return ONLY valid JSON. No explanations or markdown.
 
 {
@@ -58,9 +70,11 @@ Return ONLY valid JSON. No explanations or markdown.
       "name": "medicine name",
       "dosage": "e.g., 500mg",
       "frequency": "e.g., twice daily",
-      "duration": "e.g., 5 days"
+      "duration": "e.g., 5 days",
+      "uncertain": ["dosage"]
     }
   ],
+  "uncertain_fields": ["patient_name"],
   "visit_date": "YYYY-MM-DD or null",
   "uhid": "string or null",
   "reference_number": "string or null",
@@ -214,6 +228,31 @@ serve(async (req) => {
       return new Response(
         JSON.stringify({ error: "Service configuration error" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    // Per-user hourly cap on paid model calls. Counted after validation, so a
+    // rejected upload costs nothing, and once per request however many retries
+    // the call below makes. Fails closed like the can_scan check: an unreadable
+    // quota must not become an unlimited one.
+    const hourlyLimit = Number.parseInt(Deno.env.get("SCAN_HOURLY_LIMIT") ?? "", 10) || 30;
+    const { data: withinQuota, error: quotaError } = await supabaseClient.rpc("consume_scan_extraction", {
+      _hourly_limit: hourlyLimit,
+    });
+    if (quotaError) {
+      console.error("[AUTH] Scan quota check failed:", quotaError.code, quotaError.message);
+      return new Response(
+        JSON.stringify({ error: "Could not verify your scan allowance. Please try again." }),
+        { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    if (withinQuota !== true) {
+      console.log("[AUTH] Scan quota reached:", user.id);
+      return new Response(
+        JSON.stringify({
+          error: `You've reached the limit of ${hourlyLimit} extractions per hour. Please try again later.`,
+        }),
+        { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
@@ -378,6 +417,22 @@ serve(async (req) => {
         const ageNum = parseInt(extractedData.age.replace(/[^\d]/g, ""), 10);
         extractedData.age = isNaN(ageNum) ? null : ageNum;
       }
+      // Uncertainty flags drive highlighting in Review, so only known names get
+      // through: anything else would highlight nothing or break the check.
+      const TOP_FIELDS = ["patient_name", "age", "gender", "height_cm", "weight_kg",
+        "doctor_name", "diagnosis", "visit_date", "uhid"];
+      const MED_FIELDS = ["name", "dosage", "frequency", "duration"];
+      const onlyKnown = (value: unknown, allowed: string[]) =>
+        Array.isArray(value)
+          ? [...new Set(value.filter((v): v is string => typeof v === "string" && allowed.includes(v)))]
+          : [];
+      extractedData.uncertain_fields = onlyKnown(extractedData.uncertain_fields, TOP_FIELDS);
+      if (Array.isArray(extractedData.medicines)) {
+        for (const med of extractedData.medicines) {
+          if (med && typeof med === "object") med.uncertain = onlyKnown(med.uncertain, MED_FIELDS);
+        }
+      }
+
       // The prompt asks for M/F; records and the review form use the full words.
       // Mapped here so the stored extraction_raw agrees and provenance does not
       // log every "M" as a human correction to "Male".

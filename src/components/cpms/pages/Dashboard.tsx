@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/cpms/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/cpms/ui/card";
-import { Activity, Building2, ClipboardList, LogOut, ScanLine, User, Users, Shield, Crown, MapPin, CalendarCheck, HelpCircle } from "lucide-react";
+import { Activity, BarChart3, Building2, ClipboardList, LogOut, ScanLine, User, Users, Shield, Crown, MapPin, CalendarCheck, HelpCircle } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/cpms/useAuth";
 import { useRole } from "@/hooks/cpms/useRole";
@@ -340,6 +340,32 @@ const Dashboard = () => {
                     </span>
                     <span className="px-3 py-1 bg-accent text-accent-foreground text-xs font-medium">
                       Permissions
+                    </span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* How often staff correct the AI's reading */}
+              <Card
+                className="border-2 border-border hover:border-primary transition-colors cursor-pointer group shadow-sm hover:shadow-md"
+                onClick={() => router.push(asset("/admin/scan-quality"))}
+              >
+                <CardHeader className="pb-4">
+                  <div className="h-16 w-16 bg-primary flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
+                    <BarChart3 className="h-8 w-8 text-primary-foreground" />
+                  </div>
+                  <CardTitle className="text-xl">Scan Accuracy</CardTitle>
+                  <CardDescription>
+                    See which fields staff correct most often after AI extraction.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="flex flex-wrap gap-2">
+                    <span className="px-3 py-1 bg-accent text-accent-foreground text-xs font-medium">
+                      Corrections
+                    </span>
+                    <span className="px-3 py-1 bg-accent text-accent-foreground text-xs font-medium">
+                      Unclear flags
                     </span>
                   </div>
                 </CardContent>

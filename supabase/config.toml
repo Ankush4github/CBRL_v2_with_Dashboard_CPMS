@@ -20,5 +20,9 @@ verify_jwt = true
 # Called by pg_cron without a user JWT; protected by the CRON_SECRET header.
 verify_jwt = false
 
+[functions.sweep-orphan-uploads]
+# Called by pg_cron without a user JWT; protected by the CRON_SECRET header.
+verify_jwt = false
+
 [functions.vapid-public-key]
 verify_jwt = true
