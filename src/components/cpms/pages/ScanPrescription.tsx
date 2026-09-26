@@ -38,6 +38,7 @@ import { useAuth } from "@/hooks/cpms/useAuth";
 import { useHospitals } from "@/hooks/cpms/useHospitals";
 import { useRole } from "@/hooks/cpms/useRole";
 import ImagePreviewViewer from "@/components/cpms/ImagePreviewViewer";
+import { assessImageQuality, qualityWarning, type ImageQuality } from "@/lib/cpms/image-quality";
 import AdditionalDocumentsUpload, { type CategorizedDocument } from "@/components/cpms/AdditionalDocumentsUpload";
 import DocumentCamera from "@/components/cpms/DocumentCamera";
 import DocumentProcessor from "@/components/cpms/DocumentProcessor";
@@ -94,6 +95,8 @@ interface ExtraPage {
   id: string;
   file: File;
   preview: string;
+  /** Blur/darkness check; undefined while it runs, null if it could not. */
+  quality?: ImageQuality | null;
 }
 
 /** Pages after the first; the Edge Function accepts four in total. */
@@ -349,6 +352,10 @@ const ScanPrescription = () => {
   const [patientId, setPatientId] = useState("");
   const [referenceNumber, setReferenceNumber] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
+  // Extraction has been running long enough to say why: with the busy-model
+  // retries in extract-prescription it can take 10-20s, and a bare spinner for
+  // that long looks like a hang.
+  const [extractSlow, setExtractSlow] = useState(false);
   const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
   const [isSuccess, setIsSuccess] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
@@ -580,6 +587,25 @@ const ScanPrescription = () => {
     router.push(asset(path));
   };
 
+  // Blur/darkness check on page 1. Run on what will actually be sent -- the
+  // enhanced image once the enhance panel closes, not the raw capture -- and
+  // only as advice: a warning with a way to retake, never a block.
+  const [mainQuality, setMainQuality] = useState<ImageQuality | null>(null);
+
+  useEffect(() => {
+    if (!preview || showDocProcessor) {
+      setMainQuality(null);
+      return;
+    }
+    let cancelled = false;
+    void assessImageQuality(preview).then((quality) => {
+      if (!cancelled) setMainQuality(quality);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [preview, showDocProcessor]);
+
   // Generate reference number when hospital is selected
   const handleHospitalChange = async (hospital: string) => {
     setSelectedHospital(hospital);
@@ -644,9 +670,12 @@ const ScanPrescription = () => {
     const reader = new FileReader();
     reader.onerror = () => toast.error("Could not read that page. Please try again.");
     reader.onloadend = () => {
-      const page = { id: crypto.randomUUID(), file, preview: reader.result as string };
+      const page: ExtraPage = { id: crypto.randomUUID(), file, preview: reader.result as string };
       setExtraPages((prev) => (prev.length >= MAX_EXTRA_PAGES ? prev : [...prev, page]));
       invalidateReading();
+      void assessImageQuality(page.preview).then((quality) =>
+        setExtraPages((prev) => prev.map((p) => (p.id === page.id ? { ...p, quality } : p))),
+      );
     };
     reader.readAsDataURL(file);
   };
@@ -769,6 +798,7 @@ const ScanPrescription = () => {
     }
 
     setIsProcessing(true);
+    const slowTimer = setTimeout(() => setExtractSlow(true), 8000);
 
     try {
       // Extraction only -- nothing is written until the operator commits in
@@ -827,6 +857,8 @@ const ScanPrescription = () => {
     } catch (error) {
       toast.error(describeError(error, 'Could not read that prescription. Please try again.'));
     } finally {
+      clearTimeout(slowTimer);
+      setExtractSlow(false);
       setIsProcessing(false);
     }
   };
@@ -1560,6 +1592,15 @@ const ScanPrescription = () => {
                                 <span className="absolute bottom-0 left-0 right-0 bg-background/80 text-[11px] text-center">
                                   Page {i + 2}
                                 </span>
+                                {/* The page's own quality flag; the full sentence is its tooltip. */}
+                                {qualityWarning(page.quality ?? null) && (
+                                  <span
+                                    className="absolute top-0 left-0 bg-yellow-500 text-[10px] font-semibold px-1"
+                                    title={qualityWarning(page.quality ?? null) ?? undefined}
+                                  >
+                                    {page.quality?.dark ? "Dark" : "Blurry"}
+                                  </span>
+                                )}
                                 <button
                                   type="button"
                                   onClick={() => removeExtraPage(page.id)}
@@ -1574,6 +1615,17 @@ const ScanPrescription = () => {
                         )}
                       </div>
                     )}
+                  </div>
+                )}
+
+                {/* Photo quality advice for page 1 */}
+                {selectedFile && !showDocProcessor && qualityWarning(mainQuality) && (
+                  <div role="status" className="flex items-start gap-3 p-3 border-2 border-yellow-600 bg-yellow-500/10">
+                    <AlertTriangle className="h-5 w-5 text-yellow-700 shrink-0 mt-0.5" />
+                    <p className="text-sm flex-1 min-w-0">{qualityWarning(mainQuality)}</p>
+                    <Button type="button" variant="outline" size="sm" className="shrink-0" onClick={clearFile}>
+                      Retake
+                    </Button>
                   </div>
                 )}
 
@@ -1733,7 +1785,7 @@ const ScanPrescription = () => {
                   {isProcessing ? (
                     <>
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Extracting with OCR...
+                      {extractSlow ? "Google's AI is busy, still trying…" : "Extracting with OCR..."}
                     </>
                   ) : extractedData ? (
                     "Extract again"
@@ -2290,7 +2342,7 @@ const ScanPrescription = () => {
             {isProcessing ? (
               <>
                 <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                Extracting...
+                {extractSlow ? "AI busy, still trying…" : "Extracting..."}
               </>
             ) : (
               "Extract Data with AI"
