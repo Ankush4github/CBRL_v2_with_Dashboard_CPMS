@@ -2,6 +2,7 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { ExternalLink, Mail, Phone } from 'lucide-react'
 import { Separator } from '@/components/ui/separator'
+import { getLastUpdated } from '@/lib/content'
 
 /**
  * Footer for the public site.
@@ -10,7 +11,9 @@ import { Separator } from '@/components/ui/separator'
  * page lives at the app root, because Next only routes an unmatched URL to
  * `app/not-found.tsx`, and so gets none of the group's chrome automatically.
  */
-export default function SiteFooter() {
+export default async function SiteFooter() {
+  const lastUpdated = await getLastUpdated()
+
   return (
     <footer className="border-t bg-muted/30 transition-colors duration-300">
       <div className="container mx-auto px-4 py-14 sm:px-6">
@@ -143,6 +146,19 @@ export default function SiteFooter() {
             <p className="text-sm text-muted-foreground">
               © {new Date().getFullYear()} Clinical Biomarker Research Laboratory. All rights reserved.
             </p>
+            {lastUpdated && (
+              <p className="mt-1 text-sm text-muted-foreground">
+                Last updated on:{' '}
+                <time dateTime={lastUpdated.toISOString()}>
+                  {lastUpdated.toLocaleDateString('en-IN', {
+                    day: 'numeric',
+                    month: 'long',
+                    year: 'numeric',
+                    timeZone: 'Asia/Kolkata',
+                  })}
+                </time>
+              </p>
+            )}
           </div>
           <div className="text-center md:text-right">
             <p className="text-sm text-muted-foreground">

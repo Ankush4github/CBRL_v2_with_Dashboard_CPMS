@@ -247,6 +247,32 @@ export async function getAllMembers() {
   ];
 }
 
+/**
+ * When any collection was last saved — the footer's "Last updated on" date.
+ *
+ * The newest `updated_at` across `site_content`, which the BEFORE UPDATE
+ * trigger stamps on every dashboard save. Null when the database cannot be
+ * read: the disk fallback carries no trustworthy date, and showing none beats
+ * showing a wrong one.
+ */
+export const getLastUpdated = cache(async (): Promise<Date | null> => {
+  try {
+    const { data, error } = await publicSupabase
+      .from('site_content')
+      .select('updated_at')
+      .order('updated_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    if (error) throw error;
+    return data ? new Date(data.updated_at) : null;
+  } catch (reason) {
+    warnOnce('unreadable:updated_at', () =>
+      console.warn('[content] Could not read the last-updated date; the footer omits it. Reason:', reason)
+    );
+    return null;
+  }
+});
+
 /* --------------------------------------------------------------- writing */
 
 /**
@@ -308,6 +334,10 @@ async function save(
         `that is the likely reason.`
     );
   }
+
+  // Every public page's footer shows the last-updated date, so a save changes
+  // all of them, not just the collection's DEPENDENT_PATHS.
+  revalidatePath('/', 'layout');
 }
 
 export async function writeContent<K extends ContentCollection>(
