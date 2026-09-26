@@ -36,6 +36,8 @@ import {
   X,
 } from "lucide-react";
 import { Textarea } from "@/components/cpms/ui/textarea";
+import { Input } from "@/components/cpms/ui/input";
+import { Label } from "@/components/cpms/ui/label";
 import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/cpms-client";
 import { useToast } from "@/hooks/cpms/use-toast";
@@ -99,6 +101,10 @@ const PatientDetail = () => {
   const [patient, setPatient] = useState<PatientRecord | null>(null);
   const [loading, setLoading] = useState(true);
   const [deleting, setDeleting] = useState(false);
+  // A delete is permanent (the record, its history, and after a week its files
+  // via sweep-orphan-uploads), so the master types the word, not just clicks.
+  const [deleteConfirmText, setDeleteConfirmText] = useState("");
+  const deleteConfirmed = deleteConfirmText === "DELETE";
   const [downloadingDoc, setDownloadingDoc] = useState<string | null>(null);
   const [generatingPdf, setGeneratingPdf] = useState(false);
   const [preview, setPreview] = useState<PreviewState>({
@@ -118,7 +124,7 @@ const PatientDetail = () => {
   const [loadingAudit, setLoadingAudit] = useState(false);
 
   const handleDelete = async () => {
-    if (!patient) return;
+    if (!patient || !deleteConfirmed) return;
     
     setDeleting(true);
     try {
@@ -590,7 +596,13 @@ const PatientDetail = () => {
           
           {/* Delete button - only for master users */}
           {isMaster && (
-            <AlertDialog>
+            <AlertDialog
+              onOpenChange={(open) => {
+                // Every opening starts empty: a word typed and then cancelled
+                // must not pre-arm the next attempt.
+                if (!open) setDeleteConfirmText("");
+              }}
+            >
               <AlertDialogTrigger asChild>
                 <Button variant="destructive" size="sm" className="gap-2 shrink-0 h-9 sm:h-10 px-2 sm:px-3">
                   <Trash2 className="h-4 w-4" />
@@ -608,11 +620,29 @@ const PatientDetail = () => {
                     <span className="block mt-2 text-destructive">This action cannot be undone.</span>
                   </AlertDialogDescription>
                 </AlertDialogHeader>
+                <div className="space-y-2">
+                  <Label htmlFor="delete-confirm">
+                    Type <span className="font-mono font-bold">DELETE</span> to confirm
+                  </Label>
+                  <Input
+                    id="delete-confirm"
+                    value={deleteConfirmText}
+                    onChange={(e) => setDeleteConfirmText(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter" && deleteConfirmed && !deleting) void handleDelete();
+                    }}
+                    autoComplete="off"
+                    autoCapitalize="characters"
+                    spellCheck={false}
+                    placeholder="DELETE"
+                    className="font-mono"
+                  />
+                </div>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancel</AlertDialogCancel>
                   <AlertDialogAction
                     onClick={handleDelete}
-                    disabled={deleting}
+                    disabled={deleting || !deleteConfirmed}
                     className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                   >
                     {deleting ? (
