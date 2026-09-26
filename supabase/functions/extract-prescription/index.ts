@@ -341,6 +341,16 @@ serve(async (req) => {
         const ageNum = parseInt(extractedData.age.replace(/[^\d]/g, ""), 10);
         extractedData.age = isNaN(ageNum) ? null : ageNum;
       }
+      // The prompt asks for M/F; records and the review form use the full words.
+      // Mapped here so the stored extraction_raw agrees and provenance does not
+      // log every "M" as a human correction to "Male".
+      if (typeof extractedData.gender === "string") {
+        const g = extractedData.gender.trim().toLowerCase();
+        extractedData.gender = g === "m" || g === "male" ? "Male"
+          : g === "f" || g === "female" ? "Female"
+          : g === "o" || g === "other" ? "Other"
+          : null;
+      }
       if (extractedData.confidence_score && typeof extractedData.confidence_score === "string") {
         const confNum = parseInt(extractedData.confidence_score, 10);
         extractedData.confidence_score = isNaN(confNum) ? 0 : Math.min(100, Math.max(0, confNum));

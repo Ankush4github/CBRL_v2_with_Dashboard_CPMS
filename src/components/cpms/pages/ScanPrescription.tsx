@@ -158,6 +158,38 @@ const asOptionalNumber = (value: unknown): number | null => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
+// The prompt asks for "M/F", but the review Select offers Male/Female/Other, so
+// an unmapped "M" rendered as a blank Select and was saved as "M" regardless.
+const asGender = (value: unknown): string | null => {
+  const text = asText(value).trim().toLowerCase();
+  if (text === 'm' || text === 'male') return 'Male';
+  if (text === 'f' || text === 'female') return 'Female';
+  if (text === 'o' || text === 'other') return 'Other';
+  return null;
+};
+
+const localToday = (): string => {
+  const d = new Date();
+  return [
+    d.getFullYear(),
+    String(d.getMonth() + 1).padStart(2, '0'),
+    String(d.getDate()).padStart(2, '0'),
+  ].join('-');
+};
+
+// Only a real calendar date that is not in the future. Anything else ("26/09/26",
+// "2026-02-30") showed as a blank date input while the raw string still went to
+// the save; null instead raises the "no visit date" warning.
+const asVisitDate = (value: unknown): string | null => {
+  const text = asText(value).trim();
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
+  if (!match) return null;
+  const [, y, m, d] = match.map(Number);
+  const date = new Date(y, m - 1, d);
+  if (date.getFullYear() !== y || date.getMonth() !== m - 1 || date.getDate() !== d) return null;
+  return text > localToday() ? null : text;
+};
+
 const normalizeExtractedData = (raw: unknown, hospitalName: string): ExtractedData => {
   const source = (raw ?? {}) as Record<string, unknown>;
   const rawMedicines = Array.isArray(source.medicines) ? source.medicines : [];
@@ -165,7 +197,7 @@ const normalizeExtractedData = (raw: unknown, hospitalName: string): ExtractedDa
   return {
     patient_name: asText(source.patient_name),
     age: asOptionalNumber(source.age),
-    gender: asOptionalText(source.gender),
+    gender: asGender(source.gender),
     height_cm: asOptionalNumber(source.height_cm),
     weight_kg: asOptionalNumber(source.weight_kg),
     hospital_name: hospitalName,
@@ -181,7 +213,7 @@ const normalizeExtractedData = (raw: unknown, hospitalName: string): ExtractedDa
         duration: asText(med.duration),
       };
     }),
-    visit_date: asOptionalText(source.visit_date),
+    visit_date: asVisitDate(source.visit_date),
     uhid: asOptionalText(source.uhid),
     reference_number: asOptionalText(source.reference_number),
     confidence_score: asOptionalNumber(source.confidence_score),
@@ -840,6 +872,7 @@ const ScanPrescription = () => {
   // What still has to be confirmed before this record can be saved.
   const outstandingChecks: string[] = extractedData
     ? [
+        ...(patientId.trim() ? [] : ['a Patient ID']),
         ...(verifiedFields.has('patient_name') ? [] : ['the patient name']),
         ...(extractedData.medicines.length === 0
           ? verifiedFields.has('medicines_none')
@@ -860,6 +893,7 @@ const ScanPrescription = () => {
 
   const readyToSave =
     !!extractedData &&
+    patientId.trim() !== '' &&
     extractedData.patient_name.trim() !== '' &&
     outstandingChecks.length === 0;
 
@@ -873,11 +907,7 @@ const ScanPrescription = () => {
   // daily, and `new Date('YYYY-MM-DD')` parses as UTC midnight, so rendering it
   // showed the day before for any viewer west of UTC.
   const visitDateFallbackDate = new Date();
-  const visitDateFallback = [
-    visitDateFallbackDate.getFullYear(),
-    String(visitDateFallbackDate.getMonth() + 1).padStart(2, '0'),
-    String(visitDateFallbackDate.getDate()).padStart(2, '0'),
-  ].join('-');
+  const visitDateFallback = localToday();
 
   // Patient ID and uhid are two readings of the same hospital UHID: the one the
   // operator types and the one the model reads off the page. When they disagree
@@ -1117,7 +1147,10 @@ const ScanPrescription = () => {
                       />
                     )}
 
-                    {!showDocProcessor && preview ? (
+                    {/* Nothing under the enhance panel while it is open: the
+                        placeholder branch used to render there, showing
+                        "Preview unavailable" and a stray delete button. */}
+                    {showDocProcessor ? null : preview ? (
                       <ImagePreviewViewer
                         src={preview}
                         alt="Prescription preview"
@@ -1404,21 +1437,38 @@ const ScanPrescription = () => {
                         {uhidMismatch && (
                           <div role="alert" className="flex items-start gap-2 p-3 border-2 border-yellow-600 bg-yellow-500/10">
                             <AlertTriangle className="h-4 w-4 text-yellow-700 shrink-0 mt-0.5" />
-                            <p className="text-sm">
+                            <p className="text-sm flex-1 min-w-0">
                               The scan reads UHID{' '}
                               <span className="font-mono font-medium">{extractedUhid}</span>, which
                               is not the Patient ID you entered (
                               <span className="font-mono font-medium">{patientId.trim()}</span>).
                               Check you are filing against the right patient.
                             </p>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="shrink-0"
+                              onClick={() => setPatientId(extractedUhid)}
+                            >
+                              Use scanned UHID
+                            </Button>
                           </div>
                         )}
                       </div>
                     )}
                     <div className="grid sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <Label htmlFor="edit-patient-id">Patient ID</Label>
-                        <Input id="edit-patient-id" value={patientId} disabled className="font-mono bg-muted" />
+                        <Label htmlFor="edit-patient-id">Patient ID *</Label>
+                        {/* Editable here: there is no way back to step 1 without
+                            losing the extraction, and the UHID warning above
+                            asks the operator to fix exactly this field. */}
+                        <Input
+                          id="edit-patient-id"
+                          value={patientId}
+                          onChange={(e) => setPatientId(e.target.value)}
+                          className="font-mono"
+                        />
                       </div>
                       <div className="space-y-2">
                         <div className="flex items-center justify-between gap-2">
@@ -1442,7 +1492,7 @@ const ScanPrescription = () => {
                         <Input 
                           id="edit-age" 
                           type="number"
-                          value={extractedData.age || ''} 
+                          value={extractedData.age ?? ''}
                           onChange={(e) => setExtractedData({...extractedData, age: e.target.value ? parseInt(e.target.value) : null})}
                         />
                       </div>
@@ -1504,7 +1554,8 @@ const ScanPrescription = () => {
                         <Input 
                           id="edit-visit-date" 
                           type="date"
-                          value={extractedData.visit_date || ''} 
+                          value={extractedData.visit_date || ''}
+                          max={visitDateFallback}
                           onChange={(e) => setExtractedData({...extractedData, visit_date: e.target.value || null})}
                         />
                       </div>
