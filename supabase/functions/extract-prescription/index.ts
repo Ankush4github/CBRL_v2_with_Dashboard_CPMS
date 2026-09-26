@@ -246,26 +246,43 @@ serve(async (req) => {
 
     console.log("[SERVER] Sending request to AI service");
 
-    // Gemini's OpenAI-compatible endpoint, so the messages above (including
-    // the image_url data URI) are sent as-is.
-    const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${GEMINI_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: "gemini-2.5-flash",
-        messages,
-      }),
-    });
+    // Google retires Flash models for new keys (2.5 went this way), so the
+    // GEMINI_MODEL / GEMINI_FALLBACK_MODEL secrets can swap them without a
+    // code change.
+    const primaryModel = Deno.env.get("GEMINI_MODEL") || "gemini-3.8-flash";
+    const fallbackModel = Deno.env.get("GEMINI_FALLBACK_MODEL") || "gemini-3.7-flash";
+
+    // The newest model regularly answers 503 "high demand". Retry it once,
+    // then drop to the previous generation, before giving up.
+    const attempts = [primaryModel, primaryModel, fallbackModel];
+    const transient = new Set([429, 500, 503]);
+    let response!: Response;
+    let errorText = "";
+
+    for (let i = 0; i < attempts.length; i++) {
+      if (i > 0) await new Promise((r) => setTimeout(r, 1500));
+
+      // Gemini's OpenAI-compatible endpoint, so the messages above (including
+      // the image_url data URI) are sent as-is.
+      response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${GEMINI_API_KEY}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ model: attempts[i], messages }),
+      });
+
+      if (response.ok) break;
+
+      errorText = await response.text();
+      console.error("[SERVER] AI service error:", attempts[i], response.status, errorText);
+      if (!transient.has(response.status)) break;
+    }
 
     if (!response.ok) {
-      const errorText = await response.text();
-      console.error("[SERVER] AI service error:", response.status, errorText);
-
       // Return generic error messages to client
-      if (response.status === 429) {
+      if (response.status === 429 || response.status === 503) {
         return new Response(
           JSON.stringify({ error: "Service temporarily busy. Please try again in a moment." }),
           { status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" } }
