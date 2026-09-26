@@ -2,7 +2,7 @@
  * Orphaned upload sweeper for the prescriptions bucket.
  *
  * Invoked daily by pg_cron (private.invoke_orphan_sweep, migration
- * 20260926150000). Finds objects no patient record references that are older
+ * 20260926151740). Finds objects no patient record references that are older
  * than SWEEP_MIN_AGE_DAYS, via public.list_orphan_prescription_objects(), and
  * removes them through the Storage API -- deleting storage.objects rows in SQL
  * would leave the files themselves behind.
