@@ -368,9 +368,76 @@ const ScanPrescription = () => {
     };
   }, [patientId, selectedHospital]);
 
+  // A record for this patient, hospital and visit date already exists -- most
+  // often the same prescription scanned a second time. Checked in Review, where
+  // the visit date is known, and never blocks the save.
+  const [sameDayRecord, setSameDayRecord] = useState<{ reference_number: string | null } | null>(null);
+  const reviewVisitDate = extractedData?.visit_date ?? null;
+
+  useEffect(() => {
+    const pid = patientId.trim();
+    if (currentStep !== 'review' || !pid || !selectedHospital) {
+      setSameDayRecord(null);
+      return;
+    }
+
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      const { data, error } = await supabase
+        .from("patient_records")
+        .select("reference_number")
+        .eq("hospital", selectedHospital)
+        .eq("patient_id", pid)
+        // Saving with no date records today, so today is the date to check.
+        .eq("visit_date", reviewVisitDate ?? localToday())
+        .limit(1);
+
+      if (cancelled) return;
+      if (error) {
+        console.error("[cpms] same-day record lookup failed:", error.code);
+        setSameDayRecord(null);
+        return;
+      }
+      setSameDayRecord(data?.[0] ?? null);
+    }, 400);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [currentStep, patientId, selectedHospital, reviewVisitDate]);
+
+  // An extraction that has not been saved yet is work (and a paid model call)
+  // that a stray tab close or Back press would throw away.
+  const hasUnsavedScan = !!extractedData && !isSuccess;
+
+  useEffect(() => {
+    if (!hasUnsavedScan) return;
+    const onBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = '';
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, [hasUnsavedScan]);
+
+  // In-app navigation does not fire beforeunload, so the page's own links ask.
+  const leaveScan = (path: string) => {
+    if (
+      hasUnsavedScan &&
+      !window.confirm('This scan has not been saved. Leave and discard it?')
+    ) {
+      return;
+    }
+    router.push(asset(path));
+  };
+
   // Generate reference number when hospital is selected
   const handleHospitalChange = async (hospital: string) => {
     setSelectedHospital(hospital);
+    // Step 1 can be revisited with an extraction kept, and the review and
+    // success screens name the hospital from it.
+    setExtractedData((prev) => (prev ? { ...prev, hospital_name: hospital } : prev));
     if (!hospital) {
       setReferenceNumber("");
       return;
@@ -1057,7 +1124,7 @@ const ScanPrescription = () => {
       {/* Header */}
       <header className="sticky top-0 z-50 bg-card border-b-2 border-border p-4">
         <div className="max-w-7xl mx-auto flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => router.push(asset("/dashboard"))}>
+          <Button variant="ghost" size="icon" onClick={() => leaveScan("/dashboard")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex items-center gap-2">
@@ -1287,7 +1354,7 @@ const ScanPrescription = () => {
                         variant="outline"
                         size="sm"
                         onClick={() =>
-                          router.push(asset(`/patients/timeline/${encodeURIComponent(selectedHospital)}/${encodeURIComponent(patientId.trim())}`))
+                          leaveScan(`/patients/timeline/${encodeURIComponent(selectedHospital)}/${encodeURIComponent(patientId.trim())}`)
                         }
                       >
                         View patient history
@@ -1319,9 +1386,28 @@ const ScanPrescription = () => {
                   </div>
                 )}
 
+                {/* Back here from step 2 with a reading already in hand:
+                    carry on with it, or read the image again. Removing the
+                    image clears the reading, so it can't outlive its image. */}
+                {extractedData && (
+                  <div className="space-y-2">
+                    <Button
+                      className="w-full h-12"
+                      disabled={!selectedHospital || !patientId.trim() || isProcessing}
+                      onClick={() => setCurrentStep('additional-docs')}
+                    >
+                      Continue with this reading
+                    </Button>
+                    <p className="text-xs text-muted-foreground text-center">
+                      Extracting again replaces the current reading and any edits to it.
+                    </p>
+                  </div>
+                )}
+
                 {/* Process Button */}
                 <Button
                   className="w-full h-12"
+                  variant={extractedData ? "outline" : "default"}
                   disabled={!selectedFile || !selectedHospital || !patientId.trim() || isProcessing}
                   onClick={processWithAI}
                 >
@@ -1330,6 +1416,8 @@ const ScanPrescription = () => {
                       <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                       Extracting with OCR...
                     </>
+                  ) : extractedData ? (
+                    "Extract again"
                   ) : (
                     "Extract Data with AI"
                   )}
@@ -1355,6 +1443,14 @@ const ScanPrescription = () => {
 
                 {/* Action buttons */}
                 <div className="flex flex-col sm:flex-row gap-3">
+                  <Button
+                    variant="outline"
+                    className="gap-2"
+                    onClick={() => setCurrentStep('upload')}
+                  >
+                    <ArrowLeft className="h-4 w-4" />
+                    Back
+                  </Button>
                   <Button
                     variant="outline"
                     className="flex-1 gap-2"
@@ -1420,8 +1516,36 @@ const ScanPrescription = () => {
               <CardContent className="space-y-6">
                     {/* Anything the save would decide on its own, said out loud
                         before it happens rather than discovered afterwards. */}
-                    {(!extractedData.visit_date || uhidMismatch) && (
+                    {(!extractedData.visit_date || uhidMismatch || sameDayRecord) && (
                       <div className="space-y-2">
+                        {sameDayRecord && (
+                          <div role="alert" className="flex items-start gap-2 p-3 border-2 border-yellow-600 bg-yellow-500/10">
+                            <AlertTriangle className="h-4 w-4 text-yellow-700 shrink-0 mt-0.5" />
+                            <p className="text-sm flex-1 min-w-0">
+                              Patient <span className="font-mono font-medium">{patientId.trim()}</span>{' '}
+                              already has a record for this visit date at {selectedHospital}
+                              {sameDayRecord.reference_number ? (
+                                <> (<span className="font-mono font-medium">{sameDayRecord.reference_number}</span>)</>
+                              ) : null}
+                              . Make sure this prescription hasn&apos;t already been scanned.
+                            </p>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="shrink-0"
+                              onClick={() =>
+                                window.open(
+                                  asset(`/patients/timeline/${encodeURIComponent(selectedHospital)}/${encodeURIComponent(patientId.trim())}`),
+                                  '_blank',
+                                  'noopener',
+                                )
+                              }
+                            >
+                              View history
+                            </Button>
+                          </div>
+                        )}
                         {!extractedData.visit_date && (
                           <div role="alert" className="flex items-start gap-2 p-3 border-2 border-yellow-600 bg-yellow-500/10">
                             <AlertTriangle className="h-4 w-4 text-yellow-700 shrink-0 mt-0.5" />
@@ -1769,7 +1893,7 @@ const ScanPrescription = () => {
       </main>
 
       {/* Mobile Fixed Bottom Button - Step 1 */}
-      {currentStep === 'upload' && selectedFile && selectedHospital && patientId.trim() && (
+      {currentStep === 'upload' && !extractedData && selectedFile && selectedHospital && patientId.trim() && (
         <div className="lg:hidden fixed bottom-0 left-0 right-0 p-4 bg-card border-t-2 border-border safe-area-pb">
           <Button
             className="w-full h-14 text-base"
@@ -1801,7 +1925,7 @@ const ScanPrescription = () => {
       />
 
       {/* Spacer for mobile fixed button */}
-      {currentStep === 'upload' && selectedFile && selectedHospital && patientId.trim() && (
+      {currentStep === 'upload' && !extractedData && selectedFile && selectedHospital && patientId.trim() && (
         <div className="lg:hidden h-24" />
       )}
     </div>

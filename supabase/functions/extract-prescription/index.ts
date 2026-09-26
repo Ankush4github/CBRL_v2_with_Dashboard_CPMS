@@ -258,6 +258,11 @@ serve(async (req) => {
     const transient = new Set([429, 500, 503]);
     let response!: Response;
     let errorText = "";
+    // JSON mode stops the model wrapping its answer in prose, which is what
+    // ends in the 422 "Unable to extract" below. Google's OpenAI-compatibility
+    // docs do not spell out json_object support, so a 400 turns it off and the
+    // same attempt is repeated rather than letting the option fail every scan.
+    let jsonMode = true;
 
     for (let i = 0; i < attempts.length; i++) {
       if (i > 0) await new Promise((r) => setTimeout(r, 1500));
@@ -270,13 +275,22 @@ serve(async (req) => {
           Authorization: `Bearer ${GEMINI_API_KEY}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ model: attempts[i], messages }),
+        body: JSON.stringify({
+          model: attempts[i],
+          messages,
+          ...(jsonMode ? { response_format: { type: "json_object" } } : {}),
+        }),
       });
 
       if (response.ok) break;
 
       errorText = await response.text();
       console.error("[SERVER] AI service error:", attempts[i], response.status, errorText);
+      if (response.status === 400 && jsonMode && !errorText.includes("API_KEY_INVALID")) {
+        jsonMode = false;
+        i--;
+        continue;
+      }
       if (!transient.has(response.status)) break;
     }
 
