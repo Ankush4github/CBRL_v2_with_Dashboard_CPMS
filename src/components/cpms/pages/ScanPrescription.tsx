@@ -87,6 +87,15 @@ interface ExtractedData {
 
 type FlowStep = 'upload' | 'additional-docs' | 'review';
 
+interface ExtraPage {
+  id: string;
+  file: File;
+  preview: string;
+}
+
+/** Pages after the first; the Edge Function accepts four in total. */
+const MAX_EXTRA_PAGES = 3;
+
 /** The confirmation key for a medicine row. */
 const medicineKey = (id: string) => `medicine:${id}`;
 
@@ -252,6 +261,16 @@ const ScanPrescription = () => {
   
   // Camera state
   const [isCameraOpen, setIsCameraOpen] = useState(false);
+  // One camera serves page 1 and the extra pages.
+  const [cameraTarget, setCameraTarget] = useState<'main' | 'page'>('main');
+
+  // Pages 2..n of a multi-page prescription. All pages go to the model in one
+  // call and are read as one prescription; on save, page 1 is the record's
+  // prescription image and these are filed as "Additional Prescription".
+  const [extraPages, setExtraPages] = useState<ExtraPage[]>([]);
+  const extraPageInputRef = useRef<HTMLInputElement>(null);
+  // Which page the Review step is showing.
+  const [reviewPage, setReviewPage] = useState(0);
   
   // Step tracking
   const [currentStep, setCurrentStep] = useState<FlowStep>('upload');
@@ -461,24 +480,62 @@ const ScanPrescription = () => {
   // documents still accept PDF; those are stored, not extracted.
   const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/jpg"];
 
+  // Why an image can't be a prescription page, or null if it can.
+  const imageFileError = (file: File): string | null => {
+    if (!ACCEPTED_TYPES.includes(file.type)) {
+      const ext = file.name.split(".").pop()?.toUpperCase() || "Unknown";
+      return `Unsupported file type: ${ext}. Please upload a JPG or PNG.`;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+      const sizeMb = (file.size / 1024 / 1024).toFixed(1);
+      return `File too large (${sizeMb} MB). Maximum size is 10 MB.`;
+    }
+    return null;
+  };
+
+  // A reading covers exactly the pages it was made from. Carrying it on after
+  // the pages change would save a page nobody's reading came from.
+  const invalidateReading = () => {
+    if (!extractedData) return;
+    setExtractedData(null);
+    toast.info("The pages changed, so extract again to read them.");
+  };
+
+  const addExtraPage = (file: File) => {
+    const error = imageFileError(file);
+    if (extraPageInputRef.current) extraPageInputRef.current.value = "";
+    if (error) {
+      toast.error(error);
+      return;
+    }
+    if (extraPages.length >= MAX_EXTRA_PAGES) {
+      toast.error(`A prescription can have at most ${MAX_EXTRA_PAGES + 1} pages.`);
+      return;
+    }
+    const reader = new FileReader();
+    reader.onerror = () => toast.error("Could not read that page. Please try again.");
+    reader.onloadend = () => {
+      const page = { id: crypto.randomUUID(), file, preview: reader.result as string };
+      setExtraPages((prev) => (prev.length >= MAX_EXTRA_PAGES ? prev : [...prev, page]));
+      invalidateReading();
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const removeExtraPage = (id: string) => {
+    setExtraPages((prev) => prev.filter((p) => p.id !== id));
+    invalidateReading();
+  };
+
   const handleFileSelect = (file: File) => {
     // Clear previous error
     setFileError(null);
 
-    if (!ACCEPTED_TYPES.includes(file.type)) {
-      const ext = file.name.split(".").pop()?.toUpperCase() || "Unknown";
-      const msg = `Unsupported file type: ${ext}. Please upload a JPG or PNG.`;
-      setFileError(msg);
-      toast.error(msg);
+    const error = imageFileError(file);
+    if (error) {
+      setFileError(error);
+      toast.error(error);
       // Reset native input so the same file can be reselected after fixing
-      if (fileInputRef.current) fileInputRef.current.value = "";
-      return;
-    }
-    if (file.size > 10 * 1024 * 1024) {
-      const sizeMb = (file.size / 1024 / 1024).toFixed(1);
-      const msg = `File too large (${sizeMb} MB). Maximum size is 10 MB.`;
-      setFileError(msg);
-      toast.error(msg);
       if (fileInputRef.current) fileInputRef.current.value = "";
       return;
     }
@@ -520,6 +577,9 @@ const ScanPrescription = () => {
     setFileError(null);
     setShowDocProcessor(false);
     setRawPreview(null);
+    // The later pages belong to the prescription being removed.
+    setExtraPages([]);
+    setReviewPage(0);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
     }
@@ -588,10 +648,13 @@ const ScanPrescription = () => {
       // retry after a failed extraction added one, and the bucket's
       // admin-only delete policy meant the scanner who made them could not
       // clear them. saveToDatabase() owns the upload now.
-      const base64 = await preprocessImage(selectedFile);
+      // Every page, in order, read together as one prescription.
+      const pages = await Promise.all(
+        [selectedFile, ...extraPages.map((p) => p.file)].map(preprocessImage),
+      );
 
       const { data, error } = await supabase.functions.invoke('extract-prescription', {
-        body: { imageBase64: base64 },
+        body: { imagesBase64: pages },
       });
 
       if (error) {
@@ -627,6 +690,7 @@ const ScanPrescription = () => {
       // A new reading is a new draft, and has to be confirmed from scratch.
       setDraftId(crypto.randomUUID());
       setVerifiedFields(new Set());
+      setReviewPage(0);
       toast.success("Prescription data extracted successfully!");
       
       // Move to additional documents step
@@ -654,8 +718,20 @@ const ScanPrescription = () => {
     uploadedPaths: string[],
   ): Promise<Array<{ name: string; url: string; type: string; docType: string }>> => {
     const uploadedDocs: Array<{ name: string; url: string; type: string; docType: string }> = [];
-    const readyDocs = additionalDocs.filter((d) => d.status === "ready");
-    
+    // Pages 2..n of the prescription first, filed under the existing
+    // "Additional Prescription" type so the record, the timeline and the PDF
+    // export all show them without a schema change.
+    const readyDocs: Array<{ file: File; docType: string; name: string }> = [
+      ...extraPages.map((page, i) => ({
+        file: page.file,
+        docType: 'ADD_RX',
+        name: `Prescription page ${i + 2}.${page.file.name.split('.').pop()}`,
+      })),
+      ...additionalDocs
+        .filter((d) => d.status === "ready")
+        .map((d) => ({ file: d.file, docType: d.docType as string, name: d.file.name })),
+    ];
+
     for (const doc of readyDocs) {
       const fileExt = doc.file.name.split('.').pop();
       const fileName = `${user?.id}/additional/${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
@@ -665,15 +741,15 @@ const ScanPrescription = () => {
         .upload(fileName, doc.file);
       
       if (error) {
-        console.error(`Failed to upload ${doc.file.name}:`, error);
+        console.error(`Failed to upload ${doc.name}:`, error);
         throw new Error(
-          `"${doc.file.name}" could not be uploaded, so nothing has been saved. Please try again.`,
+          `"${doc.name}" could not be uploaded, so nothing has been saved. Please try again.`,
         );
       }
       
       uploadedPaths.push(fileName);
       uploadedDocs.push({
-        name: doc.file.name,
+        name: doc.name,
         url: fileName,
         type: doc.file.type.includes('pdf') ? 'PDF' : 'Image',
         docType: doc.docType,
@@ -811,7 +887,7 @@ const ScanPrescription = () => {
 
       // Upload additional documents if any
       let additionalDocsData: Array<{ name: string; url: string; type: string }> = [];
-      if (additionalDocs.length > 0) {
+      if (additionalDocs.length > 0 || extraPages.length > 0) {
         setIsUploadingDocs(true);
         // Appends to uploadedPaths itself, so a throw part-way through still
         // leaves the undo list complete.
@@ -931,6 +1007,8 @@ const ScanPrescription = () => {
     setSavedDocCount(0);
     setExtractionRaw(null);
     setAdditionalDocs([]);
+    setExtraPages([]);
+    setReviewPage(0);
     setCurrentStep('upload');
     setShowDocProcessor(false);
     setRawPreview(null);
@@ -1188,6 +1266,7 @@ const ScanPrescription = () => {
                         className="gap-2"
                         onClick={(e) => {
                           e.stopPropagation();
+                          setCameraTarget('main');
                           setIsCameraOpen(true);
                         }}
                       >
@@ -1254,6 +1333,84 @@ const ScanPrescription = () => {
                       <span className="font-medium text-foreground">{selectedFile.name}</span>
                       {" "}({(selectedFile.size / 1024 / 1024).toFixed(2)} MB)
                     </p>
+                    )}
+
+                    {/* Later pages of the same prescription */}
+                    {!showDocProcessor && (
+                      <div className="space-y-2 border-2 border-dashed border-border p-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-sm font-medium">
+                            More pages{" "}
+                            <span className="text-muted-foreground font-normal">
+                              ({extraPages.length + 1} of {MAX_EXTRA_PAGES + 1})
+                            </span>
+                          </p>
+                          {extraPages.length < MAX_EXTRA_PAGES && (
+                            <div className="flex gap-2">
+                              <input
+                                ref={extraPageInputRef}
+                                type="file"
+                                accept="image/jpeg,image/png,image/jpg"
+                                className="hidden"
+                                onChange={(e) => e.target.files?.[0] && addExtraPage(e.target.files[0])}
+                              />
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="gap-1"
+                                onClick={() => extraPageInputRef.current?.click()}
+                              >
+                                <Plus className="h-4 w-4" />
+                                Add page
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                className="gap-1"
+                                onClick={() => {
+                                  setCameraTarget('page');
+                                  setIsCameraOpen(true);
+                                }}
+                              >
+                                <Camera className="h-4 w-4" />
+                                Photo
+                              </Button>
+                            </div>
+                          )}
+                        </div>
+                        {extraPages.length === 0 ? (
+                          <p className="text-xs text-muted-foreground">
+                            If the prescription continues on another page, add it here so every
+                            medicine is read together.
+                          </p>
+                        ) : (
+                          <div className="flex flex-wrap gap-2">
+                            {extraPages.map((page, i) => (
+                              <div key={page.id} className="relative h-24 w-20 border border-border bg-secondary">
+                                {/* eslint-disable-next-line @next/next/no-img-element -- local data URL */}
+                                <img
+                                  src={page.preview}
+                                  alt={`Prescription page ${i + 2}`}
+                                  className="h-full w-full object-cover"
+                                />
+                                <span className="absolute bottom-0 left-0 right-0 bg-background/80 text-[11px] text-center">
+                                  Page {i + 2}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => removeExtraPage(page.id)}
+                                  aria-label={`Remove page ${i + 2}`}
+                                  className="absolute -top-2 -right-2 h-6 w-6 flex items-center justify-center bg-destructive text-destructive-foreground rounded-full"
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
                     )}
                   </div>
                 )}
@@ -1486,11 +1643,33 @@ const ScanPrescription = () => {
                     Check each field against this image. Pinch, scroll or use the buttons to zoom.
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="space-y-3">
+                  {extraPages.length > 0 && (
+                    <div className="flex flex-wrap gap-2" role="group" aria-label="Prescription pages">
+                      {[preview, ...extraPages.map((p) => p.preview)].map((_, i) => (
+                        <Button
+                          key={i}
+                          type="button"
+                          size="sm"
+                          variant={reviewPage === i ? "default" : "outline"}
+                          aria-pressed={reviewPage === i}
+                          onClick={() => setReviewPage(i)}
+                        >
+                          Page {i + 1}
+                        </Button>
+                      ))}
+                      <p className="w-full text-xs text-muted-foreground">
+                        Pages after the first are saved with the record as &ldquo;Additional
+                        Prescription&rdquo; documents.
+                      </p>
+                    </div>
+                  )}
                   {preview ? (
                     <ImagePreviewViewer
-                      src={preview}
-                      alt="Prescription being reviewed"
+                      // Keyed so switching pages starts the new one unzoomed.
+                      key={reviewPage}
+                      src={reviewPage === 0 ? preview : extraPages[reviewPage - 1]?.preview ?? preview}
+                      alt={`Prescription page ${reviewPage + 1} being reviewed`}
                       className="w-full h-[360px] lg:h-[560px]"
                     />
                   ) : (
@@ -1914,12 +2093,17 @@ const ScanPrescription = () => {
 
       <DocumentCamera
         open={isCameraOpen}
-        title="Take Photo · Prescription"
+        title={cameraTarget === 'page' ? `Take Photo · Page ${extraPages.length + 2}` : "Take Photo · Prescription"}
         hint="Line the prescription up inside the dashed guide."
         fileName={() => `prescription-${Date.now()}.jpg`}
         onCapture={(file) => {
-          handleFileSelect(file);
-          toast.success("Photo captured successfully!");
+          if (cameraTarget === 'page') {
+            addExtraPage(file);
+            toast.success(`Page ${extraPages.length + 2} added`);
+          } else {
+            handleFileSelect(file);
+            toast.success("Photo captured successfully!");
+          }
         }}
         onClose={() => setIsCameraOpen(false)}
       />

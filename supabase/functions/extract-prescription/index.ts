@@ -135,40 +135,60 @@ serve(async (req) => {
     }
 
     // ========== INPUT VALIDATION ==========
-    const { imageBase64, ocrText } = await req.json();
+    const { imageBase64, imagesBase64, ocrText } = await req.json();
 
-    if (!imageBase64 && !ocrText) {
+    // A prescription can run to several pages. `imagesBase64` carries them in
+    // page order; the single `imageBase64` is still accepted for older clients.
+    const MAX_PAGES = 4;
+    const images: unknown[] = Array.isArray(imagesBase64)
+      ? imagesBase64
+      : imageBase64
+      ? [imageBase64]
+      : [];
+
+    if (images.length === 0 && !ocrText) {
       return new Response(JSON.stringify({ error: "Either image or text is required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Validate imageBase64 if provided
-    if (imageBase64) {
-      if (typeof imageBase64 !== "string") {
+    if (images.length > MAX_PAGES) {
+      return new Response(JSON.stringify({ error: `A prescription can have at most ${MAX_PAGES} pages` }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    let totalImageLength = 0;
+    for (const image of images) {
+      if (typeof image !== "string" || image === "") {
         return new Response(JSON.stringify({ error: "Invalid image format" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
 
-      // Check size (max 10MB base64 ≈ 13.5MB encoded)
-      if (imageBase64.length > 14000000) {
-        return new Response(JSON.stringify({ error: "Image size exceeds 10MB limit" }), {
-          status: 413,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
       // Validate base64 image format
-      if (!imageBase64.match(/^data:image\/(jpeg|png|jpg|webp);base64,/) && !imageBase64.match(/^[A-Za-z0-9+/=]+$/)) {
+      if (!image.match(/^data:image\/(jpeg|png|jpg|webp);base64,/) && !image.match(/^[A-Za-z0-9+/=]+$/)) {
         return new Response(JSON.stringify({ error: "Invalid image format. Only JPEG, PNG, and WebP allowed" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
+
+      totalImageLength += image.length;
     }
+
+    // The 10MB budget (≈ 14M base64 characters) covers all pages together; the
+    // client downscales each to 1600px, so real pages are a few hundred KB.
+    if (totalImageLength > 14000000) {
+      return new Response(JSON.stringify({ error: "Images exceed the 10MB limit" }), {
+        status: 413,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const pages = images as string[];
 
     // Validate ocrText if provided
     if (ocrText) {
@@ -214,8 +234,14 @@ serve(async (req) => {
           content: `Extract structured patient information from the following prescription text. Return only valid JSON.\n\nText:\n${ocrText}`,
         },
       ];
-    } else if (imageBase64) {
+    } else if (pages.length > 0) {
       // Vision-based extraction using multimodal
+      const instruction = pages.length === 1
+        ? "Analyze this prescription image and extract all patient information. Return ONLY the JSON object, no other text."
+        : `These ${pages.length} images are the pages of ONE prescription, in order. Read all of them and ` +
+          "return a single JSON object that combines them: list every medicine from every page once, and " +
+          "take patient details from whichever page shows them. Return ONLY the JSON object, no other text.";
+
       messages = [
         {
           role: "system",
@@ -224,16 +250,13 @@ serve(async (req) => {
         {
           role: "user",
           content: [
-            {
-              type: "text",
-              text: "Analyze this prescription image and extract all patient information. Return ONLY the JSON object, no other text.",
-            },
-            {
+            { type: "text", text: instruction },
+            ...pages.map((page) => ({
               type: "image_url",
               image_url: {
-                url: imageBase64.startsWith("data:") ? imageBase64 : `data:image/jpeg;base64,${imageBase64}`,
+                url: page.startsWith("data:") ? page : `data:image/jpeg;base64,${page}`,
               },
-            },
+            })),
           ],
         },
       ];
