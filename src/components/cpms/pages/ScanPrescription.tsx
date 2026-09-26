@@ -78,11 +78,14 @@ interface ExtractedData {
    * renumber the whole confirmation set by hand -- correct only for a delete,
    * and silently wrong for an insert, a reorder or an undo.
    */
-  medicines: Array<{ _id: string; name: string; dosage: string; frequency: string; duration: string }>;
+  medicines: Array<{ _id: string; name: string; dosage: string; frequency: string; duration: string; uncertain: string[] }>;
   visit_date: string | null;
   uhid: string | null;
   reference_number: string | null;
   confidence_score: number | null;
+  /** Top-level fields the model said it could not read with certainty. Client-side
+   *  only, like the medicines' `uncertain`; the raw copy keeps them for provenance. */
+  uncertainFields: string[];
 }
 
 type FlowStep = 'upload' | 'additional-docs' | 'review';
@@ -98,6 +101,65 @@ const MAX_EXTRA_PAGES = 3;
 
 /** The confirmation key for a medicine row. */
 const medicineKey = (id: string) => `medicine:${id}`;
+
+/** The confirmation key for a top-level field the model flagged as unclear. */
+const fieldKey = (field: string) => `field:${field}`;
+
+/**
+ * Fields the model can flag as unclear, as named in the "still to confirm" list.
+ * patient_name has its own confirmation already; uhid is not an input here --
+ * a disagreement with the Patient ID has its own warning.
+ */
+const UNCLEAR_FIELD_LABELS: Record<string, string> = {
+  age: 'age',
+  gender: 'gender',
+  height_cm: 'height',
+  weight_kg: 'weight',
+  doctor_name: 'doctor name',
+  diagnosis: 'diagnosis',
+  visit_date: 'visit date',
+};
+
+const MEDICINE_PART_LABELS: Record<string, string> = {
+  name: 'name',
+  dosage: 'dosage',
+  frequency: 'frequency',
+  duration: 'duration',
+};
+
+/** Highlight for a value the model said it could not read with certainty. */
+const UNCLEAR_INPUT = 'border-yellow-600 ring-1 ring-yellow-600';
+
+/** Spelling-insensitive key for a medicine name: "Tab. Pan-40" ~ "tab pan 40". */
+const normMedicineName = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+/** Levenshtein distance, stopping early once it exceeds `max`. */
+const editDistance = (a: string, b: string, max: number): number => {
+  if (Math.abs(a.length - b.length) > max) return max + 1;
+  let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    let rowMin = i;
+    for (let j = 1; j <= b.length; j++) {
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      rowMin = Math.min(rowMin, cur[j]);
+    }
+    if (rowMin > max) return max + 1;
+    prev = cur;
+  }
+  return prev[b.length];
+};
+
+/**
+ * Below this many distinct names, "not in earlier records" is true of nearly
+ * everything and would teach staff to ignore it. Close-match suggestions still
+ * show, since they are specific.
+ */
+const MIN_NAMES_FOR_UNSEEN_FLAG = 25;
+
+const UnclearNote = () => (
+  <span className="ml-2 text-[11px] font-medium text-yellow-700">Unclear on the page</span>
+);
 
 /**
  * The confirm/checked toggle beside a reviewed field.
@@ -167,6 +229,9 @@ const asOptionalNumber = (value: unknown): number | null => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
+const asStringList = (value: unknown): string[] =>
+  Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : [];
+
 // The prompt asks for "M/F", but the review Select offers Male/Female/Other, so
 // an unmapped "M" rendered as a blank Select and was saved as "M" regardless.
 const asGender = (value: unknown): string | null => {
@@ -220,12 +285,14 @@ const normalizeExtractedData = (raw: unknown, hospitalName: string): ExtractedDa
         dosage: asText(med.dosage),
         frequency: asText(med.frequency),
         duration: asText(med.duration),
+        uncertain: asStringList(med.uncertain),
       };
     }),
     visit_date: asVisitDate(source.visit_date),
     uhid: asOptionalText(source.uhid),
     reference_number: asOptionalText(source.reference_number),
     confidence_score: asOptionalNumber(source.confidence_score),
+    uncertainFields: asStringList(source.uncertain_fields),
   };
 };
 
@@ -425,6 +492,68 @@ const ScanPrescription = () => {
       clearTimeout(timer);
     };
   }, [currentStep, patientId, selectedHospital, reviewVisitDate]);
+
+  // Medicine names from earlier records, for suggestions and a spelling check in
+  // Review. A misread drug name is the costliest error this flow can save.
+  // RLS decides which records are visible, so a standard user draws on their own
+  // uploads and an admin on their hospitals'. Loaded once, on reaching Review.
+  const [knownMedicines, setKnownMedicines] = useState<Map<string, string> | null>(null);
+
+  useEffect(() => {
+    if (currentStep !== 'review' || knownMedicines) return;
+    let cancelled = false;
+    (async () => {
+      const { data, error } = await supabase
+        .from("patient_records")
+        .select("medicines")
+        .order("created_at", { ascending: false })
+        .limit(500);
+      if (cancelled) return;
+      if (error) {
+        // Suggestions are a help, never a gate.
+        console.error("[cpms] medicine name lookup failed:", error.code);
+        setKnownMedicines(new Map());
+        return;
+      }
+      // normalised key -> the spelling most recently saved
+      const names = new Map<string, string>();
+      for (const row of data ?? []) {
+        if (!Array.isArray(row.medicines)) continue;
+        for (const med of row.medicines as Array<{ name?: unknown }>) {
+          const name = typeof med?.name === 'string' ? med.name.trim() : '';
+          const key = normMedicineName(name);
+          if (key && !names.has(key)) names.set(key, name);
+        }
+      }
+      setKnownMedicines(names);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [currentStep, knownMedicines]);
+
+  const checkMedicineName = (name: string): { suggestion: string | null; unseen: boolean } => {
+    const key = normMedicineName(name);
+    if (!knownMedicines || knownMedicines.size === 0 || key.length < 3 || knownMedicines.has(key)) {
+      return { suggestion: null, unseen: false };
+    }
+    // One edit per ~5 characters: "Paracetmol" finds "Paracetamol", but short
+    // names don't match everything.
+    const max = Math.min(3, Math.max(1, Math.floor(key.length / 5)));
+    let best: string | null = null;
+    let bestDistance = max + 1;
+    for (const [known, spelling] of knownMedicines) {
+      const d = editDistance(key, known, max);
+      if (d < bestDistance) {
+        bestDistance = d;
+        best = spelling;
+      }
+    }
+    return {
+      suggestion: best,
+      unseen: !best && knownMedicines.size >= MIN_NAMES_FOR_UNSEEN_FLAG,
+    };
+  };
 
   // An extraction that has not been saved yet is work (and a paid model call)
   // that a stray tab close or Back press would throw away.
@@ -928,8 +1057,9 @@ const ScanPrescription = () => {
         // Without the `_id`s: they are a client-side handle for the
         // confirmation ticks. Storing them would both pollute the record and
         // make every medicines provenance comparison read as a correction.
+        // `uncertain` is review guidance only; extraction_raw keeps it.
         _medicines: extractedData.medicines.map(
-          ({ _id, ...medicine }) => medicine,
+          ({ _id, uncertain: _uncertain, ...medicine }) => medicine,
         ) as unknown as Json,
         _additional_documents: additionalDocsData as unknown as Json,
         _prescription_image_url: mainImagePath,
@@ -1014,11 +1144,43 @@ const ScanPrescription = () => {
     setRawPreview(null);
   };
 
+  // The model's own list of values it could not read with certainty. Each one
+  // stays highlighted, and on the "still to confirm" list, until the operator
+  // edits it or presses its Confirm -- the same rule the patient name follows.
+  const isUnclear = (field: string) => !!extractedData?.uncertainFields.includes(field);
+  const needsLook = (field: string) => isUnclear(field) && !verifiedFields.has(fieldKey(field));
+  const unclearClass = (field: string) => (needsLook(field) ? UNCLEAR_INPUT : '');
+
+  const editField = (field: string, patch: Partial<ExtractedData>) => {
+    setExtractedData((prev) => (prev ? { ...prev, ...patch } : prev));
+    markVerified(fieldKey(field));
+  };
+
+  // Called, not rendered as <FieldLabel/>: a component declared in the render
+  // body would remount on every change and drop focus (see VerifyCheck).
+  const fieldLabel = (field: string, htmlFor: string, text: string) => (
+    <div className="flex items-center justify-between gap-2">
+      <Label htmlFor={htmlFor}>
+        {text}
+        {isUnclear(field) && <UnclearNote />}
+      </Label>
+      {isUnclear(field) && (
+        <VerifyCheck
+          done={verifiedFields.has(fieldKey(field))}
+          onToggle={() => toggleVerified(fieldKey(field))}
+        />
+      )}
+    </div>
+  );
+
   // What still has to be confirmed before this record can be saved.
   const outstandingChecks: string[] = extractedData
     ? [
         ...(patientId.trim() ? [] : ['a Patient ID']),
         ...(verifiedFields.has('patient_name') ? [] : ['the patient name']),
+        ...Object.keys(UNCLEAR_FIELD_LABELS)
+          .filter(needsLook)
+          .map((field) => `the ${UNCLEAR_FIELD_LABELS[field]} (unclear on the page)`),
         ...(extractedData.medicines.length === 0
           ? verifiedFields.has('medicines_none')
             ? []
@@ -1775,7 +1937,9 @@ const ScanPrescription = () => {
                       </div>
                       <div className="space-y-2">
                         <div className="flex items-center justify-between gap-2">
-                          <Label htmlFor="edit-patient-name">Patient Name *</Label>
+                          <Label htmlFor="edit-patient-name">
+                            Patient Name *{isUnclear('patient_name') && <UnclearNote />}
+                          </Label>
                           <VerifyCheck
                             done={verifiedFields.has('patient_name')}
                             onToggle={() => toggleVerified('patient_name')}
@@ -1784,6 +1948,7 @@ const ScanPrescription = () => {
                         <Input
                           id="edit-patient-name"
                           value={extractedData.patient_name}
+                          className={isUnclear('patient_name') && !verifiedFields.has('patient_name') ? UNCLEAR_INPUT : ''}
                           onChange={(e) => {
                             setExtractedData({...extractedData, patient_name: e.target.value});
                             markVerified('patient_name');
@@ -1791,18 +1956,19 @@ const ScanPrescription = () => {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="edit-age">Age</Label>
+                        {fieldLabel('age', 'edit-age', 'Age')}
                         <Input 
                           id="edit-age" 
                           type="number"
                           value={extractedData.age ?? ''}
-                          onChange={(e) => setExtractedData({...extractedData, age: e.target.value ? parseInt(e.target.value) : null})}
+                          className={unclearClass('age')}
+                          onChange={(e) => editField('age', { age: e.target.value ? parseInt(e.target.value) : null })}
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="edit-gender">Gender</Label>
-                        <Select value={extractedData.gender || ''} onValueChange={(val) => setExtractedData({...extractedData, gender: val})}>
-                          <SelectTrigger id="edit-gender">
+                        {fieldLabel('gender', 'edit-gender', 'Gender')}
+                        <Select value={extractedData.gender || ''} onValueChange={(val) => editField('gender', { gender: val })}>
+                          <SelectTrigger id="edit-gender" className={unclearClass('gender')}>
                             <SelectValue placeholder="Select gender" />
                           </SelectTrigger>
                           <SelectContent>
@@ -1813,21 +1979,23 @@ const ScanPrescription = () => {
                         </Select>
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="edit-height">Height (cm)</Label>
+                        {fieldLabel('height_cm', 'edit-height', 'Height (cm)')}
                         <Input 
                           id="edit-height" 
                           type="number"
                           value={extractedData.height_cm || ''} 
-                          onChange={(e) => setExtractedData({...extractedData, height_cm: e.target.value ? parseFloat(e.target.value) : null})}
+                          className={unclearClass('height_cm')}
+                          onChange={(e) => editField('height_cm', { height_cm: e.target.value ? parseFloat(e.target.value) : null })}
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="edit-weight">Weight (kg)</Label>
+                        {fieldLabel('weight_kg', 'edit-weight', 'Weight (kg)')}
                         <Input 
                           id="edit-weight" 
                           type="number"
                           value={extractedData.weight_kg || ''} 
-                          onChange={(e) => setExtractedData({...extractedData, weight_kg: e.target.value ? parseFloat(e.target.value) : null})}
+                          className={unclearClass('weight_kg')}
+                          onChange={(e) => editField('weight_kg', { weight_kg: e.target.value ? parseFloat(e.target.value) : null })}
                         />
                       </div>
                       <div className="space-y-2">
@@ -1845,21 +2013,23 @@ const ScanPrescription = () => {
                         <Input id="edit-hospital" value={extractedData.hospital_name} disabled className="bg-muted" />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="edit-doctor">Doctor Name</Label>
+                        {fieldLabel('doctor_name', 'edit-doctor', 'Doctor Name')}
                         <Input 
                           id="edit-doctor" 
                           value={extractedData.doctor_name || ''} 
-                          onChange={(e) => setExtractedData({...extractedData, doctor_name: e.target.value || null})}
+                          className={unclearClass('doctor_name')}
+                          onChange={(e) => editField('doctor_name', { doctor_name: e.target.value || null })}
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="edit-visit-date">Visit Date</Label>
+                        {fieldLabel('visit_date', 'edit-visit-date', 'Visit Date')}
                         <Input 
                           id="edit-visit-date" 
                           type="date"
                           value={extractedData.visit_date || ''}
                           max={visitDateFallback}
-                          onChange={(e) => setExtractedData({...extractedData, visit_date: e.target.value || null})}
+                          className={unclearClass('visit_date')}
+                          onChange={(e) => editField('visit_date', { visit_date: e.target.value || null })}
                         />
                       </div>
                       <div className="space-y-2">
@@ -1881,11 +2051,12 @@ const ScanPrescription = () => {
                         </p>
                       </div>
                       <div className="sm:col-span-2 space-y-2">
-                        <Label htmlFor="edit-diagnosis">Diagnosis</Label>
-                        <Textarea 
-                          id="edit-diagnosis" 
-                          value={extractedData.diagnosis || ''} 
-                          onChange={(e) => setExtractedData({...extractedData, diagnosis: e.target.value || null})}
+                        {fieldLabel('diagnosis', 'edit-diagnosis', 'Diagnosis')}
+                        <Textarea
+                          id="edit-diagnosis"
+                          value={extractedData.diagnosis || ''}
+                          className={unclearClass('diagnosis')}
+                          onChange={(e) => editField('diagnosis', { diagnosis: e.target.value || null })}
                           rows={2}
                         />
                       </div>
@@ -1895,6 +2066,11 @@ const ScanPrescription = () => {
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <Label>Medicines</Label>
+                        {/* Typing suggestions for every name input below. */}
+                        <datalist id="known-medicine-names">
+                          {knownMedicines &&
+                            [...knownMedicines.values()].map((name) => <option key={name} value={name} />)}
+                        </datalist>
                         <Button
                           type="button"
                           variant="outline"
@@ -1903,7 +2079,7 @@ const ScanPrescription = () => {
                             ...extractedData,
                             medicines: [
                               ...(extractedData.medicines || []),
-                              { _id: crypto.randomUUID(), name: '', dosage: '', frequency: '', duration: '' },
+                              { _id: crypto.randomUUID(), name: '', dosage: '', frequency: '', duration: '', uncertain: [] },
                             ]
                           })}
                         >
@@ -1924,6 +2100,11 @@ const ScanPrescription = () => {
                             markVerified(medicineKey(med._id));
                           };
                           const checked = verifiedFields.has(medicineKey(med._id));
+                          // What the model was unsure of in this row stays
+                          // highlighted until the row is confirmed.
+                          const unclearPart = (part: string) =>
+                            !checked && med.uncertain.includes(part) ? UNCLEAR_INPUT : '';
+                          const nameCheck = checkMedicineName(med.name);
                           return (
                             <div
                               key={med._id}
@@ -1934,6 +2115,11 @@ const ScanPrescription = () => {
                               <div className="flex items-center justify-between gap-2">
                                 <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                                   Medicine {index + 1}
+                                  {med.uncertain.length > 0 && (
+                                    <span className="ml-2 normal-case tracking-normal font-medium text-yellow-700">
+                                      Unclear: {med.uncertain.map((p) => MEDICINE_PART_LABELS[p] ?? p).join(', ')}
+                                    </span>
+                                  )}
                                 </span>
                                 <div className="flex items-center gap-1">
                                   <VerifyCheck
@@ -1954,27 +2140,49 @@ const ScanPrescription = () => {
                                 </div>
                               </div>
                               <div className="grid grid-cols-2 gap-2">
-                                <Input
-                                  placeholder="Medicine name"
-                                  value={med.name}
-                                  onChange={(e) => setField('name', e.target.value)}
-                                  className="col-span-2"
-                                />
+                                <div className="col-span-2 space-y-1">
+                                  <Input
+                                    placeholder="Medicine name"
+                                    value={med.name}
+                                    list="known-medicine-names"
+                                    onChange={(e) => setField('name', e.target.value)}
+                                    className={unclearPart('name')}
+                                  />
+                                  {nameCheck.suggestion ? (
+                                    <p className="text-xs text-yellow-700 flex flex-wrap items-center gap-1">
+                                      Not in earlier records. Did you mean{' '}
+                                      <span className="font-medium">{nameCheck.suggestion}</span>?
+                                      <button
+                                        type="button"
+                                        className="underline font-medium"
+                                        onClick={() => setField('name', nameCheck.suggestion!)}
+                                      >
+                                        Use it
+                                      </button>
+                                    </p>
+                                  ) : nameCheck.unseen ? (
+                                    <p className="text-xs text-yellow-700">
+                                      Not in earlier records &mdash; check the spelling against the image.
+                                    </p>
+                                  ) : null}
+                                </div>
                                 <Input
                                   placeholder="Dosage"
                                   value={med.dosage}
                                   onChange={(e) => setField('dosage', e.target.value)}
+                                  className={unclearPart('dosage')}
                                 />
                                 <Input
                                   placeholder="Frequency"
                                   value={med.frequency}
                                   onChange={(e) => setField('frequency', e.target.value)}
+                                  className={unclearPart('frequency')}
                                 />
                                 <Input
                                   placeholder="Duration"
                                   value={med.duration}
                                   onChange={(e) => setField('duration', e.target.value)}
-                                  className="col-span-2"
+                                  className={`col-span-2 ${unclearPart('duration')}`}
                                 />
                               </div>
                             </div>
