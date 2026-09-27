@@ -89,19 +89,38 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, [user?.id, fetchProfile]);
 
   useEffect(() => {
+    // Whose profile has been fetched, so a repeat event for the same account
+    // does not fetch it again.
+    let profileUserId: string | null = null;
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setSession(session);
-        setUser(session?.user ?? null);
+        // supabase-js re-emits SIGNED_IN (and TOKEN_REFRESHED) every time the
+        // tab becomes visible again, each with a new `user` object for the
+        // same account. Replacing ours made everything keyed on `user` start
+        // over -- useRole went back to loading, the route guards swapped the
+        // page for a spinner, and the page remounted: switching tabs looked
+        // like a reload and threw away a half-finished scan. The same account
+        // keeps the same object, unless its details really changed.
+        const nextUser = session?.user ?? null;
+        setUser((prev) =>
+          prev && nextUser && prev.id === nextUser.id && event !== 'USER_UPDATED' ? prev : nextUser,
+        );
         setLoading(false);
 
         // Defer profile fetch to avoid Supabase deadlock
         if (session?.user) {
-          setTimeout(() => {
-            fetchProfile(session.user.id);
-          }, 0);
+          const userId = session.user.id;
+          if (userId !== profileUserId || event === 'USER_UPDATED') {
+            profileUserId = userId;
+            setTimeout(() => {
+              fetchProfile(userId);
+            }, 0);
+          }
         } else {
+          profileUserId = null;
           setProfile(null);
           setProfileLoaded(false);
           setProfileError(null);
@@ -112,11 +131,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
-      setUser(session?.user ?? null);
+      const nextUser = session?.user ?? null;
+      setUser((prev) => (prev && nextUser && prev.id === nextUser.id ? prev : nextUser));
       setLoading(false);
 
       if (session?.user) {
-        fetchProfile(session.user.id);
+        // The listener above usually fires first with the same session.
+        if (session.user.id !== profileUserId) {
+          profileUserId = session.user.id;
+          fetchProfile(session.user.id);
+        }
       } else {
         setProfileLoaded(true);
       }

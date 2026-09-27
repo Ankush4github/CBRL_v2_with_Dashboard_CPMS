@@ -60,6 +60,9 @@ const RoleContext = createContext<UseRoleReturn | undefined>(undefined);
 
 export const RoleProvider = ({ children }: { children: ReactNode }) => {
   const { user } = useAuth();
+  // Keyed on the id, not the object: an auth event for the same account must
+  // never send the role check (and with it every route guard) back to loading.
+  const userId = user?.id ?? null;
   const [role, setRole] = useState<UserRole>("user");
   const [loading, setLoading] = useState(true);
   const [permissions, setPermissions] = useState<UserPermissions | null>(null);
@@ -68,7 +71,7 @@ export const RoleProvider = ({ children }: { children: ReactNode }) => {
   const [assignedHospitals, setAssignedHospitals] = useState<string[]>([]);
 
   const fetchRoleData = useCallback(async () => {
-    if (!user) {
+    if (!userId) {
       setRole("user");
       setPermissions(null);
       setHasPermissionsRow(false);
@@ -83,7 +86,7 @@ export const RoleProvider = ({ children }: { children: ReactNode }) => {
     try {
       // Fetch user role using the database function
       const { data: roleData, error: roleError } = await supabase
-        .rpc("get_user_role", { _user_id: user.id });
+        .rpc("get_user_role", { _user_id: userId });
 
       if (roleError) {
         console.error("Error fetching role:", roleError);
@@ -99,7 +102,7 @@ export const RoleProvider = ({ children }: { children: ReactNode }) => {
       const { data: permData, error: permError } = await supabase
         .from("user_permissions")
         .select("can_scan, can_upload, is_enabled")
-        .eq("user_id", user.id)
+        .eq("user_id", userId)
         .maybeSingle();
 
       if (permError) {
@@ -132,7 +135,7 @@ export const RoleProvider = ({ children }: { children: ReactNode }) => {
       const { data: hospitalData, error: hospitalError } = await supabase
         .from("hospital_assignments")
         .select("hospital")
-        .eq("user_id", user.id);
+        .eq("user_id", userId);
 
       if (hospitalError) {
         console.error("Error fetching hospital assignments:", hospitalError);
@@ -145,7 +148,7 @@ export const RoleProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [userId]);
 
   useEffect(() => {
     fetchRoleData();
