@@ -541,6 +541,25 @@ export type Database = {
         Args: { _admin_id: string; _target_user_id: string }
         Returns: boolean
       }
+      audit_changer_names: {
+        Args: { _record_id: string }
+        Returns: { user_id: string; display_name: string | null }[]
+      }
+      admin_manageable_user_ids: {
+        Args: never
+        Returns: string[]
+      }
+      admin_update_user: {
+        Args: {
+          _target_user_id: string
+          _hospitals: string[]
+          _can_scan: boolean
+          _can_upload: boolean
+          _is_enabled: boolean
+          _role?: string
+        }
+        Returns: undefined
+      }
       can_manage_user: {
         Args: { _actor_id: string; _target_user_id: string }
         Returns: boolean

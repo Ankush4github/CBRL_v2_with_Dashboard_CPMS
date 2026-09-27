@@ -8,7 +8,7 @@ import {
   DialogTitle,
 } from "@/components/cpms/ui/dialog";
 import { Button } from "@/components/cpms/ui/button";
-import { Download, Loader2, X, Maximize2, Minimize2 } from "lucide-react";
+import { Download, ExternalLink, Loader2, X, Maximize2, Minimize2 } from "lucide-react";
 import ImagePreviewViewer from "@/components/cpms/ImagePreviewViewer";
 
 interface DocumentPreviewModalProps {
@@ -34,6 +34,14 @@ const DocumentPreviewModal = ({
 
   const isPdf = documentName.toLowerCase().endsWith(".pdf");
   const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(documentName);
+  // Android Chrome has no built-in PDF viewer: the iframe below renders blank
+  // there, and still fires onLoad, so no error ever showed. Browsers report
+  // this as navigator.pdfViewerEnabled; where they don't say, assume inline
+  // works, as it did before.
+  const canShowPdfInline =
+    typeof navigator === "undefined" ||
+    (navigator as Navigator & { pdfViewerEnabled?: boolean }).pdfViewerEnabled !== false;
+  const pdfFallback = isPdf && !canShowPdfInline;
 
   // Reset when the dialog opens, or when it is handed a different document
   // while already open. Adjusting state during render rather than in an effect
@@ -101,7 +109,7 @@ const DocumentPreviewModal = ({
         </DialogHeader>
 
         <div className="flex-1 overflow-auto bg-muted/50 relative min-h-0">
-          {loading && (
+          {loading && !pdfFallback && (
             <div className="absolute inset-0 flex items-center justify-center bg-background/80 z-10">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
@@ -125,7 +133,29 @@ const DocumentPreviewModal = ({
 
           {documentUrl && !error && (
             <>
-              {isPdf ? (
+              {pdfFallback ? (
+                <div className="flex items-center justify-center h-full p-6">
+                  <div className="text-center space-y-4">
+                    <p className="text-muted-foreground">
+                      This browser can&apos;t show PDFs here. Open it in a new tab or download it.
+                    </p>
+                    <div className="flex flex-col sm:flex-row gap-2 justify-center">
+                      <Button
+                        variant="outline"
+                        className="gap-2"
+                        onClick={() => window.open(documentUrl, "_blank", "noopener")}
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        Open in new tab
+                      </Button>
+                      <Button className="gap-2" onClick={onDownload} disabled={isDownloading}>
+                        <Download className="h-4 w-4" />
+                        Download
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ) : isPdf ? (
                 <iframe
                   src={documentUrl}
                   className="w-full h-full border-0"

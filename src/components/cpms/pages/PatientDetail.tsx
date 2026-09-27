@@ -41,7 +41,7 @@ import { Label } from "@/components/cpms/ui/label";
 import { useRouter, useParams } from "next/navigation";
 import { supabase } from "@/lib/supabase/cpms-client";
 import { useToast } from "@/hooks/cpms/use-toast";
-import { describeError } from "@/lib/cpms/errors";
+import { describeError, describeInvokeError } from "@/lib/cpms/errors";
 import { useRole } from "@/hooks/cpms/useRole";
 import DocumentPreviewModal from "@/components/cpms/DocumentPreviewModal";
 import { asset } from "@/lib/cpms/base-path";
@@ -50,7 +50,17 @@ interface AdditionalDocument {
   name: string;
   url: string;
   type: string;
+  /** PIS, ICF, TRF or ADD_RX, as chosen at upload. */
+  docType?: string;
 }
+
+/** The same labels the upload screen and the PDF export use. */
+const DOC_TYPE_LABELS: Record<string, string> = {
+  PIS: "Patient Information Sheet",
+  ICF: "Signed Informed Consent Form",
+  TRF: "Test Requisition Form",
+  ADD_RX: "Additional Prescription",
+};
 
 interface PatientRecord {
   id: string;
@@ -182,6 +192,7 @@ const PatientDetail = () => {
             name: doc.name || "",
             url: doc.url || "",
             type: doc.type || "File",
+            docType: typeof doc.docType === "string" ? doc.docType : undefined,
           }));
         }
         
@@ -392,7 +403,10 @@ const PatientDetail = () => {
       console.error("PDF generation error:", error);
       toast({
         title: "PDF generation failed",
-        description: describeError(error, "Failed to generate PDF. Please try again."),
+        // The function answers with a message written for this screen
+        // ("Access denied", "Patient record not found"); describeError cannot
+        // read it, so every failure used to look the same.
+        description: await describeInvokeError(error, "Failed to generate PDF. Please try again."),
         variant: "destructive",
       });
     } finally {
@@ -506,24 +520,38 @@ const PatientDetail = () => {
 
       if (error) throw error;
 
-      // Fetch profile names for changers
-      const logsWithNames: AuditLogEntry[] = await Promise.all(
-        (data || []).map(async (log) => {
-          let changerName = "Unknown User";
-          if (log.changed_by) {
-            const { data: profile } = await supabase
-              .from("profiles")
-              .select("full_name, email")
-              .eq("id", log.changed_by)
-              .maybeSingle();
-            changerName = profile?.full_name || profile?.email || "Unknown User";
+      // Names for the people who changed this record. profiles is readable
+      // only by admins and by each user for themselves, so a standard user saw
+      // "Unknown User" for every colleague. audit_changer_names() returns just
+      // the names, and only for a record the caller can read. Until that
+      // function exists on the database, fall back to one batched profiles read
+      // (this used to be one query per audit row).
+      const names = new Map<string, string>();
+      const { data: changerNames, error: namesError } = await supabase.rpc("audit_changer_names", {
+        _record_id: recordId,
+      });
+      if (!namesError) {
+        for (const row of (changerNames ?? []) as Array<{ user_id: string; display_name: string | null }>) {
+          if (row.display_name) names.set(row.user_id, row.display_name);
+        }
+      } else {
+        const ids = [...new Set((data || []).map((log) => log.changed_by).filter(Boolean))] as string[];
+        if (ids.length > 0) {
+          const { data: profiles } = await supabase
+            .from("profiles")
+            .select("id, full_name, email")
+            .in("id", ids);
+          for (const profile of profiles ?? []) {
+            const name = profile.full_name || profile.email;
+            if (name) names.set(profile.id, name);
           }
-          return {
-            ...log,
-            changer_name: changerName,
-          };
-        })
-      );
+        }
+      }
+
+      const logsWithNames: AuditLogEntry[] = (data || []).map((log) => ({
+        ...log,
+        changer_name: (log.changed_by && names.get(log.changed_by)) || "Unknown User",
+      }));
 
       setAuditLogs(logsWithNames);
     } catch (error: any) {
@@ -717,7 +745,9 @@ const PatientDetail = () => {
               <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <div className="p-4 bg-secondary">
                   <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Age</p>
-                  <p className="font-semibold text-lg">{patient.age || "N/A"} years</p>
+                  <p className="font-semibold text-lg">
+                    {patient.age != null ? `${patient.age} years` : "N/A"}
+                  </p>
                 </div>
                 <div className="p-4 bg-secondary">
                   <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Gender</p>
@@ -905,7 +935,12 @@ const PatientDetail = () => {
                         >
                           {doc.name}
                         </p>
-                        <p className="text-xs text-muted-foreground truncate">{doc.type}</p>
+                        {/* What the document is, not only its file format:
+                            consent forms, requisitions and extra prescription
+                            pages all used to read just "Image" or "PDF". */}
+                        <p className="text-xs text-muted-foreground truncate">
+                          {doc.docType ? `${DOC_TYPE_LABELS[doc.docType] ?? doc.docType} · ${doc.type}` : doc.type}
+                        </p>
                       </div>
                       <div className="flex gap-1 sm:gap-2 shrink-0">
                         <Button

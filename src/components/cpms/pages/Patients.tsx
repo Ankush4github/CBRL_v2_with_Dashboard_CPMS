@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Button } from "@/components/cpms/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/cpms/ui/card";
 import { Input } from "@/components/cpms/ui/input";
@@ -13,6 +13,28 @@ import { useToast } from "@/hooks/cpms/use-toast";
 import { describeError } from "@/lib/cpms/errors";
 import { useHospitals } from "@/hooks/cpms/useHospitals";
 import { asset } from "@/lib/cpms/base-path";
+// The columns the list and the CSV show -- not select("*"), which also pulled
+// every record's raw AI extraction into the browser.
+const LIST_COLUMNS =
+  "id, patient_id, patient_name, age, gender, height_cm, weight_kg, bmi, diagnosis, medicines, visit_date, doctor_name, hospital, reference_number";
+
+// PostgREST returns at most 1000 rows per request; the CSV pages through.
+const EXPORT_BATCH = 1000;
+
+/**
+ * The search box as a PostgREST or() filter over name, Patient ID and
+ * reference. Values are double-quoted so commas and brackets cannot break the
+ * filter syntax, and quotes and backslashes -- the quoting's own escape
+ * characters -- are dropped. A typed % or _ stays an ILIKE wildcard, which can
+ * only widen the match.
+ */
+const searchFilter = (query: string): string | null => {
+  const term = query.trim().replace(/["\\]/g, "");
+  if (!term) return null;
+  const pattern = `"%${term}%"`;
+  return `patient_name.ilike.${pattern},patient_id.ilike.${pattern},reference_number.ilike.${pattern}`;
+};
+
 interface Patient {
   id: string;
   patient_id: string;
@@ -34,23 +56,50 @@ const Patients = () => {
   const router = useRouter();
   const { toast } = useToast();
   const { hospitalOptions } = useHospitals(true); // Include "All Hospitals" option
-  const [patients, setPatients] = useState<Patient[]>([]);
+  const [paginatedPatients, setPaginatedPatients] = useState<Patient[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
   const [selectedHospital, setSelectedHospital] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
+  // What the list is filtered by: the search box, a moment after typing stops.
+  const [appliedSearch, setAppliedSearch] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 5;
+  const itemsPerPage = 20;
 
-  const fetchPatients = async () => {
+  useEffect(() => {
+    const timer = setTimeout(() => setAppliedSearch(searchQuery), 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // The list used to load every record and filter in the browser, which
+  // PostgREST caps at 1000 rows: past that, search silently missed older
+  // patients and the count and CSV were short. Filtering, counting and paging
+  // now happen in the database.
+  const buildQuery = useCallback(
+    (columns: string, withCount: boolean) => {
+      let query = supabase
+        .from("patient_records")
+        .select(columns, withCount ? { count: "exact" } : undefined)
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false });
+      if (selectedHospital !== "all") query = query.eq("hospital", selectedHospital);
+      const filter = searchFilter(appliedSearch);
+      if (filter) query = query.or(filter);
+      return query;
+    },
+    [selectedHospital, appliedSearch],
+  );
+
+  const fetchPatients = useCallback(async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("patient_records")
-        .select("*")
-        .order("created_at", { ascending: false });
+      const from = (currentPage - 1) * itemsPerPage;
+      const { data, error, count } = await buildQuery(LIST_COLUMNS, true).range(from, from + itemsPerPage - 1);
 
       if (error) throw error;
-      setPatients(data || []);
+      setPaginatedPatients((data ?? []) as unknown as Patient[]);
+      setTotalCount(count ?? 0);
     } catch (error: any) {
       toast({
         title: "Error fetching patients",
@@ -60,24 +109,13 @@ const Patients = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [buildQuery, currentPage, toast]);
 
   useEffect(() => {
     fetchPatients();
-  }, []);
+  }, [fetchPatients]);
 
-  const filteredPatients = patients.filter((patient) => {
-    const matchesHospital = selectedHospital === "all" || patient.hospital === selectedHospital;
-    const searchLower = searchQuery.toLowerCase();
-    const matchesSearch = 
-      patient.patient_name.toLowerCase().includes(searchLower) ||
-      patient.patient_id?.toLowerCase().includes(searchLower) ||
-      patient.reference_number?.toLowerCase().includes(searchLower);
-    return matchesHospital && matchesSearch;
-  });
-
-  const totalPages = Math.ceil(filteredPatients.length / itemsPerPage);
-  const paginatedPatients = filteredPatients.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  const totalPages = Math.ceil(totalCount / itemsPerPage);
 
   // Each medicine with its dose, frequency and duration -- the export used to
   // carry names only, which dropped the instructions a reader actually needs.
@@ -108,7 +146,30 @@ const Patients = () => {
     return value;
   };
 
-  const exportToCsv = () => {
+  const exportToCsv = async () => {
+    // Every matching record, fetched in batches -- not just the page on screen,
+    // and not cut off at 1000.
+    setExporting(true);
+    let filteredPatients: Patient[] = [];
+    try {
+      for (let from = 0; ; from += EXPORT_BATCH) {
+        const { data, error } = await buildQuery(LIST_COLUMNS, false).range(from, from + EXPORT_BATCH - 1);
+        if (error) throw error;
+        const batch = (data ?? []) as unknown as Patient[];
+        filteredPatients = filteredPatients.concat(batch);
+        if (batch.length < EXPORT_BATCH) break;
+      }
+    } catch (error: any) {
+      toast({
+        title: "Export failed",
+        description: describeError(error, "Could not export the patient list. Please try again."),
+        variant: "destructive",
+      });
+      return;
+    } finally {
+      setExporting(false);
+    }
+
     const headers = ["Reference No", "Patient ID", "Name", "Age", "Gender", "Height (cm)", "Weight (kg)", "BMI", "Diagnosis", "Medicines", "Visit Date", "Doctor", "Hospital"];
     const csvContent = [
       headers.join(","),
@@ -137,6 +198,7 @@ const Patients = () => {
     a.href = url;
     a.download = `patients_${selectedHospital}_${new Date().toISOString().split("T")[0]}.csv`;
     a.click();
+    URL.revokeObjectURL(url);
   };
 
   return (
@@ -197,8 +259,13 @@ const Patients = () => {
                       ))}
                     </SelectContent>
                   </Select>
-                  <Button onClick={exportToCsv} variant="outline" className="gap-2 h-11 sm:h-10 px-3 sm:px-4 shrink-0">
-                    <Download className="h-4 w-4" />
+                  <Button
+                    onClick={exportToCsv}
+                    variant="outline"
+                    className="gap-2 h-11 sm:h-10 px-3 sm:px-4 shrink-0"
+                    disabled={exporting || totalCount === 0}
+                  >
+                    {exporting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                     <span className="hidden sm:inline">Export</span>
                   </Button>
                 </div>
@@ -209,7 +276,7 @@ const Patients = () => {
           {/* Results count */}
           {!loading && (
             <p className="text-sm text-muted-foreground px-1">
-              {filteredPatients.length} patient{filteredPatients.length !== 1 ? 's' : ''} found
+              {totalCount} patient{totalCount !== 1 ? 's' : ''} found
             </p>
           )}
 
@@ -243,6 +310,7 @@ const Patients = () => {
                         <TableHead className="font-bold">Medicines</TableHead>
                         <TableHead className="font-bold">Visit Date</TableHead>
                         <TableHead className="font-bold">Doctor</TableHead>
+                        <TableHead className="font-bold">Hospital</TableHead>
                         <TableHead className="font-bold w-[80px]">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -261,6 +329,7 @@ const Patients = () => {
                           <TableCell>{formatMedicines(patient.medicines)}</TableCell>
                           <TableCell>{patient.visit_date || "N/A"}</TableCell>
                           <TableCell>{patient.doctor_name || "N/A"}</TableCell>
+                          <TableCell>{patient.hospital}</TableCell>
                           <TableCell>
                             <Button
                               variant="ghost"
@@ -388,7 +457,7 @@ const Patients = () => {
           )}
 
           {/* Empty State */}
-          {!loading && filteredPatients.length === 0 && (
+          {!loading && totalCount === 0 && (
             <Card className="border-2">
               <CardContent className="p-8 sm:p-12 text-center">
                 <User className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-4 text-muted-foreground" />
