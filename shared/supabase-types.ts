@@ -216,6 +216,39 @@ export type Database = {
           },
         ]
       }
+      patient_record_deletions: {
+        Row: {
+          deleted_at: string
+          deleted_by: string | null
+          hospital: string | null
+          id: string
+          patient_id: string | null
+          patient_record_id: string
+          record_created_at: string | null
+          reference_number: string | null
+        }
+        Insert: {
+          deleted_at?: string
+          deleted_by?: string | null
+          hospital?: string | null
+          id?: string
+          patient_id?: string | null
+          patient_record_id: string
+          record_created_at?: string | null
+          reference_number?: string | null
+        }
+        Update: {
+          deleted_at?: string
+          deleted_by?: string | null
+          hospital?: string | null
+          id?: string
+          patient_id?: string | null
+          patient_record_id?: string
+          record_created_at?: string | null
+          reference_number?: string | null
+        }
+        Relationships: []
+      }
       patient_records: {
         Row: {
           additional_documents: Json | null

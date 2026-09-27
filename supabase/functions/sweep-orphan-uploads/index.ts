@@ -55,6 +55,33 @@ function secretsMatch(a: string, b: string): boolean {
   return diff === 0;
 }
 
+/**
+ * For ops-alerts (migration 20260927100000): failures are noted, and every
+ * completed run stamps a heartbeat so a sweep that silently stops running is
+ * noticed too. Best-effort -- a missing table must not fail the sweep.
+ */
+async function recordFailure(admin: any, kind: string, detail: string) {
+  try {
+    await admin.from("service_failures").insert({
+      service: "sweep-orphan-uploads",
+      kind,
+      detail: detail.slice(0, 300),
+    });
+  } catch {
+    // Nothing more to do; the run's own log line carries the reason.
+  }
+}
+
+async function recordSuccess(admin: any) {
+  try {
+    await admin
+      .from("service_heartbeats")
+      .upsert({ service: "sweep-orphan-uploads", last_ok_at: new Date().toISOString() });
+  } catch {
+    // As above.
+  }
+}
+
 const BATCH = 100;
 // One run's ceiling. Anything past it is picked up the next night.
 const MAX_PER_RUN = 1000;
@@ -90,6 +117,7 @@ Deno.serve(async (req) => {
   });
   if (error) {
     console.error("[sweep-orphan-uploads] listing failed:", error.code, error.message);
+    await recordFailure(admin, "list", `${error.code} ${error.message}`);
     return json({ error: "Listing failed" }, 500);
   }
 
@@ -107,6 +135,7 @@ Deno.serve(async (req) => {
 
   if (!apply || orphans.length === 0) {
     console.log("[sweep-orphan-uploads]", JSON.stringify(summary));
+    await recordSuccess(admin);
     return json({ ...summary, removed: 0 });
   }
 
@@ -124,5 +153,10 @@ Deno.serve(async (req) => {
   }
 
   console.log("[sweep-orphan-uploads]", JSON.stringify({ ...summary, removed, failed: failures.length }));
+  if (failures.length > 0) {
+    await recordFailure(admin, "remove", `${failures.length} of ${orphans.length} files could not be removed`);
+  } else {
+    await recordSuccess(admin);
+  }
   return json({ ...summary, removed, failed: failures.length });
 });

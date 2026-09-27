@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/cpms/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/cpms/ui/card";
-import { Activity, BarChart3, Building2, ClipboardList, LogOut, ScanLine, User, Users, Shield, Crown, MapPin, CalendarCheck, HelpCircle } from "lucide-react";
+import { Activity, BarChart3, Building2, ClipboardList, LogOut, ScanLine, User, Users, Shield, Crown, MapPin, CalendarCheck, HelpCircle, Trash2 } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/cpms/useAuth";
 import { useRole } from "@/hooks/cpms/useRole";
@@ -393,6 +393,34 @@ const Dashboard = () => {
                       </span>
                       <span className="px-3 py-1 bg-accent text-accent-foreground text-xs font-medium">
                         Remove Hospitals
+                      </span>
+                      <span className="px-3 py-1 bg-accent text-accent-foreground text-xs font-medium">
+                        Master Only
+                      </span>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Deletion log - Only for Masters, who are the only ones who can delete */}
+              {isMaster && (
+                <Card
+                  className="border-2 border-border hover:border-primary transition-colors cursor-pointer group shadow-sm hover:shadow-md"
+                  onClick={() => router.push(asset("/admin/deleted-records"))}
+                >
+                  <CardHeader className="pb-4">
+                    <div className="h-16 w-16 bg-primary flex items-center justify-center mb-4 group-hover:scale-105 transition-transform">
+                      <Trash2 className="h-8 w-8 text-primary-foreground" />
+                    </div>
+                    <CardTitle className="text-xl">Deleted Records</CardTitle>
+                    <CardDescription>
+                      See which patient records were deleted, by whom and when.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="flex flex-wrap gap-2">
+                      <span className="px-3 py-1 bg-accent text-accent-foreground text-xs font-medium">
+                        Deletion log
                       </span>
                       <span className="px-3 py-1 bg-accent text-accent-foreground text-xs font-medium">
                         Master Only

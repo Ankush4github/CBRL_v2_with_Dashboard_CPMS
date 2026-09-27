@@ -6,6 +6,40 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+/**
+ * Note a failure for ops-alerts, which emails the masters when scanning keeps
+ * failing (migration 20260927100000). Best-effort: a missing table or a
+ * network blip must never turn into a failed scan, so errors are swallowed.
+ * `detail` is a status code and the provider's message -- never patient data.
+ *
+ *   config   -- a required secret is missing; every scan fails
+ *   model    -- Gemini refused the key or the model (401/403/404); every scan fails
+ *   rejected -- Gemini refused this request (other 4xx), e.g. an unreadable image
+ *   busy     -- still overloaded after the retries (429/5xx)
+ *   parse    -- the reply was not usable JSON
+ *   error    -- anything else that reached the catch-all
+ */
+async function recordFailure(kind: string, detail: string): Promise<void> {
+  try {
+    const url = Deno.env.get("SUPABASE_URL");
+    const key = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+    if (!url || !key) return;
+    await fetch(`${url}/rest/v1/service_failures`, {
+      method: "POST",
+      headers: {
+        apikey: key,
+        Authorization: `Bearer ${key}`,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify({ service: "extract-prescription", kind, detail: detail.slice(0, 300) }),
+      signal: AbortSignal.timeout(3000),
+    });
+  } catch {
+    // Alerting is a help; the scan's own response is what matters here.
+  }
+}
+
 const EXTRACTION_PROMPT = `You are a medical prescription extraction AI specialized in reading handwritten and printed medical documents.
 
 You are given an IMAGE of a medical prescription. Your job is to accurately extract patient and prescription data.
@@ -104,6 +138,7 @@ serve(async (req) => {
     
     if (!supabaseUrl || !supabaseAnonKey) {
       console.error("[SERVER] Missing Supabase configuration");
+      await recordFailure("config", "SUPABASE_URL or SUPABASE_ANON_KEY missing");
       return new Response(
         JSON.stringify({ error: "Service configuration error" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -225,6 +260,7 @@ serve(async (req) => {
     const GEMINI_API_KEY = Deno.env.get("GEMINI_API_KEY");
     if (!GEMINI_API_KEY) {
       console.error("[SERVER] GEMINI_API_KEY is not configured");
+      await recordFailure("config", "GEMINI_API_KEY is not set");
       return new Response(
         JSON.stringify({ error: "Service configuration error" }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -357,6 +393,14 @@ serve(async (req) => {
     }
 
     if (!response.ok) {
+      const status = response.status;
+      await recordFailure(
+        transient.has(status) ? "busy"
+          : status === 401 || status === 403 || status === 404 || errorText.includes("API_KEY_INVALID") ? "model"
+          : "rejected",
+        `${status} ${errorText.replace(/\s+/g, " ")}`,
+      );
+
       // Return generic error messages to client
       if (response.status === 429 || response.status === 503) {
         return new Response(
@@ -385,6 +429,7 @@ serve(async (req) => {
 
     if (!content) {
       console.error("[SERVER] No content in AI response");
+      await recordFailure("parse", "reply had no content");
       return new Response(
         JSON.stringify({ error: "Unable to extract data from prescription. Please try again." }),
         { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -452,6 +497,7 @@ serve(async (req) => {
       // The model's reply is transcribed prescription text (names, diagnoses),
       // so only its shape goes to the logs, never its content.
       console.error("[SERVER] Unparseable AI reply, length:", content.length, "fenced:", /```/.test(content));
+      await recordFailure("parse", `unparseable reply, length ${content.length}`);
       
       // Return generic error - don't expose raw AI content
       return new Response(
@@ -473,6 +519,7 @@ serve(async (req) => {
     );
   } catch (error) {
     console.error("[SERVER] Function error:", error);
+    await recordFailure("error", error instanceof Error ? `${error.name}: ${error.message}` : "unknown error");
     
     // Return generic error - don't expose internal details
     return new Response(
