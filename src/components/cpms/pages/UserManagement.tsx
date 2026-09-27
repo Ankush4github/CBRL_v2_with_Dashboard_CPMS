@@ -123,6 +123,21 @@ const assignableRoles = (rank: number): UserRole[] =>
 const PEER_NOTE =
   "Accounts at your own role level — your own included — can only be changed by someone above them.";
 
+/**
+ * The account state the database enforces. No permissions row means the
+ * account was never activated, and user_is_enabled() treats that as disabled;
+ * the old `is_enabled !== false` test showed those accounts as "Active", with
+ * Scan and Upload badges, while the approval queue said they could do nothing.
+ */
+const accountStatus = (
+  u: UserWithDetails,
+): { label: string; variant: "default" | "destructive" | "secondary" } => {
+  if (!u.permissions) return { label: "Pending", variant: "secondary" };
+  return u.permissions.is_enabled
+    ? { label: "Active", variant: "default" }
+    : { label: "Disabled", variant: "destructive" };
+};
+
 const UserManagement = () => {
   const router = useRouter();
   const { toast } = useToast();
@@ -226,12 +241,16 @@ const UserManagement = () => {
       // Filter users based on current user's role
       let filteredUsers = usersWithDetails;
       if (!isMaster) {
-        // Admins can only see users assigned to their hospitals
-        filteredUsers = usersWithDetails.filter((u) => {
-          if (u.role === "master") return false; // Admins can't see masters
-          if (u.role === "admin" && u.id !== user?.id) return false; // Admins can't see other admins
-          return true;
-        });
+        // Admins see themselves and the accounts they may manage: lower-ranked
+        // staff sharing one of their hospitals, or with no hospital yet. Asked
+        // of the database, because this client cannot see another hospital's
+        // assignments and so cannot tell "no hospital" from "not my hospital".
+        const { data: manageable, error: manageableError } = await supabase.rpc(
+          "admin_manageable_user_ids",
+        );
+        if (manageableError) throw manageableError;
+        const allowed = new Set<string>((manageable ?? []) as string[]);
+        filteredUsers = usersWithDetails.filter((u) => u.id === user?.id || allowed.has(u.id));
       }
 
       setUsers(filteredUsers);
@@ -522,66 +541,55 @@ const UserManagement = () => {
       return;
     }
 
+    // An enabled account with no hospital signs in to an empty CPMS -- the
+    // state the approval queue exists to prevent. The database refuses it too.
+    if (editPermissions.is_enabled && editHospitals.length === 0) {
+      toast({
+        title: "Assign a hospital first",
+        description: "Choose at least one hospital before enabling this account.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // The two changes that lock someone out of their work get a second look;
+    // everything else on this dialog is easy to put back.
+    const wasEnabled = selectedUser.permissions?.is_enabled === true;
+    const whoName = selectedUser.full_name || selectedUser.email || "this user";
+    if (wasEnabled && !editPermissions.is_enabled) {
+      if (!window.confirm(`Disable ${whoName}? They will not be able to use CPMS until re-enabled.`)) return;
+    } else if (selectedUser.hospitals.length > 0 && editHospitals.length === 0) {
+      if (!window.confirm(`Remove all hospitals from ${whoName}? They will no longer see any patient records.`)) return;
+    }
+
     setSaving(true);
     try {
-      // Hospitals and permissions are written BEFORE any role change, because
-      // RLS reads the target's *current* rank: a role change can only lower an
-      // account, but it still re-evaluates every following write against the
-      // new rank, so the role goes last.
+      // One call, one transaction (admin_update_user). This used to be five
+      // separate writes: deleting every visible hospital row and re-inserting
+      // the list, which for a user shared with another admin's hospital deleted
+      // only the caller's rows and then failed re-inserting the other's --
+      // leaving the user without the caller's hospital and the rest unsaved.
+      // The function touches only hospitals the caller runs, leaves the others
+      // as they are, and rechecks rank and hospital scope itself.
+      const { error: saveError } = await supabase.rpc("admin_update_user", {
+        _target_user_id: selectedUser.id,
+        _hospitals: editHospitals,
+        _can_scan: editPermissions.can_scan,
+        _can_upload: editPermissions.can_upload,
+        _is_enabled: editPermissions.is_enabled,
+        _role: editRole !== selectedUser.role && canChangeRole ? editRole : undefined,
+      });
 
-      // Update hospital assignments
-      // Delete existing
-      await supabase
-        .from("hospital_assignments")
-        .delete()
-        .eq("user_id", selectedUser.id);
-
-      // Insert new
-      if (editHospitals.length > 0) {
-        const hospitalInserts = editHospitals.map((h) => ({
-          user_id: selectedUser.id,
-          hospital: h,
-          assigned_by: user?.id,
-        }));
-
-        const { error: hospitalsError } = await supabase
-          .from("hospital_assignments")
-          .insert(hospitalInserts);
-
-        if (hospitalsError) throw hospitalsError;
-      }
-
-      // Upsert permissions
-      const { error: permsError } = await supabase
-        .from("user_permissions")
-        .upsert(
-          {
-            user_id: selectedUser.id,
-            can_scan: editPermissions.can_scan,
-            can_upload: editPermissions.can_upload,
-            is_enabled: editPermissions.is_enabled,
-            updated_by: user?.id,
-          },
-          { onConflict: "user_id" }
-        );
-
-      if (permsError) throw permsError;
-
-      // Update role last, if changed and allowed
-      if (editRole !== selectedUser.role && canChangeRole) {
-        // Delete existing roles
-        await supabase
-          .from("user_roles")
-          .delete()
-          .eq("user_id", selectedUser.id);
-
-        // Insert new role
-        const roleToInsert = editRole === "user" ? "staff" : editRole;
-        const { error: roleError } = await supabase
-          .from("user_roles")
-          .insert({ user_id: selectedUser.id, role: roleToInsert });
-
-        if (roleError) throw roleError;
+      if (saveError) {
+        // The function raises 42501 with wording written for this screen
+        // ("This person works only at hospitals you do not manage").
+        // 22023 is the function's own "no hospital" / "hospital no longer exists".
+        const code = (saveError as { code?: string }).code;
+        if (code === "42501" || code === "22023") {
+          toast({ title: "Not allowed", description: saveError.message, variant: "destructive" });
+          return;
+        }
+        throw saveError;
       }
 
       toast({
@@ -905,14 +913,6 @@ const UserManagement = () => {
             </Card>
           )}
 
-          {!isMaster && pendingUsers.length === 0 && (
-            <Card className="border-2 border-dashed">
-              <CardContent className="p-4 text-xs text-muted-foreground">
-                New accounts are only visible to master administrators until a hospital is assigned,
-                so any users awaiting first-time approval will not appear here.
-              </CardContent>
-            </Card>
-          )}
 
           {/* Search */}
           <Card className="border-2">
@@ -982,16 +982,16 @@ const UserManagement = () => {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant={u.permissions?.is_enabled !== false ? "default" : "destructive"}>
-                            {u.permissions?.is_enabled !== false ? "Active" : "Disabled"}
+                          <Badge variant={accountStatus(u).variant}>
+                            {accountStatus(u).label}
                           </Badge>
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-2 text-xs">
-                            {u.permissions?.can_scan !== false && (
+                            {u.permissions?.can_scan === true && (
                               <Badge variant="outline">Scan</Badge>
                             )}
-                            {u.permissions?.can_upload !== false && (
+                            {u.permissions?.can_upload === true && (
                               <Badge variant="outline">Upload</Badge>
                             )}
                           </div>
@@ -1047,15 +1047,15 @@ const UserManagement = () => {
 
                       <div className="flex flex-wrap items-center gap-1.5">
                         <Badge
-                          variant={u.permissions?.is_enabled !== false ? "default" : "destructive"}
+                          variant={accountStatus(u).variant}
                           className="text-[10px]"
                         >
-                          {u.permissions?.is_enabled !== false ? "Active" : "Disabled"}
+                          {accountStatus(u).label}
                         </Badge>
-                        {u.permissions?.can_scan !== false && (
+                        {u.permissions?.can_scan === true && (
                           <Badge variant="outline" className="text-[10px]">Scan</Badge>
                         )}
-                        {u.permissions?.can_upload !== false && (
+                        {u.permissions?.can_upload === true && (
                           <Badge variant="outline" className="text-[10px]">Upload</Badge>
                         )}
                       </div>
