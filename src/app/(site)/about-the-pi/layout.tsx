@@ -25,7 +25,7 @@ export const metadata: Metadata = {
         url: 'https://cbrl.iitkgp.ac.in/about-the-pi',
         type: 'profile',
         locale: 'en_US',
-        siteName: 'Clinical Biomarker Research Laboratory - CBRL',
+        siteName: 'Clinical Biomarker Research Laboratory',
         images: [
             {
                 url: '/images/og/pi.jpg',

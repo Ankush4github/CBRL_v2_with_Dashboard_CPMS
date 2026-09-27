@@ -4,6 +4,7 @@
 
 import type { Member, MembersContent } from '@/lib/content-types';
 import { SITE_URL, absoluteAsset } from '@/lib/site-url';
+import { PARENT_ORGANIZATION, organizationRef, websiteRef } from '@/lib/site-identity';
 
 /**
  * Generate comprehensive JSON-LD structured data for all members.
@@ -18,22 +19,12 @@ export function generateMembersJsonLd(members: MembersContent) {
             '@type': 'Person',
             name: m.name.trim(),
             jobTitle: m.title,
-            affiliation: {
-                '@type': 'EducationalOrganization',
-                name: 'Indian Institute of Technology Kharagpur',
-                department: {
-                    '@type': 'Organization',
-                    name: 'Clinical Biomarker Research Laboratory (CBRL)',
-                    parentOrganization: {
-                        '@type': 'Organization',
-                        name: 'School of Medical Science and Technology'
-                    }
-                }
-            },
-            worksFor: {
-                '@type': 'Organization',
-                name: 'Clinical Biomarker Research Laboratory (CBRL), IIT Kharagpur'
-            }
+            // The lab by @id rather than a copy per person: these used to name
+            // it "Clinical Biomarker Research Laboratory (CBRL)" and "...,
+            // IIT Kharagpur", dozens of near-duplicate organizations on one
+            // page competing with the site-wide definition.
+            affiliation: PARENT_ORGANIZATION,
+            worksFor: organizationRef
         };
 
         if (m.image && !m.image.includes('empty_dp')) {
@@ -78,10 +69,7 @@ export function generateMembersJsonLd(members: MembersContent) {
             }
         }
 
-        person.memberOf = {
-            '@type': 'Organization',
-            name: 'Clinical Biomarker Research Laboratory (CBRL)'
-        };
+        person.memberOf = organizationRef;
 
         (person as Record<string, unknown>)['@id'] = `${SITE_URL}/members#${m.id}`;
 
@@ -109,21 +97,10 @@ export function generateMembersJsonLd(members: MembersContent) {
             name: 'Team Members | Clinical Biomarker Research Laboratory (CBRL), IIT Kharagpur',
             description: 'Meet the faculty, research scientists, PhD scholars, technical staff, and alumni of the Clinical Biomarker Research Laboratory (CBRL) at IIT Kharagpur, led by Professor Koel Chaudhury.',
             url: `${SITE_URL}/members`,
-            isPartOf: {
-                '@type': 'WebSite',
-                name: 'Clinical Biomarker Research Laboratory',
-                url: SITE_URL
-            },
-            about: {
-                '@type': 'Organization',
-                name: 'Clinical Biomarker Research Laboratory (CBRL)',
-                url: SITE_URL,
-                parentOrganization: {
-                    '@type': 'EducationalOrganization',
-                    name: 'Indian Institute of Technology Kharagpur',
-                    url: 'https://www.iitkgp.ac.in'
-                }
-            },
+            // References to the one WebSite and Organization defined in the
+            // (site) layout, rather than copies with slightly different names.
+            isPartOf: websiteRef,
+            about: organizationRef,
             mainEntity: {
                 '@type': 'ItemList',
                 name: 'CBRL Team Members',

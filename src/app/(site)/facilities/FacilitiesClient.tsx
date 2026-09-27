@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import { jsonLd } from '@/lib/json-ld';
+import { HOME_URL, ORGANIZATION_ID, PARENT_ORGANIZATION, SITE_NAME } from '@/lib/site-identity';
 import Image from 'next/image';
 import { Mail, ArrowUpRight } from 'lucide-react';
 
@@ -191,15 +192,15 @@ export default function FacilitiesClient({
         dangerouslySetInnerHTML={{
           __html: jsonLd({
             '@context': 'https://schema.org',
+            // The lab itself, merged with the site-wide Organization by @id.
+            // It used to be named "Clinical Biomarker Research Laboratory -
+            // Facilities", which reads as a second, different organization.
             '@type': 'ResearchOrganization',
-            name: 'Clinical Biomarker Research Laboratory - Facilities',
-            url: 'https://cbrl.iitkgp.ac.in/facilities',
+            '@id': ORGANIZATION_ID,
+            name: SITE_NAME,
+            url: HOME_URL,
             description: 'State-of-the-art laboratory facilities for biomarker research, metabolomics, and proteomics at IIT Kharagpur',
-            parentOrganization: {
-              '@type': 'CollegeOrUniversity',
-              name: 'Indian Institute of Technology Kharagpur',
-              url: 'https://www.iitkgp.ac.in'
-            },
+            parentOrganization: PARENT_ORGANIZATION,
             address: {
               '@type': 'PostalAddress',
               streetAddress: 'Life Science Building, Room 329-330',

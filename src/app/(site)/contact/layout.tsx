@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     url: 'https://cbrl.iitkgp.ac.in/contact',
     type: 'website',
     locale: 'en_US',
-    siteName: 'Clinical Biomarker Research Laboratory - CBRL',
+    siteName: 'Clinical Biomarker Research Laboratory',
     images: [
       {
         url: '/images/og/contact.jpg',
@@ -71,7 +71,7 @@ export default function ContactLayout({
 }) {
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: '{"@context":"https://schema.org","@type":"ContactPage","name":"Contact CBRL","description":"Contact the Clinical Biomarker Research Laboratory at IIT Kharagpur.","url":"https://cbrl.iitkgp.ac.in/contact","mainEntity":{"@type":"Organization","name":"Clinical Biomarker Research Laboratory","telephone":"+91-3222-282221","email":"contact.cbrl@smst.iitkgp.ac.in","address":{"@type":"PostalAddress","streetAddress":"Room 329-330, 3rd Floor, Life Science Building, School of Medical Science and Technology","addressLocality":"Kharagpur","addressRegion":"West Bengal","postalCode":"721302","addressCountry":"IN"}}}' }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: '{"@context":"https://schema.org","@type":"ContactPage","name":"Contact CBRL","description":"Contact the Clinical Biomarker Research Laboratory at IIT Kharagpur.","url":"https://cbrl.iitkgp.ac.in/contact","mainEntity":{"@type":"Organization","@id":"https://cbrl.iitkgp.ac.in/#organization","name":"Clinical Biomarker Research Laboratory","telephone":"+91-3222-282221","email":"contact.cbrl@smst.iitkgp.ac.in","address":{"@type":"PostalAddress","streetAddress":"Room 329-330, 3rd Floor, Life Science Building, School of Medical Science and Technology","addressLocality":"Kharagpur","addressRegion":"West Bengal","postalCode":"721302","addressCountry":"IN"}}}' }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: '{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://cbrl.iitkgp.ac.in/"},{"@type":"ListItem","position":2,"name":"Contact Us","item":"https://cbrl.iitkgp.ac.in/contact"}]}' }} />
       {children}
     </>

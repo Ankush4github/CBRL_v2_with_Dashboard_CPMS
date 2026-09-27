@@ -102,7 +102,7 @@ export default function MemberFlipCard({
                 className="object-cover object-center"
                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
                 priority={priority}
-                quality={90}
+                quality={75}
               />
             ) : (
               <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">

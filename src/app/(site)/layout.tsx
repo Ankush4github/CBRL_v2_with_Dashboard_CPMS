@@ -2,6 +2,16 @@
 import Navigation from '@/components/Navigation'
 import SiteFooter from '@/components/SiteFooter'
 import { jsonLd } from '@/lib/json-ld'
+import {
+  LOGO_URL,
+  ORGANIZATION_ID,
+  PARENT_ORGANIZATION,
+  SITE_NAME,
+  SITE_SHORT_NAME,
+  HOME_URL,
+  WEBSITE_ID,
+  organizationRef,
+} from '@/lib/site-identity'
 
 /**
  * Chrome for the public site: navigation, footer, analytics and the site-wide
@@ -13,16 +23,18 @@ export default function SiteLayout({
 }: {
   children: React.ReactNode
 }) {
-  // JSON-LD objects
+  // JSON-LD objects. These are the only WebSite and Organization definitions;
+  // every other page refers to them by @id (see src/lib/site-identity.ts).
   const orgJsonLd = {
     '@context': 'https://schema.org',
     '@type': ['ResearchOrganization', 'EducationalOrganization'],
-    name: 'Clinical Biomarker Research Laboratory',
-    alternateName: 'CBRL',
-    url: 'https://cbrl.iitkgp.ac.in',
+    '@id': ORGANIZATION_ID,
+    name: SITE_NAME,
+    alternateName: SITE_SHORT_NAME,
+    url: HOME_URL,
     logo: {
       '@type': 'ImageObject',
-      url: 'https://cbrl.iitkgp.ac.in/cbrl-logo.png',
+      url: LOGO_URL,
     },
     image: 'https://cbrl.iitkgp.ac.in/images/facilities/waters-ms.jpg',
     description: "Clinical Biomarker Research Laboratory at IIT Kharagpur, led by Prof. Koel Chaudhury. Omics-driven biomarker discovery and insights into disease pathogenesis of complex etiology.",
@@ -54,12 +66,7 @@ export default function SiteLayout({
     sameAs: [
       'https://www.linkedin.com/company/clinical-biomarkers-research-laboratory',
     ],
-    parentOrganization: {
-      '@type': 'CollegeOrUniversity',
-      name: 'Indian Institute of Technology Kharagpur',
-      url: 'https://www.iitkgp.ac.in/',
-      sameAs: 'https://en.wikipedia.org/wiki/IIT_Kharagpur',
-    },
+    parentOrganization: PARENT_ORGANIZATION,
     knowsAbout: [
       'Biomarker Research', 'Clinical Diagnostics', 'Metabolomics',
       'Proteomics', "Women's Health", 'Respiratory Disorders',
@@ -74,26 +81,19 @@ export default function SiteLayout({
     },
   }
 
+  // The site-name signal Google reads first. `url` is the homepage exactly as
+  // canonicalised, trailing slash included. The SearchAction that used to sit
+  // here pointed at /publications?q=, which the publications page does not
+  // read -- it described a search box the site does not have.
   const websiteJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'WebSite',
-    name: 'Clinical Biomarker Research Laboratory',
-    alternateName: 'CBRL',
-    url: 'https://cbrl.iitkgp.ac.in',
+    '@id': WEBSITE_ID,
+    name: SITE_NAME,
+    alternateName: SITE_SHORT_NAME,
+    url: HOME_URL,
     inLanguage: 'en',
-    potentialAction: {
-      '@type': 'SearchAction',
-      target: {
-        '@type': 'EntryPoint',
-        urlTemplate: 'https://cbrl.iitkgp.ac.in/publications?q={search_term_string}',
-      },
-      'query-input': 'required name=search_term_string',
-    },
-    publisher: {
-      '@type': 'Organization',
-      name: 'Clinical Biomarker Research Laboratory',
-      url: 'https://cbrl.iitkgp.ac.in',
-    },
+    publisher: organizationRef,
   }
 
   return (

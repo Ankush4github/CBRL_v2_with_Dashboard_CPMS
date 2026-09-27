@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     url: 'https://cbrl.iitkgp.ac.in/gallery',
     type: 'website',
     locale: 'en_US',
-    siteName: 'Clinical Biomarker Research Laboratory - CBRL',
+    siteName: 'Clinical Biomarker Research Laboratory',
     images: [
       // Conferences
       {
@@ -128,7 +128,7 @@ export default function GalleryLayout({
 }) {
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: '{"@context":"https://schema.org","@type":"CollectionPage","name":"CBRL Photo Gallery","description":"Photo gallery of the Clinical Biomarker Research Laboratory at IIT Kharagpur featuring conferences, awards, and team events.","url":"https://cbrl.iitkgp.ac.in/gallery","isPartOf":{"@type":"WebSite","name":"Clinical Biomarker Research Laboratory","url":"https://cbrl.iitkgp.ac.in"}}' }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: '{"@context":"https://schema.org","@type":"CollectionPage","name":"CBRL Photo Gallery","description":"Photo gallery of the Clinical Biomarker Research Laboratory at IIT Kharagpur featuring conferences, awards, and team events.","url":"https://cbrl.iitkgp.ac.in/gallery","isPartOf":{"@id":"https://cbrl.iitkgp.ac.in/#website"}}' }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: '{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://cbrl.iitkgp.ac.in/"},{"@type":"ListItem","position":2,"name":"Gallery","item":"https://cbrl.iitkgp.ac.in/gallery"}]}' }} />
       {children}
     </>

@@ -25,7 +25,7 @@ export const metadata: Metadata = {
     url: 'https://cbrl.iitkgp.ac.in/publications',
     type: 'website',
     locale: 'en_US',
-    siteName: 'Clinical Biomarker Research Laboratory - CBRL',
+    siteName: 'Clinical Biomarker Research Laboratory',
     images: [
       {
         url: '/images/og/cbrl.jpg',
@@ -70,7 +70,7 @@ export default function PublicationsLayout({
 }) {
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: '{"@context":"https://schema.org","@type":"CollectionPage","name":"CBRL Publications","description":"Browse 180+ peer-reviewed research publications from Clinical Biomarker Research Laboratory at IIT Kharagpur.","url":"https://cbrl.iitkgp.ac.in/publications","isPartOf":{"@type":"WebSite","name":"Clinical Biomarker Research Laboratory","url":"https://cbrl.iitkgp.ac.in"},"about":{"@type":"Thing","name":"Biomarker Research Publications"},"author":{"@type":"Person","name":"Prof. Koel Chaudhury"}}' }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: '{"@context":"https://schema.org","@type":"CollectionPage","name":"CBRL Publications","description":"Browse 180+ peer-reviewed research publications from Clinical Biomarker Research Laboratory at IIT Kharagpur.","url":"https://cbrl.iitkgp.ac.in/publications","isPartOf":{"@id":"https://cbrl.iitkgp.ac.in/#website"},"about":{"@type":"Thing","name":"Biomarker Research Publications"},"author":{"@type":"Person","name":"Prof. Koel Chaudhury"}}' }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: '{"@context":"https://schema.org","@type":"BreadcrumbList","itemListElement":[{"@type":"ListItem","position":1,"name":"Home","item":"https://cbrl.iitkgp.ac.in/"},{"@type":"ListItem","position":2,"name":"Publications","item":"https://cbrl.iitkgp.ac.in/publications"}]}' }} />
       {children}
     </>

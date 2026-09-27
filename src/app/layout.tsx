@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     default: 'Clinical Biomarker Research Laboratory | IIT Kharagpur',
   },
   description:
-    "Clinical Biomarker Research Laboratory at IIT Kharagpur, led by Prof. Koel Chaudhury. Omics-driven biomarker discovery in women's and respiratory health.",
+    "The Clinical Biomarker Research Laboratory (CBRL) at IIT Kharagpur advances omics-driven biomarker discovery in women's and respiratory health through metabolomics, proteomics, lipidomics and mass spectrometry.",
   authors: [
     { name: 'CBRL Team', url: 'https://cbrl.iitkgp.ac.in' },
     { name: 'Prof. Koel Chaudhury', url: 'https://cbrl.iitkgp.ac.in/members' }
@@ -39,8 +39,10 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'en_US',
     url: 'https://cbrl.iitkgp.ac.in/',
-    siteName: 'Clinical Biomarker Research Laboratory - CBRL',
-    title: 'Clinical Biomarker Research Laboratory | IIT Kharagpur - Advanced Biomarker Research',
+    siteName: 'Clinical Biomarker Research Laboratory',
+    // The same as the <title> default and the WebSite name, so every signal
+    // agrees on the site's identity (see src/lib/site-identity.ts).
+    title: 'Clinical Biomarker Research Laboratory | IIT Kharagpur',
     description:
       "Clinical Biomarker Research Laboratory at IIT Kharagpur, led by Prof. Koel Chaudhury. Omics-driven biomarker discovery and insights into disease pathogenesis of complex etiology. Specializing in women's health, respiratory disorders, and innovative diagnostics through multi-omics research.",
     images: [

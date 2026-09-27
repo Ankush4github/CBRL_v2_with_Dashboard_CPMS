@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import { jsonLd } from '@/lib/json-ld';
+import { HOME_URL, SITE_TITLE, websiteRef } from '@/lib/site-identity';
 import Link from 'next/link';
 import {
   ArrowRight,
@@ -164,19 +165,17 @@ export default async function Home() {
   const homeJsonLd = {
     '@context': 'https://schema.org',
     '@type': 'WebPage',
-    name: 'Clinical Biomarker Research Laboratory',
-    url: 'https://cbrl.iitkgp.ac.in/',
+    name: SITE_TITLE,
+    url: HOME_URL,
     description:
       "Clinical Biomarker Research Laboratory (CBRL) at IIT Kharagpur, led by Prof. Koel Chaudhury. Omics-driven biomarker discovery and insights into disease pathogenesis of complex etiology.",
     primaryImageOfPage: {
       '@type': 'ImageObject',
       url: 'https://cbrl.iitkgp.ac.in/images/facilities/waters-ms.jpg',
     },
-    isPartOf: {
-      '@type': 'WebSite',
-      name: 'Clinical Biomarker Research Laboratory',
-      url: 'https://cbrl.iitkgp.ac.in/',
-    },
+    // By reference: a second inline WebSite here would be a second, id-less
+    // WebSite for Google to reconcile with the one in the (site) layout.
+    isPartOf: websiteRef,
     about: [
       { '@type': 'Thing', name: 'Biomarker Research' },
       { '@type': 'Thing', name: 'Metabolomics' },

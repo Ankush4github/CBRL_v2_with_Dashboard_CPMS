@@ -1,5 +1,6 @@
 import Image from 'next/image';
 import { jsonLd } from '@/lib/json-ld';
+import { organizationRef } from '@/lib/site-identity';
 import { MapPin, Phone, Mail } from 'lucide-react';
 
 import { getAbout, readPublicationsFile } from '@/lib/content';
@@ -44,16 +45,7 @@ export default async function About() {
     image: absoluteAsset(profile.image),
     email: profile.email,
     telephone: profile.phone,
-    worksFor: {
-      '@type': 'ResearchOrganization',
-      name: 'Clinical Biomarker Research Laboratory',
-      url: 'https://cbrl.iitkgp.ac.in',
-      parentOrganization: {
-        '@type': 'CollegeOrUniversity',
-        name: 'Indian Institute of Technology Kharagpur',
-        url: 'https://www.iitkgp.ac.in'
-      }
-    },
+    worksFor: organizationRef,
     affiliation: {
       '@type': 'EducationalOrganization',
       name: 'School of Medical Science and Technology',

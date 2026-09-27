@@ -133,7 +133,7 @@ function MemberPhoto({
           className="object-cover object-center"
           sizes={sizes}
           priority={priority}
-          quality={90}
+          quality={75}
         />
       ) : (
         <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
