@@ -92,7 +92,7 @@ export default async function SiteFooter() {
                 { href: 'https://www.iitkgp.ac.in/department/MM', label: 'SMST' },
                 { href: 'http://apna.iitkgp.ac.in/web/', label: 'Apna IIT KGP' },
                 { href: 'https://erp.iitkgp.ac.in/', label: 'ERP' },
-                { href: 'https://cpms.cbrliitkgp.online/', label: 'CPMS' },
+                { href: 'https://cbrl.iitkgp.ac.in/cpms', label: 'CPMS' },
                 { href: 'https://www.iitkgp.ac.in/holidays', label: 'Holidays' },
               ].map((link) => (
                 <li key={link.href}>
