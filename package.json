@@ -9,13 +9,14 @@
     "lint": "eslint src",
     "optimize-images": "node scripts/optimize-images.js",
     "typecheck": "tsc --noEmit && tsc --noEmit -p scripts/tsconfig.json",
-    "test": "npm run test:network && npm run test:errors && npm run test:uploads && npm run test:access",
+    "test": "npm run test:network && npm run test:errors && npm run test:uploads && npm run test:access && npm run test:scan",
     "test:network": "npx tsx scripts/test-admin-network.mts",
     "test:access": "npx tsx scripts/test-access-stage.mts",
     "test:errors": "npx tsx scripts/test-error-messages.mts",
     "test:uploads": "npx tsx scripts/test-upload-validation.mts",
     "test:api": "npx tsx scripts/test-api-responses.mts",
-    "migrate:content": "npx tsx scripts/migrate-content-to-supabase.mts"
+    "migrate:content": "npx tsx scripts/migrate-content-to-supabase.mts",
+    "test:scan": "npx tsx scripts/test-scan-logic.mts"
   },
   "dependencies": {
     "@emailjs/browser": "^4.4.1",

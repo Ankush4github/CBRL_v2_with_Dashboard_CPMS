@@ -13,6 +13,8 @@ import { useToast } from "@/hooks/cpms/use-toast";
 import { describeError } from "@/lib/cpms/errors";
 import { useHospitals } from "@/hooks/cpms/useHospitals";
 import { asset } from "@/lib/cpms/base-path";
+import { escapeCSVField, formatMedicines } from "@/lib/cpms/csv";
+import { searchFilter } from "@/lib/cpms/patient-search";
 // The columns the list and the CSV show -- not select("*"), which also pulled
 // every record's raw AI extraction into the browser.
 const LIST_COLUMNS =
@@ -20,20 +22,6 @@ const LIST_COLUMNS =
 
 // PostgREST returns at most 1000 rows per request; the CSV pages through.
 const EXPORT_BATCH = 1000;
-
-/**
- * The search box as a PostgREST or() filter over name, Patient ID and
- * reference. Values are double-quoted so commas and brackets cannot break the
- * filter syntax, and quotes and backslashes -- the quoting's own escape
- * characters -- are dropped. A typed % or _ stays an ILIKE wildcard, which can
- * only widen the match.
- */
-const searchFilter = (query: string): string | null => {
-  const term = query.trim().replace(/["\\]/g, "");
-  if (!term) return null;
-  const pattern = `"%${term}%"`;
-  return `patient_name.ilike.${pattern},patient_id.ilike.${pattern},reference_number.ilike.${pattern}`;
-};
 
 interface Patient {
   id: string;
@@ -116,35 +104,6 @@ const Patients = () => {
   }, [fetchPatients]);
 
   const totalPages = Math.ceil(totalCount / itemsPerPage);
-
-  // Each medicine with its dose, frequency and duration -- the export used to
-  // carry names only, which dropped the instructions a reader actually needs.
-  const formatMedicines = (medicines: any): string => {
-    if (!medicines) return "N/A";
-    if (Array.isArray(medicines)) {
-      return medicines
-        .map((m: any) => {
-          if (typeof m === "string") return m;
-          const details = [m?.dosage, m?.frequency, m?.duration].filter(Boolean).join(", ");
-          const name = m?.name || "Unnamed";
-          return details ? `${name} (${details})` : name;
-        })
-        .join("; ");
-    }
-    return String(medicines);
-  };
-
-  const escapeCSVField = (field: string): string => {
-    // Spreadsheets run a cell starting with = + - @ (or tab/CR) as a formula:
-    // "+ve" shows as #NAME?, and a crafted name or diagnosis could execute.
-    // A leading apostrophe makes Excel and Sheets treat it as text.
-    let value = field;
-    if (/^[=+\-@\t\r]/.test(value)) value = `'${value}`;
-    if (/[",\n\r]/.test(value)) {
-      return `"${value.replace(/"/g, '""')}"`;
-    }
-    return value;
-  };
 
   const exportToCsv = async () => {
     // Every matching record, fetched in batches -- not just the page on screen,

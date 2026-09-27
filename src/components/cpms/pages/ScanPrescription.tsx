@@ -44,6 +44,13 @@ import DocumentCamera from "@/components/cpms/DocumentCamera";
 import DocumentProcessor from "@/components/cpms/DocumentProcessor";
 import { asset } from "@/lib/cpms/base-path";
 import type { Json } from "@shared/supabase-types";
+import {
+  type ExtractedData,
+  calculateBMI,
+  localToday,
+  normalizeExtractedData,
+} from "@/lib/cpms/scan-reading";
+import { matchMedicineName, normMedicineName } from "@/lib/cpms/medicine-names";
 
 interface PriorVisitSummary {
   id: string;
@@ -61,32 +68,6 @@ interface PriorVisits {
    *  uploads, so this can under-report — the wording in the UI reflects that. */
   count: number;
   latest: PriorVisitSummary | null;
-}
-
-interface ExtractedData {
-  patient_name: string;
-  age: number | null;
-  gender: string | null;
-  height_cm: number | null;
-  weight_kg: number | null;
-  hospital_name: string; // Note: bmi is computed via calculateBMI, not stored in ExtractedData
-  doctor_name: string | null;
-  diagnosis: string | null;
-  /**
-   * `_id` is client-side only and is stripped before saving. Confirmations are
-   * keyed to it rather than to an array index: a tick belongs to a medicine,
-   * not to a position, and keying by position meant every delete had to
-   * renumber the whole confirmation set by hand -- correct only for a delete,
-   * and silently wrong for an insert, a reorder or an undo.
-   */
-  medicines: Array<{ _id: string; name: string; dosage: string; frequency: string; duration: string; uncertain: string[] }>;
-  visit_date: string | null;
-  uhid: string | null;
-  reference_number: string | null;
-  confidence_score: number | null;
-  /** Top-level fields the model said it could not read with certainty. Client-side
-   *  only, like the medicines' `uncertain`; the raw copy keeps them for provenance. */
-  uncertainFields: string[];
 }
 
 type FlowStep = 'upload' | 'additional-docs' | 'review';
@@ -133,33 +114,6 @@ const MEDICINE_PART_LABELS: Record<string, string> = {
 /** Highlight for a value the model said it could not read with certainty. */
 const UNCLEAR_INPUT = 'border-yellow-600 ring-1 ring-yellow-600';
 
-/** Spelling-insensitive key for a medicine name: "Tab. Pan-40" ~ "tab pan 40". */
-const normMedicineName = (name: string) => name.toLowerCase().replace(/[^a-z0-9]/g, '');
-
-/** Levenshtein distance, stopping early once it exceeds `max`. */
-const editDistance = (a: string, b: string, max: number): number => {
-  if (Math.abs(a.length - b.length) > max) return max + 1;
-  let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
-  for (let i = 1; i <= a.length; i++) {
-    const cur = [i];
-    let rowMin = i;
-    for (let j = 1; j <= b.length; j++) {
-      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
-      rowMin = Math.min(rowMin, cur[j]);
-    }
-    if (rowMin > max) return max + 1;
-    prev = cur;
-  }
-  return prev[b.length];
-};
-
-/**
- * Below this many distinct names, "not in earlier records" is true of nearly
- * everything and would teach staff to ignore it. Close-match suggestions still
- * show, since they are specific.
- */
-const MIN_NAMES_FOR_UNSEEN_FLAG = 25;
-
 const UnclearNote = () => (
   <span className="ml-2 text-[11px] font-medium text-yellow-700">Unclear on the page</span>
 );
@@ -195,109 +149,6 @@ const VerifyCheck = ({
     {done ? 'Checked' : label}
   </button>
 );
-
-// Calculate BMI from height (cm) and weight (kg), rounded to 2 decimal places
-const calculateBMI = (heightCm: number | null, weightKg: number | null): number | null => {
-  if (!heightCm || !weightKg || heightCm <= 0 || weightKg <= 0) return null;
-  const heightM = heightCm / 100;
-  return Math.round((weightKg / (heightM * heightM)) * 100) / 100;
-};
-
-// The extraction prompt instructs the model to return null for anything it
-// cannot read, so its response does not actually satisfy ExtractedData's
-// non-null string fields. Spreading it in unchecked meant a prescription with,
-// say, no duration on one medicine put null straight into a controlled input,
-// which React warns about and which leaves the field unable to accept typing.
-//
-// Normalizing once here keeps that guarantee in one place instead of relying on
-// a guard at every binding. Genuinely optional values stay null: the numeric
-// inputs already guard them and the database wants null, not "", for an empty
-// number or date.
-const asText = (value: unknown): string => {
-  if (typeof value === 'string') return value;
-  if (value == null) return '';
-  return String(value);
-};
-
-const asOptionalText = (value: unknown): string | null => {
-  const text = asText(value).trim();
-  return text === '' ? null : text;
-};
-
-const asOptionalNumber = (value: unknown): number | null => {
-  if (value == null || value === '') return null;
-  const parsed = typeof value === 'number'
-    ? value
-    : parseFloat(String(value).replace(/[^\d.-]/g, ''));
-  return Number.isFinite(parsed) ? parsed : null;
-};
-
-const asStringList = (value: unknown): string[] =>
-  Array.isArray(value) ? value.filter((v): v is string => typeof v === 'string') : [];
-
-// The prompt asks for "M/F", but the review Select offers Male/Female/Other, so
-// an unmapped "M" rendered as a blank Select and was saved as "M" regardless.
-const asGender = (value: unknown): string | null => {
-  const text = asText(value).trim().toLowerCase();
-  if (text === 'm' || text === 'male') return 'Male';
-  if (text === 'f' || text === 'female') return 'Female';
-  if (text === 'o' || text === 'other') return 'Other';
-  return null;
-};
-
-const localToday = (): string => {
-  const d = new Date();
-  return [
-    d.getFullYear(),
-    String(d.getMonth() + 1).padStart(2, '0'),
-    String(d.getDate()).padStart(2, '0'),
-  ].join('-');
-};
-
-// Only a real calendar date that is not in the future. Anything else ("26/09/26",
-// "2026-02-30") showed as a blank date input while the raw string still went to
-// the save; null instead raises the "no visit date" warning.
-const asVisitDate = (value: unknown): string | null => {
-  const text = asText(value).trim();
-  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(text);
-  if (!match) return null;
-  const [, y, m, d] = match.map(Number);
-  const date = new Date(y, m - 1, d);
-  if (date.getFullYear() !== y || date.getMonth() !== m - 1 || date.getDate() !== d) return null;
-  return text > localToday() ? null : text;
-};
-
-const normalizeExtractedData = (raw: unknown, hospitalName: string): ExtractedData => {
-  const source = (raw ?? {}) as Record<string, unknown>;
-  const rawMedicines = Array.isArray(source.medicines) ? source.medicines : [];
-
-  return {
-    patient_name: asText(source.patient_name),
-    age: asOptionalNumber(source.age),
-    gender: asGender(source.gender),
-    height_cm: asOptionalNumber(source.height_cm),
-    weight_kg: asOptionalNumber(source.weight_kg),
-    hospital_name: hospitalName,
-    doctor_name: asOptionalText(source.doctor_name),
-    diagnosis: asOptionalText(source.diagnosis),
-    medicines: rawMedicines.map((medicine) => {
-      const med = (medicine ?? {}) as Record<string, unknown>;
-      return {
-        _id: crypto.randomUUID(),
-        name: asText(med.name),
-        dosage: asText(med.dosage),
-        frequency: asText(med.frequency),
-        duration: asText(med.duration),
-        uncertain: asStringList(med.uncertain),
-      };
-    }),
-    visit_date: asVisitDate(source.visit_date),
-    uhid: asOptionalText(source.uhid),
-    reference_number: asOptionalText(source.reference_number),
-    confidence_score: asOptionalNumber(source.confidence_score),
-    uncertainFields: asStringList(source.uncertain_fields),
-  };
-};
 
 // Generate reference number in format: <FirstLetterOfHospital><MMYY><ScanNumber>
 // Example: Fortis Hospital + 30/01/2026 + Scan No. 2 → F01262
@@ -539,28 +390,7 @@ const ScanPrescription = () => {
     };
   }, [currentStep, knownMedicines]);
 
-  const checkMedicineName = (name: string): { suggestion: string | null; unseen: boolean } => {
-    const key = normMedicineName(name);
-    if (!knownMedicines || knownMedicines.size === 0 || key.length < 3 || knownMedicines.has(key)) {
-      return { suggestion: null, unseen: false };
-    }
-    // One edit per ~5 characters: "Paracetmol" finds "Paracetamol", but short
-    // names don't match everything.
-    const max = Math.min(3, Math.max(1, Math.floor(key.length / 5)));
-    let best: string | null = null;
-    let bestDistance = max + 1;
-    for (const [known, spelling] of knownMedicines) {
-      const d = editDistance(key, known, max);
-      if (d < bestDistance) {
-        bestDistance = d;
-        best = spelling;
-      }
-    }
-    return {
-      suggestion: best,
-      unseen: !best && knownMedicines.size >= MIN_NAMES_FOR_UNSEEN_FLAG,
-    };
-  };
+  const checkMedicineName = (name: string) => matchMedicineName(name, knownMedicines);
 
   // An extraction that has not been saved yet is work (and a paid model call)
   // that a stray tab close or Back press would throw away.
