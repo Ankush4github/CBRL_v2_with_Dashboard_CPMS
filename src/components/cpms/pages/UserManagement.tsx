@@ -51,12 +51,13 @@ import {
   Send,
   Ban,
   MailCheck,
+  Pencil,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase/cpms-client";
 import { useToast } from "@/hooks/cpms/use-toast";
-import { describeError } from "@/lib/cpms/errors";
+import { describeError, describeInvokeError } from "@/lib/cpms/errors";
 import { useRole, UserRole } from "@/hooks/cpms/useRole";
 import { useAuth } from "@/hooks/cpms/useAuth";
 import { useHospitals } from "@/hooks/cpms/useHospitals";
@@ -88,7 +89,52 @@ interface Invitation {
   role: string;
   hospitals: string[];
   created_at: string;
+  // From migration 20260927140000; absent on a database without it.
+  expires_at?: string;
+  last_emailed_at?: string | null;
+  email_count?: number;
 }
+
+/** How long a new or extended invitation stays open. Matches the column default. */
+const INVITATION_DAYS = 30;
+
+const invitationExpired = (invite: Invitation) =>
+  !!invite.expires_at && Date.parse(invite.expires_at) <= Date.now();
+
+// Common misspellings of the big mail domains. A typo here means the invitation
+// can never match the address Google reports, and nothing says why.
+const DOMAIN_TYPOS: Record<string, string> = {
+  "gmial.com": "gmail.com",
+  "gmai.com": "gmail.com",
+  "gamil.com": "gmail.com",
+  "gmail.co": "gmail.com",
+  "gmail.con": "gmail.com",
+  "gmaill.com": "gmail.com",
+  "gnail.com": "gmail.com",
+  "yahoo.co": "yahoo.com",
+  "hotmial.com": "hotmail.com",
+  "outlook.co": "outlook.com",
+};
+
+/**
+ * What to tell the master about an address before it is saved: how it will be
+ * stored, a likely domain typo, and the Gmail rule. Advice only.
+ */
+const inviteAddressHints = (typed: string): string[] => {
+  const trimmed = typed.trim();
+  if (!trimmed.includes("@")) return [];
+  const normalized = trimmed.toLowerCase();
+  const hints: string[] = [];
+  if (normalized !== typed) hints.push(`It will be saved as ${normalized}.`);
+  const domain = normalized.split("@").pop() ?? "";
+  if (DOMAIN_TYPOS[domain]) hints.push(`Did you mean @${DOMAIN_TYPOS[domain]}?`);
+  if (domain === "gmail.com" || domain === "googlemail.com") {
+    hints.push(
+      "For Gmail, type it exactly as it appears in their Google account — dots and any +tag included. Google sends back the address as written there, and the invitation only matches that.",
+    );
+  }
+  return hints;
+};
 
 // Mirrors public.role_rank() in 20260908074018_peer_role_management.sql. An
 // account may only manage accounts below its own rank, so an equal rank is
@@ -161,6 +207,9 @@ const UserManagement = () => {
   const [inviteHospitals, setInviteHospitals] = useState<string[]>([]);
   const [inviting, setInviting] = useState(false);
   const [revokingId, setRevokingId] = useState<string | null>(null);
+  // Set while the invite dialog is editing an existing invitation, not creating one.
+  const [editingInvitation, setEditingInvitation] = useState<Invitation | null>(null);
+  const [emailingId, setEmailingId] = useState<string | null>(null);
   const [activatingId, setActivatingId] = useState<string | null>(null);
 
   // Edit form state
@@ -271,7 +320,9 @@ const UserManagement = () => {
     // the ones covering a hospital it runs. Neither needs a filter here.
     const { data, error } = await supabase
       .from("staff_invitations")
-      .select("id, email, role, hospitals, created_at")
+      // "*" so the expiry and email columns come through once migration
+      // 20260927140000 is applied, without breaking this read before it is.
+      .select("*")
       .is("accepted_at", null)
       .is("revoked_at", null)
       .order("created_at", { ascending: false });
@@ -286,7 +337,7 @@ const UserManagement = () => {
       return;
     }
 
-    setInvitations(data || []);
+    setInvitations((data || []) as Invitation[]);
   };
 
   useEffect(() => {
@@ -308,10 +359,53 @@ const UserManagement = () => {
     target !== null && myRank > (ROLE_RANK[target.role] ?? 0);
 
   const openInviteDialog = () => {
+    setEditingInvitation(null);
     setInviteEmail("");
     setInviteRole("user");
     setInviteHospitals([]);
     setIsInviteDialogOpen(true);
+  };
+
+  // Changing the role or hospitals of an invitation used to mean revoking it
+  // and typing it all again. The address stays fixed: a different address is a
+  // different person, and gets its own invitation.
+  const openEditInvitation = (invite: Invitation) => {
+    setEditingInvitation(invite);
+    setInviteEmail(invite.email);
+    setInviteRole(invite.role === "admin" ? "admin" : "user");
+    setInviteHospitals(invite.hospitals);
+    setIsInviteDialogOpen(true);
+  };
+
+  /**
+   * Email the invitation to the person invited (send-staff-invitation). The
+   * function checks the caller is an enabled master, refuses a resend within
+   * two minutes, and records when it was sent.
+   */
+  // `announce: false` when the caller shows its own combined message.
+  const emailInvitation = async (
+    invitationId: string,
+    address: string,
+    announce = true,
+  ): Promise<{ ok: boolean; reason?: string }> => {
+    setEmailingId(invitationId);
+    try {
+      const { error } = await supabase.functions.invoke("send-staff-invitation", {
+        body: { invitationId },
+      });
+      if (error) throw error;
+      if (announce) toast({ title: "Invitation emailed", description: `Sent to ${address}.` });
+      return { ok: true };
+    } catch (error) {
+      const reason = await describeInvokeError(error, "Could not send the email. Use Resend email to try again.");
+      if (announce) {
+        toast({ title: "The invitation email was not sent", description: reason, variant: "destructive" });
+      }
+      return { ok: false, reason };
+    } finally {
+      setEmailingId(null);
+      fetchInvitations();
+    }
   };
 
   const toggleInviteHospital = (hospital: string) => {
@@ -361,7 +455,7 @@ const UserManagement = () => {
     // created, so it does nothing at all for someone who already has one —
     // they will never sign up again. Say so, rather than leaving a row that can
     // never be taken up.
-    if (users.some((u) => u.email?.toLowerCase() === email)) {
+    if (!editingInvitation && users.some((u) => u.email?.toLowerCase() === email)) {
       toast({
         title: "That address already has an account",
         description: "Find them in the list below and edit their role and hospitals directly.",
@@ -370,39 +464,100 @@ const UserManagement = () => {
       return;
     }
 
-    if (invitations.some((i) => i.email === email)) {
+    if (!editingInvitation && invitations.some((i) => i.email === email)) {
       toast({
         title: "Already invited",
-        description: "There is an open invitation for that address. Revoke it first to change it.",
+        description: "There is an open invitation for that address. Use Edit on it to change or extend it.",
         variant: "destructive",
       });
       return;
     }
 
     setInviting(true);
+
+    if (editingInvitation) {
+      try {
+        const roleToSave = inviteRole === "user" ? "staff" : inviteRole;
+        // Saving an edit also gives it a fresh 30 days: an edit is someone
+        // looking at it and confirming it still stands.
+        const changes: { role: "staff" | "admin"; hospitals: string[]; expires_at?: string } = {
+          role: roleToSave as "staff" | "admin",
+          hospitals: inviteHospitals,
+        };
+        if (editingInvitation.expires_at !== undefined) {
+          changes.expires_at = new Date(Date.now() + INVITATION_DAYS * 86_400_000).toISOString();
+        }
+        const { data: updated, error } = await supabase
+          .from("staff_invitations")
+          .update(changes)
+          .eq("id", editingInvitation.id)
+          .is("accepted_at", null)
+          .is("revoked_at", null)
+          .select("id");
+        if (error) throw error;
+        if (!updated || updated.length === 0) {
+          toast({
+            title: "Invitation not changed",
+            description: "It was accepted or revoked in the meantime. The list has been refreshed.",
+            variant: "destructive",
+          });
+        } else {
+          toast({
+            title: "Invitation updated",
+            description:
+              changes.expires_at !== undefined
+                ? `Saved, and valid for another ${INVITATION_DAYS} days. Use Resend email if they need the details again.`
+                : "Saved. Use Resend email if they need the details again.",
+          });
+        }
+        setIsInviteDialogOpen(false);
+        setEditingInvitation(null);
+        fetchInvitations();
+      } catch (error: any) {
+        toast({
+          title: "Could not update the invitation",
+          description: describeError(error, "Could not update the invitation. Please try again."),
+          variant: "destructive",
+        });
+      } finally {
+        setInviting(false);
+      }
+      return;
+    }
+
     try {
       // The same mapping the edit dialog uses: this screen's "user" is the
       // enum's 'staff'. The enum's own 'user' is what an *uninvited* signup
       // gets, and is not invitable.
       const roleToInsert = inviteRole === "user" ? "staff" : inviteRole;
 
-      const { error } = await supabase.from("staff_invitations").insert({
-        email,
-        role: roleToInsert,
-        hospitals: inviteHospitals,
-        // Pinned by the insert policy too, so this is not optional.
-        invited_by: user?.id,
-      });
+      const { data: created, error } = await supabase
+        .from("staff_invitations")
+        .insert({
+          email,
+          role: roleToInsert,
+          hospitals: inviteHospitals,
+          // Pinned by the insert policy too, so this is not optional.
+          invited_by: user?.id,
+        })
+        .select("id")
+        .single();
 
       if (error) throw error;
 
-      toast({
-        title: "Invitation created",
-        description: `${email} will be set up the moment they sign in with Google. They will then appear under "Awaiting approval" for you to activate.`,
-      });
-
       setIsInviteDialogOpen(false);
       fetchInvitations();
+
+      // The invitation is saved whatever happens to the email; a failed send
+      // says so and leaves Resend email on the row.
+      const sent = await emailInvitation(created.id, email, false);
+      toast({
+        title: sent.ok ? "Invitation created and emailed" : "Invitation created, but not emailed",
+        description: sent.ok
+          ? `${email} has the sign-in details. After they sign in with Google they appear under "Awaiting approval" for you to activate.`
+          : `${sent.reason} The invitation is saved: tell them another way, or use Resend email.`,
+        variant: sent.ok ? "default" : "destructive",
+      });
     } catch (error: any) {
       toast({
         title: "Could not create the invitation",
@@ -805,23 +960,66 @@ const UserManagement = () => {
                           <span className="text-[11px] text-muted-foreground">
                             invited {formatDistanceToNow(new Date(invite.created_at), { addSuffix: true })}
                           </span>
+                          {invite.expires_at && (
+                            invitationExpired(invite) ? (
+                              <Badge variant="destructive" className="text-[10px]">Expired — edit to extend</Badge>
+                            ) : (
+                              <span className="text-[11px] text-muted-foreground">
+                                · expires {formatDistanceToNow(new Date(invite.expires_at), { addSuffix: true })}
+                              </span>
+                            )
+                          )}
+                          {invite.expires_at !== undefined && (
+                            <span className="text-[11px] text-muted-foreground">
+                              ·{" "}
+                              {invite.last_emailed_at
+                                ? `emailed ${formatDistanceToNow(new Date(invite.last_emailed_at), { addSuffix: true })}`
+                                : "not emailed yet"}
+                            </span>
+                          )}
                         </div>
                       </div>
                       {isMaster && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          className="gap-2 shrink-0"
-                          onClick={() => revokeInvitation(invite)}
-                          disabled={revokingId === invite.id}
-                        >
-                          {revokingId === invite.id ? (
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                          ) : (
-                            <Ban className="h-4 w-4" />
-                          )}
-                          Revoke
-                        </Button>
+                        <div className="flex flex-wrap gap-2 shrink-0">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-2"
+                            onClick={() => emailInvitation(invite.id, invite.email)}
+                            disabled={emailingId === invite.id || invitationExpired(invite)}
+                            title={invitationExpired(invite) ? "Extend it first with Edit" : undefined}
+                          >
+                            {emailingId === invite.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Send className="h-4 w-4" />
+                            )}
+                            Resend email
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-2"
+                            onClick={() => openEditInvitation(invite)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                            Edit
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="gap-2"
+                            onClick={() => revokeInvitation(invite)}
+                            disabled={revokingId === invite.id}
+                          >
+                            {revokingId === invite.id ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Ban className="h-4 w-4" />
+                            )}
+                            Revoke
+                          </Button>
+                        </div>
                       )}
                     </div>
                   ))
@@ -1102,10 +1300,11 @@ const UserManagement = () => {
       <Dialog open={isInviteDialogOpen} onOpenChange={setIsInviteDialogOpen}>
         <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto w-[calc(100%-1.5rem)] sm:w-full">
           <DialogHeader>
-            <DialogTitle>Invite a staff member</DialogTitle>
+            <DialogTitle>{editingInvitation ? "Edit invitation" : "Invite a staff member"}</DialogTitle>
             <DialogDescription>
-              Choose what they get before they arrive. It is applied the first time they sign in
-              with Google, and takes effect when you activate the account.
+              {editingInvitation
+                ? `Change what ${editingInvitation.email} gets when they sign in. Saving also extends the invitation for another ${INVITATION_DAYS} days.`
+                : "Choose what they get before they arrive. It is applied the first time they sign in with Google, and takes effect when you activate the account."}
             </DialogDescription>
           </DialogHeader>
 
@@ -1121,11 +1320,19 @@ const UserManagement = () => {
                 value={inviteEmail}
                 onChange={(e) => setInviteEmail(e.target.value)}
                 className="h-11 sm:h-10"
+                disabled={!!editingInvitation}
               />
               <p className="text-xs text-muted-foreground">
-                It has to be the address they sign in to Google with — CPMS has no other way to
-                recognise them.
+                {editingInvitation
+                  ? "The address can't be changed — a different address is a different person. Revoke this one and invite the new address instead."
+                  : "It has to be the address they sign in to Google with — CPMS has no other way to recognise them."}
               </p>
+              {!editingInvitation &&
+                inviteAddressHints(inviteEmail).map((hint) => (
+                  <p key={hint} className="text-xs text-yellow-700">
+                    {hint}
+                  </p>
+                ))}
             </div>
 
             <div className="space-y-2">
@@ -1192,9 +1399,9 @@ const UserManagement = () => {
             </div>
 
             <div className="border-l-4 border-primary bg-accent/40 px-4 py-3 text-xs leading-relaxed">
-              Inviting does not send an email and does not switch the account on. Ask them to open
-              CPMS and sign in with Google; they will land on a Pending Activation screen, and you
-              activate them from the queue on this page.
+              {editingInvitation
+                ? "The person is not emailed about an edit. Use Resend email on the invitation if they need the new details."
+                : `They are emailed a link to CPMS and told to sign in with Google using this exact address. The invitation stays open for ${INVITATION_DAYS} days. It does not switch the account on: they land on a Pending Activation screen, and you activate them from the queue on this page.`}
             </div>
           </div>
 
@@ -1204,7 +1411,7 @@ const UserManagement = () => {
             </Button>
             <Button onClick={sendInvitation} disabled={inviting} className="gap-2">
               {inviting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
-              Create invitation
+              {editingInvitation ? "Save changes" : "Invite and email"}
             </Button>
           </DialogFooter>
         </DialogContent>

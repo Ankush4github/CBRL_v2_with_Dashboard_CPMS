@@ -477,9 +477,12 @@ export type Database = {
           accepted_by: string | null
           created_at: string
           email: string
+          email_count: number
+          expires_at: string
           hospitals: string[]
           id: string
           invited_by: string | null
+          last_emailed_at: string | null
           revoked_at: string | null
           revoked_by: string | null
           role: Database["public"]["Enums"]["app_role"]
@@ -489,9 +492,12 @@ export type Database = {
           accepted_by?: string | null
           created_at?: string
           email: string
+          email_count?: number
+          expires_at?: string
           hospitals: string[]
           id?: string
           invited_by?: string | null
+          last_emailed_at?: string | null
           revoked_at?: string | null
           revoked_by?: string | null
           role?: Database["public"]["Enums"]["app_role"]
@@ -501,9 +507,12 @@ export type Database = {
           accepted_by?: string | null
           created_at?: string
           email?: string
+          email_count?: number
+          expires_at?: string
           hospitals?: string[]
           id?: string
           invited_by?: string | null
+          last_emailed_at?: string | null
           revoked_at?: string | null
           revoked_by?: string | null
           role?: Database["public"]["Enums"]["app_role"]

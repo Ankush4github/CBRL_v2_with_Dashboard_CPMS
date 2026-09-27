@@ -23,6 +23,10 @@ verify_jwt = true
 # Called by pg_cron without a user JWT; protected by the CRON_SECRET header.
 verify_jwt = false
 
+[functions.send-staff-invitation]
+# Called from User Management with the master's own JWT.
+verify_jwt = true
+
 [functions.ops-alerts]
 # Called by pg_cron without a user JWT; protected by the CRON_SECRET header.
 verify_jwt = false
