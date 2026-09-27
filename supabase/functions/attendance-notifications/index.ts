@@ -83,28 +83,28 @@ function fmt12(t: string | null | undefined, fallback: string): string {
 interface HospitalSchedule {
   /** ISO weekdays this hospital operates, Monday at 1. */
   workDays: number[];
-  /** Check-in is due by the start of the working day, check-out by its end. */
+  /** checkin_deadline / checkout_deadline, else the start and end of the working day. */
   checkInBy: string;
   checkOutBy: string;
 }
 
 /**
- * There are no checkin_deadline / checkout_deadline columns on `hospitals`.
- * What it stores is work_days plus work_start_time and work_end_time, which
- * send-test-attendance-email renders as "Working hours". The deadlines are
- * read off those: in by the start of the day, out by its end.
+ * `hospitals` stores work_days, work_start_time / work_end_time and the
+ * optional checkin_deadline / checkout_deadline set in Hospital Management.
+ * A deadline left empty falls back to the working hours: in by the start of
+ * the day, out by its end.
  */
 async function loadSchedules(admin: any): Promise<Map<string, HospitalSchedule>> {
   const { data, error } = await admin
     .from("hospitals")
-    .select("name, work_days, work_start_time, work_end_time");
+    .select("name, work_days, work_start_time, work_end_time, checkin_deadline, checkout_deadline");
   if (error) throw error;
   const map = new Map<string, HospitalSchedule>();
   for (const h of data ?? []) {
     map.set(h.name, {
       workDays: Array.isArray(h.work_days) ? h.work_days : [1, 2, 3, 4, 5],
-      checkInBy: fmt12(h.work_start_time, "09:00"),
-      checkOutBy: fmt12(h.work_end_time, "17:00"),
+      checkInBy: fmt12(h.checkin_deadline ?? h.work_start_time, "09:00"),
+      checkOutBy: fmt12(h.checkout_deadline ?? h.work_end_time, "17:00"),
     });
   }
   return map;

@@ -173,9 +173,9 @@ Deno.serve(async (req) => {
       event === "checkin_reminder" ||
       event === "checkin_final_reminder";
 
-    // hospitals stores work_days, work_start_time and work_end_time. There are
-    // no checkin_deadline / checkout_deadline columns: check-in is due by the
-    // start of the working day and check-out by its end.
+    // The deadline is the hospital's checkin_deadline / checkout_deadline, or,
+    // when that is empty, the start / end of its working day -- the same rule
+    // attendance-notifications uses.
     let deadline = isCheckIn ? "09:00 AM IST" : "05:00 PM IST";
     let workingHours: string | null = null;
     let workingDays: string | null = null;
@@ -183,7 +183,7 @@ Deno.serve(async (req) => {
     if (hospitals.length) {
       const { data: rows, error: hErr } = await supabase
         .from("hospitals")
-        .select("name, work_days, work_start_time, work_end_time")
+        .select("name, work_days, work_start_time, work_end_time, checkin_deadline, checkout_deadline")
         .in("name", hospitals);
       if (hErr) {
         console.error("[send-test-attendance-email] hospitals lookup failed:", hErr.message);
@@ -191,7 +191,9 @@ Deno.serve(async (req) => {
       const entries = (rows ?? []).map((r) => ({
         name: r.name as string,
         value: fmt12(
-          isCheckIn ? r.work_start_time : r.work_end_time,
+          isCheckIn
+            ? r.checkin_deadline ?? r.work_start_time
+            : r.checkout_deadline ?? r.work_end_time,
           isCheckIn ? "09:00" : "17:00",
         ),
       }));
