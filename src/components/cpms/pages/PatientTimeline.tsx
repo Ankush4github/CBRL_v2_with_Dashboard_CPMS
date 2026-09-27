@@ -212,6 +212,7 @@ const PatientTimeline = () => {
                               <li key={k} className="text-sm">
                                 <span className="font-medium">{m?.name || "Unnamed"}</span>
                                 {m?.dosage ? ` — ${m.dosage}` : ""}
+                                {m?.frequency ? ` · ${m.frequency}` : ""}
                                 {m?.duration ? ` · ${m.duration}` : ""}
                               </li>
                             ))}

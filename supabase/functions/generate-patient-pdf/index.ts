@@ -1,5 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { PDFDocument, rgb, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
+import fontkit from "https://esm.sh/@pdf-lib/fontkit@1.1.1";
 import { CBRL_LOGO_PNG_BASE64 } from "./cbrl-logo.ts";
 
 const corsHeaders = {
@@ -10,6 +11,7 @@ const corsHeaders = {
 interface Medicine {
   name: string;
   dosage?: string;
+  frequency?: string;
   duration?: string;
 }
 
@@ -74,28 +76,116 @@ function decodeLogoBytes(): Uint8Array {
 
 const CBRL_LOGO_BYTES = decodeLogoBytes();
 
+/**
+ * Lines of at most `maxWidth`, keeping the text's own line breaks.
+ *
+ * It used to split on spaces only: a diagnosis typed over several lines kept
+ * its newlines inside one "line", and pdf-lib drew those as extra lines on top
+ * of the section below. A single word wider than the page is broken by
+ * characters rather than left to run off the edge. Pass text through
+ * pdfSafeText() first; this only measures.
+ */
 function wrapText(text: string, maxWidth: number, font: any, fontSize: number): string[] {
-  const words = text.split(" ");
   const lines: string[] = [];
-  let currentLine = "";
+  const fits = (s: string) => font.widthOfTextAtSize(s, fontSize) <= maxWidth;
 
-  for (const word of words) {
-    const testLine = currentLine ? `${currentLine} ${word}` : word;
-    const testWidth = font.widthOfTextAtSize(testLine, fontSize);
-
-    if (testWidth > maxWidth && currentLine) {
-      lines.push(currentLine);
-      currentLine = word;
-    } else {
-      currentLine = testLine;
+  for (const paragraph of text.split(/\r?\n/)) {
+    let currentLine = "";
+    for (const rawWord of paragraph.split(/[ \t]+/).filter(Boolean)) {
+      let word = rawWord;
+      while (!fits(word)) {
+        let cut = word.length - 1;
+        while (cut > 1 && !fits(word.slice(0, cut))) cut--;
+        if (currentLine) {
+          lines.push(currentLine);
+          currentLine = "";
+        }
+        lines.push(word.slice(0, cut));
+        word = word.slice(cut);
+      }
+      const testLine = currentLine ? `${currentLine} ${word}` : word;
+      if (currentLine && !fits(testLine)) {
+        lines.push(currentLine);
+        currentLine = word;
+      } else {
+        currentLine = testLine;
+      }
     }
-  }
-
-  if (currentLine) {
     lines.push(currentLine);
   }
 
+  // Blank paragraphs survive as blank lines, but not trailing ones.
+  while (lines.length > 1 && lines[lines.length - 1] === "") lines.pop();
   return lines;
+}
+
+/**
+ * Indian scripts, by block. pdf-lib's shaping reorders their vowel signs
+ * wrongly ("অমিত" is drawn as "অ ি মত"), and a patient's name drawn wrongly on
+ * an audit document is worse than one not drawn, so such runs become a note.
+ */
+const INDIC_SCRIPTS: Array<[number, number, string]> = [
+  [0x0900, 0x097f, "Devanagari"],
+  [0x0980, 0x09ff, "Bengali"],
+  [0x0a00, 0x0a7f, "Gurmukhi"],
+  [0x0a80, 0x0aff, "Gujarati"],
+  [0x0b00, 0x0b7f, "Odia"],
+  [0x0b80, 0x0bff, "Tamil"],
+  [0x0c00, 0x0c7f, "Telugu"],
+  [0x0c80, 0x0cff, "Kannada"],
+  [0x0d00, 0x0d7f, "Malayalam"],
+];
+const INDIC_RUN = /[ऀ-ൿ]+(?:[\s‌‍]+[ऀ-ൿ]+)*/g;
+
+/** Plain stand-ins for common symbols Noto Sans (or Helvetica) may lack. */
+const SYMBOL_FALLBACKS: Record<string, string> = {
+  "→": "->", "←": "<-", "↔": "<->", "⇒": "=>",
+  "≥": ">=", "≤": "<=", "≠": "!=", "×": "x",
+  "…": "...", "−": "-", "‑": "-", " ": " ",
+};
+
+/**
+ * Text the given font can actually draw. pdf-lib throws on the first character
+ * outside a font's set ("WinAnsi cannot encode"), which used to fail the whole
+ * export with a 500. Indian-script runs become a note (see INDIC_SCRIPTS),
+ * known symbols get a plain stand-in, and anything else becomes "?".
+ */
+function pdfSafeText(charset: Set<number>, text: string): string {
+  const withNotes = text.replace(INDIC_RUN, (run) => {
+    const cp = run.codePointAt(0) ?? 0;
+    const script = INDIC_SCRIPTS.find(([lo, hi]) => cp >= lo && cp <= hi)?.[2] ?? "Indian-script";
+    return `[${script} text – see the record in CPMS]`;
+  });
+  let out = "";
+  for (const ch of withNotes) {
+    if (ch === "\n" || ch === "\r") {
+      out += ch;
+      continue;
+    }
+    const cp = ch.codePointAt(0)!;
+    if (charset.has(cp)) {
+      out += ch;
+      continue;
+    }
+    const fallback = SYMBOL_FALLBACKS[ch];
+    out += fallback && [...fallback].every((c) => charset.has(c.codePointAt(0)!)) ? fallback : "?";
+  }
+  return out;
+}
+
+/**
+ * Noto Sans from the function's bundled files (config.toml static_files), or
+ * Helvetica if they cannot be read -- a degraded PDF beats no PDF, and
+ * pdfSafeText() keeps Helvetica's narrower character set from throwing.
+ */
+async function embedTextFont(pdfDoc: any, file: string, fallback: string): Promise<any> {
+  try {
+    const bytes = await Deno.readFile(new URL(`./fonts/${file}`, import.meta.url));
+    return await pdfDoc.embedFont(bytes, { subset: true });
+  } catch (err) {
+    console.error(`Could not load ${file}; falling back to ${fallback}:`, err);
+    return await pdfDoc.embedFont(fallback);
+  }
 }
 
 /**
@@ -280,8 +370,20 @@ Deno.serve(async (req) => {
 
     // Create PDF document
     const pdfDoc = await PDFDocument.create();
-    const helvetica = await pdfDoc.embedFont(StandardFonts.Helvetica);
-    const helveticaBold = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    pdfDoc.registerFontkit(fontkit);
+    // Named for what they replaced; they are Noto Sans unless the bundled
+    // files could not be read.
+    const helvetica = await embedTextFont(pdfDoc, "NotoSans-Regular.ttf", StandardFonts.Helvetica);
+    const helveticaBold = await embedTextFont(pdfDoc, "NotoSans-Bold.ttf", StandardFonts.HelveticaBold);
+    // Every record value goes through this before it is drawn. Characters must
+    // be drawable in both faces, so the set is their intersection.
+    const boldSet = new Set<number>(helveticaBold.getCharacterSet());
+    const charset = new Set<number>(
+      (helvetica.getCharacterSet() as number[]).filter((cp) => boldSet.has(cp)),
+    );
+    const safe = (value: unknown) => pdfSafeText(charset, String(value ?? ""));
+    // Single-line fields: a stray newline would draw over the next row.
+    const safeLine = (value: unknown) => safe(value).replace(/\s+/g, " ").trim();
 
     const pageWidth = 595; // A4 width in points
     const pageHeight = 842; // A4 height in points
@@ -380,7 +482,7 @@ Deno.serve(async (req) => {
 
     for (const [label, value] of metadata) {
       page.drawText(`${label}:`, { x: margin, y, size: 10, font: helveticaBold, color: rgb(0.3, 0.3, 0.3) });
-      page.drawText(String(value), { x: margin + 100, y, size: 10, font: helvetica, color: rgb(0.1, 0.1, 0.1) });
+      page.drawText(safeLine(value), { x: margin + 100, y, size: 10, font: helvetica, color: rgb(0.1, 0.1, 0.1) });
       y -= 16;
     }
     y -= 15;
@@ -397,7 +499,7 @@ Deno.serve(async (req) => {
 
     const patientDetails = [
       ["Name", patient.patient_name],
-      ["Age", patient.age ? `${patient.age} years` : "N/A"],
+      ["Age", patient.age != null ? `${patient.age} years` : "N/A"],
       ["Gender", patient.gender || "N/A"],
       ["Height", patient.height_cm ? `${patient.height_cm} cm` : "N/A"],
       ["Weight", patient.weight_kg ? `${patient.weight_kg} kg` : "N/A"],
@@ -407,7 +509,7 @@ Deno.serve(async (req) => {
 
     for (const [label, value] of patientDetails) {
       page.drawText(`${label}:`, { x: margin, y, size: 10, font: helveticaBold, color: rgb(0.3, 0.3, 0.3) });
-      page.drawText(String(value), { x: margin + 100, y, size: 10, font: helvetica, color: rgb(0.1, 0.1, 0.1) });
+      page.drawText(safeLine(value), { x: margin + 100, y, size: 10, font: helvetica, color: rgb(0.1, 0.1, 0.1) });
       y -= 16;
     }
     y -= 15;
@@ -422,9 +524,14 @@ Deno.serve(async (req) => {
     });
     y -= 20;
 
-    const diagnosisText = patient.diagnosis || "No diagnosis recorded";
+    const diagnosisText = safe(patient.diagnosis || "No diagnosis recorded");
     const diagnosisLines = wrapText(diagnosisText, contentWidth, helvetica, 10);
     for (const line of diagnosisLines) {
+      // A long diagnosis used to run off the foot of the page.
+      if (y < margin + 30) {
+        page = pdfDoc.addPage([pageWidth, pageHeight]);
+        y = pageHeight - margin;
+      }
       page.drawText(line, { x: margin, y, size: 10, font: helvetica, color: rgb(0.1, 0.1, 0.1) });
       y -= 14;
     }
@@ -443,17 +550,24 @@ Deno.serve(async (req) => {
     const medicines: Medicine[] = Array.isArray(patient.medicines) ? patient.medicines : [];
     if (medicines.length > 0) {
       for (const med of medicines) {
-        const medName = typeof med === "string" ? med : med.name || "Unknown";
+        const medName = safeLine(typeof med === "string" ? med : med.name || "Unknown");
         const medDosage = typeof med === "object" ? med.dosage || "" : "";
+        // Frequency ("1-0-1", "twice daily") was left off this "Audit-Ready"
+        // document entirely, though every scan saves it.
+        const medFrequency = typeof med === "object" ? med.frequency || "" : "";
         const medDuration = typeof med === "object" ? med.duration || "" : "";
 
-        page.drawText(`• ${medName}`, { x: margin, y, size: 10, font: helveticaBold, color: rgb(0.1, 0.1, 0.1) });
-        y -= 14;
+        for (const line of wrapText(`• ${medName}`, contentWidth, helveticaBold, 10)) {
+          page.drawText(line, { x: margin, y, size: 10, font: helveticaBold, color: rgb(0.1, 0.1, 0.1) });
+          y -= 14;
+        }
 
-        if (medDosage || medDuration) {
-          const details = [medDosage, medDuration].filter(Boolean).join(" • ");
-          page.drawText(`  ${details}`, { x: margin + 10, y, size: 9, font: helvetica, color: rgb(0.4, 0.4, 0.4) });
-          y -= 12;
+        if (medDosage || medFrequency || medDuration) {
+          const details = safeLine([medDosage, medFrequency, medDuration].filter(Boolean).join(" • "));
+          for (const line of wrapText(details, contentWidth - 10, helvetica, 9)) {
+            page.drawText(line, { x: margin + 10, y, size: 9, font: helvetica, color: rgb(0.4, 0.4, 0.4) });
+            y -= 12;
+          }
         }
 
         // Check if we need a new page
@@ -504,7 +618,7 @@ Deno.serve(async (req) => {
 
       for (const doc of additionalDocs) {
         const docLabel = getDocTypeLabel(doc.docType);
-        page.drawText(`${docIndex}. ${docLabel}`, {
+        page.drawText(safeLine(`${docIndex}. ${docLabel}`), {
           x: margin,
           y,
           size: 10,
@@ -523,7 +637,7 @@ Deno.serve(async (req) => {
 
     // Footer on first page
     const firstPage = pdfDoc.getPage(0);
-    firstPage.drawText(`Generated on ${formatIST(new Date())} IST | Audit-Ready Document`, {
+    firstPage.drawText(safeLine(`Generated on ${formatIST(new Date())} IST | Audit-Ready Document`), {
       x: margin,
       y: margin - 20,
       size: 8,
@@ -588,7 +702,7 @@ Deno.serve(async (req) => {
           const docPage = pdfDoc.addPage([pageWidth, pageHeight]);
           let yPos = pageHeight - margin;
 
-          docPage.drawText(`DOCUMENT: ${docLabel}`, {
+          docPage.drawText(safeLine(`DOCUMENT: ${docLabel}`), {
             x: margin,
             y: yPos,
             size: 14,

@@ -12,6 +12,9 @@ verify_jwt = true
 [functions.generate-patient-pdf]
 # This function reads patient records.
 verify_jwt = true
+# Noto Sans, read at runtime: the standard Helvetica font cannot encode ₹,
+# curly quotes and much else, and pdf-lib throws on the first such character.
+static_files = ["./functions/generate-patient-pdf/fonts/*.ttf"]
 
 [functions.send-test-attendance-email]
 verify_jwt = true

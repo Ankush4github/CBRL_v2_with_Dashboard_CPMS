@@ -400,16 +400,22 @@ const PatientDetail = () => {
     }
   };
 
-  const formatMedicines = (medicines: any): Array<{ name: string; dosage: string; duration: string }> => {
+  const formatMedicines = (
+    medicines: any,
+  ): Array<{ name: string; dosage: string; frequency: string; duration: string }> => {
     if (!medicines) return [];
     if (Array.isArray(medicines)) {
       return medicines.map((m: any) => {
         if (typeof m === "string") {
-          return { name: m, dosage: "", duration: "" };
+          return { name: m, dosage: "", frequency: "", duration: "" };
         }
+        // Frequency is saved by every scan ("1-0-1", "twice daily") and was
+        // dropped here, leaving the one instruction that says how often to take
+        // a medicine off the record page.
         return {
           name: m.name || "",
           dosage: m.dosage || "",
+          frequency: m.frequency || "",
           duration: m.duration || "",
         };
       });
@@ -441,12 +447,30 @@ const PatientDetail = () => {
     
     setSavingDiagnosis(true);
     try {
-      const { error } = await supabase
+      // Conditional on the value this screen loaded, and asking for the row
+      // back. An UPDATE that RLS filters out, or that finds the record gone,
+      // returns no error -- it just matches nothing -- so without the row
+      // count the toast said "saved" for a write that never happened. The
+      // condition also stops a save silently overwriting a colleague's edit
+      // made since this page loaded.
+      let update = supabase
         .from("patient_records")
         .update({ diagnosis: newValue })
         .eq("id", patient.id);
+      update = oldValue === null ? update.is("diagnosis", null) : update.eq("diagnosis", oldValue);
+      const { data: updated, error } = await update.select("id");
 
       if (error) throw error;
+
+      if (!updated || updated.length === 0) {
+        toast({
+          title: "Diagnosis not saved",
+          description:
+            "This record changed since you opened it, or you no longer have access to it. Reload the page to see the current version.",
+          variant: "destructive",
+        });
+        return;
+      }
 
       // The audit entry is written by the patient_records_audit trigger, which
       // records every changed column and cannot be bypassed by the client.
@@ -795,9 +819,9 @@ const PatientDetail = () => {
                     {medicines.map((med, index) => (
                       <div key={index} className="p-3 bg-secondary">
                         <p className="font-medium">{med.name}</p>
-                        {(med.dosage || med.duration) && (
+                        {(med.dosage || med.frequency || med.duration) && (
                           <p className="text-sm text-muted-foreground">
-                            {med.dosage}{med.dosage && med.duration && " • "}{med.duration}
+                            {[med.dosage, med.frequency, med.duration].filter(Boolean).join(" • ")}
                           </p>
                         )}
                       </div>

@@ -79,19 +79,33 @@ const Patients = () => {
   const totalPages = Math.ceil(filteredPatients.length / itemsPerPage);
   const paginatedPatients = filteredPatients.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
+  // Each medicine with its dose, frequency and duration -- the export used to
+  // carry names only, which dropped the instructions a reader actually needs.
   const formatMedicines = (medicines: any): string => {
     if (!medicines) return "N/A";
     if (Array.isArray(medicines)) {
-      return medicines.map((m: any) => typeof m === "string" ? m : m.name || JSON.stringify(m)).join(", ");
+      return medicines
+        .map((m: any) => {
+          if (typeof m === "string") return m;
+          const details = [m?.dosage, m?.frequency, m?.duration].filter(Boolean).join(", ");
+          const name = m?.name || "Unnamed";
+          return details ? `${name} (${details})` : name;
+        })
+        .join("; ");
     }
     return String(medicines);
   };
 
   const escapeCSVField = (field: string): string => {
-    if (field.includes(',') || field.includes('"') || field.includes('\n')) {
-      return `"${field.replace(/"/g, '""')}"`;
+    // Spreadsheets run a cell starting with = + - @ (or tab/CR) as a formula:
+    // "+ve" shows as #NAME?, and a crafted name or diagnosis could execute.
+    // A leading apostrophe makes Excel and Sheets treat it as text.
+    let value = field;
+    if (/^[=+\-@\t\r]/.test(value)) value = `'${value}`;
+    if (/[",\n\r]/.test(value)) {
+      return `"${value.replace(/"/g, '""')}"`;
     }
-    return field;
+    return value;
   };
 
   const exportToCsv = () => {
