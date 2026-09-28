@@ -784,6 +784,28 @@ const ScanPrescription = () => {
     }
   };
 
+  // Undo the uploads of a save whose create_patient_record call errored.
+  // A lost response looks exactly like a failure, and the admins' delete policy
+  // lets them remove files a record references -- so a blind discard here can
+  // strip the images off a record that did commit. Only discard once the
+  // database confirms no row for this draft points at this attempt's image.
+  const discardUnlessCommitted = async (draft: string, mainImagePath: string, paths: string[]) => {
+    const { data: row, error } = await supabase
+      .from('patient_records')
+      .select('prescription_image_url')
+      .eq('draft_id', draft)
+      .maybeSingle();
+
+    if (error) {
+      // Cannot tell whether the record exists. Leaving orphans is the safe
+      // side: the sweeper can find those, nothing can restore deleted files.
+      console.error('[cpms] could not check whether the save committed:', error.code);
+      return;
+    }
+    if (row?.prescription_image_url === mainImagePath) return;
+    await discardUploads(paths);
+  };
+
   const proceedToReview = () => {
     const hasErrors = additionalDocs.some((d) => d.status === "error");
     const hasCompressing = additionalDocs.some((d) => d.status === "compressing");
@@ -837,6 +859,10 @@ const ScanPrescription = () => {
     // may well have committed -- a lost response looks exactly like a failure
     // from here.
     const isRetry = draftId !== null && attemptedDraftRef.current === draftId;
+
+    // Set once create_patient_record has been called: from then on a failure
+    // may sit on top of a committed record.
+    let rpcAttempt: { draft: string; mainImagePath: string } | null = null;
 
     try {
       // So ask, before uploading anything. create_patient_record() is
@@ -897,6 +923,7 @@ const ScanPrescription = () => {
       // From here on a lost response could mean a committed record, so the
       // next press of Save for this draft must check before uploading.
       attemptedDraftRef.current = draft;
+      rpcAttempt = { draft, mainImagePath };
 
       const { data: created, error: insertError } = await supabase.rpc('create_patient_record', {
         _draft_id: draft,
@@ -930,20 +957,23 @@ const ScanPrescription = () => {
       });
 
       if (insertError) {
-        // Nothing references these files, so take them back out. Pressing
-        // Save again re-uploads the lot to fresh randomised paths, so leaving
-        // them behind accumulates a full duplicate set per failed attempt with
-        // no record pointing at any of it.
-        await discardUploads(uploadedPaths);
-
         // create_patient_record() raises these two classes itself, with
         // wording written for this screen ("You are not assigned to this
         // hospital"), so they are safe to show as-is. Everything else goes
         // through describeError, which strips database detail.
         const code = (insertError as { code?: string }).code;
-        if (code === '42501' || code === '22004') {
+        const refusedByServer = code === '42501' || code === '22004';
+
+        // Take the files back out: pressing Save again re-uploads the lot to
+        // fresh randomised paths, so leaving them behind accumulates a full
+        // duplicate set per failed attempt. A refusal the function raised
+        // itself means nothing committed; any other error might be a lost
+        // response, so check first.
+        if (refusedByServer) {
+          await discardUploads(uploadedPaths);
           toast.error(insertError.message);
         } else {
+          await discardUnlessCommitted(draft, mainImagePath, uploadedPaths);
           toast.error(describeError(insertError, 'Could not save the patient record. Please try again.'));
         }
         return;
@@ -978,7 +1008,11 @@ const ScanPrescription = () => {
       setIsSuccess(true);
       toast.success("Patient data saved successfully!");
     } catch (error) {
-      await discardUploads(uploadedPaths);
+      if (rpcAttempt) {
+        await discardUnlessCommitted(rpcAttempt.draft, rpcAttempt.mainImagePath, uploadedPaths);
+      } else {
+        await discardUploads(uploadedPaths);
+      }
       toast.error(describeError(error, 'Could not save the patient record. Please try again.'));
     } finally {
       setIsProcessing(false);

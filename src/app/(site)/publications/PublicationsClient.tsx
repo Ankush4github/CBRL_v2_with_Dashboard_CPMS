@@ -305,7 +305,7 @@ export default function PublicationsClient({
                 type="text"
                 placeholder="Search by title, author, journal..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value.trim())}
+                onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9"
                 aria-label="Search publications"
               />

@@ -54,6 +54,16 @@ interface Hospital {
   work_days: number[] | null;
 }
 
+/** Exact number of patient records filed under a hospital, counted server-side. */
+async function countPatients(hospitalName: string): Promise<number> {
+  const { count, error } = await supabase
+    .from("patient_records")
+    .select("id", { count: "exact", head: true })
+    .eq("hospital", hospitalName);
+  if (error) throw error;
+  return count ?? 0;
+}
+
 const HospitalManagement = () => {
   const router = useRouter();
   const { toast } = useToast();
@@ -84,12 +94,12 @@ const HospitalManagement = () => {
 
       if (hospitalsError) throw hospitalsError;
 
-      // Get patient counts per hospital
-      const { data: patientData, error: patientError } = await supabase
-        .from("patient_records")
-        .select("hospital");
-
-      if (patientError) throw patientError;
+      // Patient counts per hospital, counted by the database. Reading the rows
+      // and tallying them here stops at the API's 1000-row cap, which made a
+      // hospital with records show 0 and become deletable.
+      const patientCounts = await Promise.all(
+        (hospitalsData || []).map((h) => countPatients(h.name))
+      );
 
       // Get user counts per hospital
       const { data: userAssignments, error: userError } = await supabase
@@ -101,13 +111,6 @@ const HospitalManagement = () => {
       // Count patients and users per hospital
       const hospitalCounts: { [key: string]: { patients: number; users: Set<string> } } = {};
 
-      patientData?.forEach((record) => {
-        if (!hospitalCounts[record.hospital]) {
-          hospitalCounts[record.hospital] = { patients: 0, users: new Set() };
-        }
-        hospitalCounts[record.hospital].patients++;
-      });
-
       userAssignments?.forEach((assignment) => {
         if (!hospitalCounts[assignment.hospital]) {
           hospitalCounts[assignment.hospital] = { patients: 0, users: new Set() };
@@ -116,10 +119,10 @@ const HospitalManagement = () => {
       });
 
       // Merge with hospitals table data
-      const hospitalList: Hospital[] = (hospitalsData || []).map((h) => ({
+      const hospitalList: Hospital[] = (hospitalsData || []).map((h, i) => ({
         id: h.id,
         name: h.name,
-        patientCount: hospitalCounts[h.name]?.patients || 0,
+        patientCount: patientCounts[i],
         userCount: hospitalCounts[h.name]?.users.size || 0,
         latitude: (h as any).latitude ?? null,
         longitude: (h as any).longitude ?? null,
@@ -294,30 +297,34 @@ const HospitalManagement = () => {
   const handleDeleteHospital = async (hospitalId: string, hospitalName: string) => {
     setDeletingHospital(hospitalName);
     try {
-      // Check if there are patient records
-      const hospital = hospitals.find((h) => h.id === hospitalId);
-      if (hospital && hospital.patientCount > 0) {
+      // Count again now rather than trusting the list: records may have been
+      // saved since it loaded, and patient_records.hospital has no foreign key
+      // to stop the delete orphaning them.
+      const patientCount = await countPatients(hospitalName);
+      if (patientCount > 0) {
         toast({
           title: "Cannot delete hospital",
-          description: `${hospitalName} has ${hospital.patientCount} patient records. Delete or transfer them first.`,
+          description: `${hospitalName} has ${patientCount} patient records. Delete or transfer them first.`,
           variant: "destructive",
         });
+        fetchHospitals();
         return;
       }
 
-      // Delete all hospital assignments for this hospital
-      await supabase
-        .from("hospital_assignments")
-        .delete()
-        .eq("hospital", hospitalName);
-
-      // Delete the hospital
-      const { error } = await supabase
+      // Its staff assignments go with it: the hospitals_cleanup_assignments
+      // trigger removes them in the same transaction, so a failed delete
+      // leaves them untouched.
+      const { data: deleted, error } = await supabase
         .from("hospitals")
         .delete()
-        .eq("id", hospitalId);
+        .eq("id", hospitalId)
+        .select("id");
 
       if (error) throw error;
+      // RLS narrows a delete to nothing without raising an error.
+      if (!deleted || deleted.length === 0) {
+        throw new Error("The hospital was not deleted. You may not have permission to remove it.");
+      }
 
       toast({
         title: "Hospital removed",
