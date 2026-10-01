@@ -10,12 +10,13 @@ import { cookies } from 'next/headers';
 import { createServerClient } from '@supabase/ssr';
 
 import type { Database } from '@shared/supabase-types';
-import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from './config';
+import { COOKIE_ENCODING, SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from './config';
 
 export async function createClient() {
   const cookieStore = await cookies();
 
   return createServerClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABLE_KEY, {
+    cookieEncoding: COOKIE_ENCODING,
     cookies: {
       getAll: () => cookieStore.getAll(),
       setAll: (toSet) => {

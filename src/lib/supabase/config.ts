@@ -24,3 +24,14 @@ export const SUPABASE_PUBLISHABLE_KEY = process.env.NEXT_PUBLIC_SUPABASE_PUBLISH
 export function isSupabaseConfigured(): boolean {
   return Boolean(SUPABASE_URL && SUPABASE_PUBLISHABLE_KEY);
 }
+
+/**
+ * How the auth cookies are written. Every `@supabase/ssr` client here must use
+ * the same value, or one side cannot read what the other wrote.
+ *
+ * Not the library's default `base64url`: that prefixes each value with
+ * `base64-`, and the institute's Apache in front of the site answers any
+ * request carrying such a cookie with a bare 403 — on every path, so a single
+ * sign-in attempt locked the browser out of the whole site.
+ */
+export const COOKIE_ENCODING = 'raw' as const;
