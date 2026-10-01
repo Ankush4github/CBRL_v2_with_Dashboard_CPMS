@@ -6,6 +6,7 @@ import {
   isAdminConfigured,
   sessionCookie,
 } from '@/lib/admin-auth';
+import { expectedOrigin } from '@/lib/admin-network';
 import { isSiteEditor } from '@/lib/site-editor';
 import { createRequestClient } from '@/lib/supabase/request';
 
@@ -36,8 +37,12 @@ export async function GET(request: NextRequest) {
       ? requested
       : '/admin';
 
+  // Behind Apache, `request.url` is the internal `http://localhost:3200`, so
+  // redirects are built on the public origin instead.
+  const origin = expectedOrigin(request, request.nextUrl.origin);
+
   const fail = (reason: string) => {
-    const url = new URL('/admin/login', request.url);
+    const url = new URL('/admin/login', origin);
     url.searchParams.set('reason', reason);
     return NextResponse.redirect(url);
   };
@@ -45,12 +50,12 @@ export async function GET(request: NextRequest) {
   // Without the signing secret createSessionToken throws, which surfaced as an
   // unhandled 500 after a successful Google sign-in. The login page explains
   // what is missing when the dashboard is not configured.
-  if (!isAdminConfigured()) return NextResponse.redirect(new URL('/admin/login', request.url));
+  if (!isAdminConfigured()) return NextResponse.redirect(new URL('/admin/login', origin));
 
   if (!code) return fail('failed');
 
   // Built before the client, because that is where the new auth cookies land.
-  const response = NextResponse.redirect(new URL(target, request.url));
+  const response = NextResponse.redirect(new URL(target, origin));
   const supabase = createRequestClient(request, response);
 
   const { error } = await supabase.auth.exchangeCodeForSession(code);

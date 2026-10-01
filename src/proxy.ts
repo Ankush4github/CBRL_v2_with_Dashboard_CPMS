@@ -139,7 +139,7 @@ export async function proxy(request: NextRequest) {
     // a stray in-flight load of this page landing just after a successful
     // sign-in would otherwise delete the session that was just issued.
     if (!signedIn) return noStore(response);
-    return noStore(carryAuthCookies(response, NextResponse.redirect(new URL('/admin', request.url))));
+    return noStore(carryAuthCookies(response, NextResponse.redirect(new URL('/admin', expectedOrigin(request, request.nextUrl.origin)))));
   }
 
   if (signedIn && activity.status === 'active') {
@@ -182,7 +182,7 @@ export async function proxy(request: NextRequest) {
     );
   }
 
-  const login = new URL('/admin/login', request.url);
+  const login = new URL('/admin/login', expectedOrigin(request, request.nextUrl.origin));
   // Bounce back to the page they were after once they sign in.
   if (pathname !== '/admin') login.searchParams.set('next', `${pathname}${search}`);
   if (denied) login.searchParams.set('reason', 'denied');
