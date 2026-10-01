@@ -154,7 +154,12 @@ export default function LoginForm({ configured }: { configured: boolean }) {
     const supabase = createClient();
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: 'google',
-      options: { redirectTo: callback.toString() },
+      options: {
+        redirectTo: callback.toString(),
+        // Always show Google's account chooser rather than silently reusing
+        // the account last active in this browser.
+        queryParams: { prompt: 'select_account' },
+      },
     });
 
     if (oauthError) {

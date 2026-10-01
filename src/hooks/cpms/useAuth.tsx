@@ -160,6 +160,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       provider: 'google',
       options: {
         redirectTo: redirectUrl,
+        // Always show Google's account chooser. Without it Google silently
+        // reuses whichever account was last active in the browser, so a shared
+        // workstation signs the next clinician in as the previous one.
+        queryParams: { prompt: 'select_account' },
       },
     });
 
