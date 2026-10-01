@@ -48,3 +48,10 @@ export async function PUT(request: NextRequest) {
 
   return NextResponse.json({ data: result.value, savedAt: new Date().toISOString() });
 }
+
+/**
+ * Saves arrive as POST. CIC's Apache in front of the site answers PUT, PATCH
+ * and DELETE with its own 403 before they reach Node, so the dashboard cannot
+ * send them; PUT stays for local development and anything calling it directly.
+ */
+export const POST = PUT;

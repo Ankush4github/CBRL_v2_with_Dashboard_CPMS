@@ -111,7 +111,9 @@ export default function PublicationsEditor({ initial }: { initial: PublicationSu
 
     try {
       const response = await fetch(endpoint, {
-        method: mode.kind === 'edit' ? 'PUT' : 'POST',
+        // Always POST: CIC's Apache refuses PUT and DELETE before they reach
+        // the app, so an edit is a POST to the entry's own URL.
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(mode.draft),
       });
@@ -136,8 +138,10 @@ export default function PublicationsEditor({ initial }: { initial: PublicationSu
     setBusy(true);
     setError(null);
     try {
-      const response = await fetch(`/api/admin/publications/${encodeURIComponent(id)}`, {
-        method: 'DELETE',
+      // A POST to `/delete`, not DELETE: CIC's Apache refuses DELETE before it
+      // reaches the app.
+      const response = await fetch(`/api/admin/publications/${encodeURIComponent(id)}/delete`, {
+        method: 'POST',
       });
       const payload = await readJson(response);
       if (!response.ok) {
@@ -147,6 +151,8 @@ export default function PublicationsEditor({ initial }: { initial: PublicationSu
       await refresh();
       setConfirmDelete(null);
       setNotice('Publication removed.');
+    } catch {
+      setError('Could not reach the server.');
     } finally {
       setBusy(false);
     }

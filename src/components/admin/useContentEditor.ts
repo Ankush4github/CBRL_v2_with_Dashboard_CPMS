@@ -50,7 +50,8 @@ export function useContentEditor<T>(initial: T, endpoint: string) {
 
     try {
       const response = await fetch(endpoint, {
-        method: 'PUT',
+        // POST, not PUT: CIC's Apache refuses PUT before it reaches the app.
+        method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(draft),
       });

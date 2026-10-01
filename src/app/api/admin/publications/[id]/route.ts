@@ -94,3 +94,11 @@ export async function DELETE(_request: NextRequest, { params }: Params) {
 
   return NextResponse.json({ ok: true });
 }
+
+/**
+ * Edits arrive as POST, deletes as POST to `./delete`. CIC's Apache in front
+ * of the site answers PUT and DELETE with its own 403 before they reach Node —
+ * and `X-HTTP-Method-Override` as well — so the dashboard cannot send them.
+ * PUT and DELETE stay for local development and direct use.
+ */
+export const POST = PUT;
