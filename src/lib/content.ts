@@ -360,7 +360,7 @@ async function save(
   // all of them, not just the collection's DEPENDENT_PATHS.
   revalidatePath('/', 'layout');
   // The sitemap is a route of its own rather than a page under the layout,
-  // and carries each page's lastmod and image list, so it is refreshed too.
+  // and carries each page's lastmod, so it is refreshed too.
   revalidatePath('/sitemap.xml');
 }
 
@@ -370,6 +370,9 @@ export async function writeContent<K extends ContentCollection>(
 ): Promise<void> {
   await save(collection, { data });
   for (const p of DEPENDENT_PATHS[collection]) revalidatePath(p);
+  // Every member's profile page is built from this collection too. A member
+  // removed by this save then 404s, and one added is rendered on first visit.
+  if (collection === 'members') revalidatePath('/members/[id]', 'page');
 }
 
 /* ------------------------------------------------------- citation metrics */

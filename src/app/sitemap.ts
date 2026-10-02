@@ -1,7 +1,8 @@
 import { MetadataRoute } from 'next';
 
-import { getAllMembers, getCollectionUpdatedAt, getGallery } from '@/lib/content';
-import { absoluteAsset, SITE_URL } from '@/lib/site-url';
+import { getCollectionUpdatedAt, getMembers } from '@/lib/content';
+import { profileMembers, profilePath } from '@/lib/member-profile';
+import { SITE_URL } from '@/lib/site-url';
 
 /**
  * Each public page, the content collections it is built from, and the date to
@@ -15,7 +16,9 @@ import { absoluteAsset, SITE_URL } from '@/lib/site-url';
  * feeds; bump it when that page's code changes.
  *
  * changefreq and priority are deliberately omitted: Google ignores both
- * outright, so they only add noise a maintainer has to keep plausible.
+ * outright, so they only add noise a maintainer has to keep plausible. So are
+ * image entries: the pages themselves carry the images, with their alt text
+ * and structured data, which is what Google Images reads.
  *
  * The collections mirror DEPENDENT_PATHS in src/lib/content.ts (plus the two
  * BibTeX-backed ones, publications and metrics); keep the two in step.
@@ -32,48 +35,36 @@ const routes: { path: string; collections: string[]; fallback: string }[] = [
   { path: '/contact', collections: [], fallback: '2026-07-21' },
 ];
 
-/**
- * Image URLs for a page, for Google Images. The gallery and the members page
- * are mostly photographs, and an image listed here is found even where the
- * page only reveals it in a lightbox or on a card flip. Absolute, de-duplicated,
- * and capped well under the 1,000-per-URL limit.
- */
-async function pageImages(path: string): Promise<string[] | undefined> {
-  let paths: (string | undefined)[] = [];
-  try {
-    if (path === '/gallery') {
-      const { albums } = await getGallery();
-      paths = albums.flatMap((album) => [album.image, ...(album.images ?? [])]);
-    } else if (path === '/members') {
-      paths = (await getAllMembers()).map((member) => member.image);
-    } else {
-      return undefined;
-    }
-  } catch {
-    // Content unreadable: the page is still listed, just without its images.
-    return undefined;
-  }
-  const urls = [...new Set(paths.filter((p): p is string => Boolean(p)).map(absoluteAsset))];
-  return urls.length ? urls.slice(0, 500) : undefined;
+/** The members collection's last save, or the fixed fallback. */
+function membersDate(updated: Map<string, Date>): Date {
+  const saved = updated.get('members');
+  return saved && !Number.isNaN(saved.getTime()) ? saved : new Date('2026-07-21');
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const updated = await getCollectionUpdatedAt();
 
-  return Promise.all(
-    routes.map(async ({ path, collections, fallback }) => {
-      const saved = collections
-        .map((c) => updated.get(c))
-        .filter((d): d is Date => d instanceof Date && !Number.isNaN(d.getTime()));
-      const lastModified = saved.length
-        ? new Date(Math.max(...saved.map((d) => d.getTime())))
-        : new Date(fallback);
-      const images = await pageImages(path);
-      return {
-        url: `${SITE_URL}${path}`,
-        lastModified,
-        ...(images ? { images } : {}),
-      };
-    })
-  );
+  // One URL per member profile, so a search for a member's name can find a
+  // page about that person. The PI's profile is /about-the-pi, already above.
+  let profiles: MetadataRoute.Sitemap = [];
+  try {
+    profiles = profileMembers(await getMembers()).map(({ member, group }) => ({
+      url: `${SITE_URL}${profilePath(member, group)}`,
+      lastModified: membersDate(updated),
+    }));
+  } catch {
+    // Members unreadable: the sitemap still lists the main pages.
+  }
+
+  const pages = routes.map(({ path, collections, fallback }) => {
+    const saved = collections
+      .map((c) => updated.get(c))
+      .filter((d): d is Date => d instanceof Date && !Number.isNaN(d.getTime()));
+    const lastModified = saved.length
+      ? new Date(Math.max(...saved.map((d) => d.getTime())))
+      : new Date(fallback);
+    return { url: `${SITE_URL}${path}`, lastModified };
+  });
+
+  return [...pages, ...profiles];
 }

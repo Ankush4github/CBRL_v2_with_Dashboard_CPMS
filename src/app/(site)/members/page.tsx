@@ -1,13 +1,6 @@
 import Image from 'next/image';
-import {
-  ExternalLink,
-  Globe,
-  GraduationCap,
-  Linkedin,
-  Mail,
-  Phone,
-  UserRound,
-} from 'lucide-react';
+import Link from 'next/link';
+import { Mail, Phone, UserRound } from 'lucide-react';
 
 import PageHeader from '@/components/PageHeader';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -15,8 +8,12 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import { getMembers } from '@/lib/content';
-import type { Member } from '@/lib/content-types';
+import type { Member, MemberGroup } from '@/lib/content-types';
+import { jsonLd } from '@/lib/json-ld';
+import { memberImage, memberImageAlt, profilePath } from '@/lib/member-profile';
 import MemberFlipCard from './MemberFlipCard';
+import { EmailLinks, ProfileLinks } from './member-links';
+import { generateMembersJsonLd } from './members-data';
 
 /* ------------------------------------------------------------------ */
 /* Helpers                                                            */
@@ -46,72 +43,6 @@ function formatMonthYear(dateString: string) {
 /* Shared building blocks                                             */
 /* ------------------------------------------------------------------ */
 
-const PROFILE_META: Record<string, { label: string; Icon: typeof Globe }> = {
-  googleScholar: { label: 'Google Scholar', Icon: GraduationCap },
-  orcid: { label: 'ORCID', Icon: Globe },
-  linkedin: { label: 'LinkedIn', Icon: Linkedin },
-  researchgate: { label: 'ResearchGate', Icon: ExternalLink },
-};
-
-function ProfileLinks({
-  profiles,
-  className,
-}: {
-  profiles: NonNullable<Member['profiles']>;
-  className?: string;
-}) {
-  const entries = Object.entries(profiles).filter(
-    (entry): entry is [string, string] => Boolean(entry[1])
-  );
-  if (entries.length === 0) return null;
-
-  return (
-    <ul className={cn('flex flex-wrap gap-x-5 gap-y-1.5', className)}>
-      {entries.map(([key, url]) => {
-        const { label, Icon } = PROFILE_META[key] ?? {
-          label: key,
-          Icon: ExternalLink,
-        };
-        return (
-          <li key={key}>
-            <a
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
-            >
-              <Icon className="h-3.5 w-3.5" aria-hidden="true" />
-              {label}
-            </a>
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
-
-function EmailLinks({ emails, className }: { emails: string; className?: string }) {
-  return (
-    <ul className={cn('flex flex-col items-start gap-1.5', className)}>
-      {emails.split(',').map((email) => {
-        const trimmed = email.trim();
-        if (!trimmed) return null;
-        return (
-          <li key={trimmed}>
-            <a
-              href={`mailto:${trimmed}`}
-              className="inline-flex items-center gap-1.5 break-all text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
-            >
-              <Mail className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
-              {trimmed}
-            </a>
-          </li>
-        );
-      })}
-    </ul>
-  );
-}
-
 function MemberPhoto({
   member,
   sizes,
@@ -125,10 +56,10 @@ function MemberPhoto({
 }) {
   return (
     <div className={cn('relative overflow-hidden bg-muted', className)}>
-      {member.image ? (
+      {memberImage(member) ? (
         <Image
-          src={member.image}
-          alt={`${member.name.trim()}'s photo`}
+          src={memberImage(member)!}
+          alt={memberImageAlt(member)}
           fill
           className="object-cover object-center"
           sizes={sizes}
@@ -141,6 +72,21 @@ function MemberPhoto({
         </div>
       )}
     </div>
+  );
+}
+
+/**
+ * A member's name, linking to their own profile page. That page is what a
+ * search for the name should find, and this link is how crawlers reach it.
+ */
+function ProfileLink({ member, group }: { member: Member; group: MemberGroup }) {
+  return (
+    <Link
+      href={profilePath(member, group)}
+      className="underline-offset-4 transition-colors hover:text-primary hover:underline"
+    >
+      {member.name.trim()}
+    </Link>
   );
 }
 
@@ -202,7 +148,7 @@ function FacultyCard({ member }: { member: Member }) {
               {member.title}
             </p>
             <h3 className="text-2xl font-bold tracking-tight sm:text-3xl">
-              {member.name}
+              <ProfileLink member={member} group="faculty" />
             </h3>
             {member.bio && (
               <p className="max-w-prose text-sm leading-relaxed text-muted-foreground sm:text-base">
@@ -309,7 +255,7 @@ function StaffCard({ member }: { member: Member }) {
             )}
           </p>
           <h3 className="mt-1.5 text-lg font-semibold leading-tight tracking-tight">
-            {member.name.trim()}
+            <ProfileLink member={member} group="staff" />
           </h3>
 
           {member.bio && (
@@ -356,10 +302,10 @@ function AlumniRow({ member }: { member: Member }) {
       className="flex h-full scroll-mt-24 gap-5 border-b py-6"
     >
       <Avatar className="h-20 w-20 shrink-0 border">
-        {member.image && (
+        {memberImage(member) && (
           <AvatarImage
-            src={member.image}
-            alt={`${member.name.trim()}'s photo`}
+            src={memberImage(member)!}
+            alt={memberImageAlt(member)}
             className="object-cover"
           />
         )}
@@ -371,7 +317,7 @@ function AlumniRow({ member }: { member: Member }) {
       <div className="min-w-0 flex-1 space-y-2">
         <div className="space-y-0.5">
           <h3 className="font-semibold leading-tight tracking-tight">
-            {member.name.trim()}
+            <ProfileLink member={member} group="alumni" />
           </h3>
           <p className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
             {member.title}
@@ -412,6 +358,15 @@ export default async function Members() {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* The team as structured data. Here rather than in the layout, which
+          also wraps every /members/[id] profile page. */}
+      {generateMembersJsonLd(members).map((schema, index) => (
+        <script
+          key={`jsonld-${index}`}
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: jsonLd(schema) }}
+        />
+      ))}
       <PageHeader
         eyebrow="People"
         title="Lab Members"
@@ -446,6 +401,7 @@ export default async function Members() {
                 key={member.id}
                 member={member}
                 anchorId={member.id}
+                profileHref={profilePath(member, 'postdocs')}
                 priority={index < 3}
               />
             ))}
@@ -465,6 +421,7 @@ export default async function Members() {
                 key={member.id}
                 member={member}
                 anchorId={member.id}
+                profileHref={profilePath(member, 'students')}
               />
             ))}
           </div>

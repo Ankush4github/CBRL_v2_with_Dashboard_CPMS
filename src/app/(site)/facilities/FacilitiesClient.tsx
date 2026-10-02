@@ -5,6 +5,8 @@ import { jsonLd } from '@/lib/json-ld';
 import { HOME_URL, ORGANIZATION_ID, PARENT_ORGANIZATION, SITE_NAME } from '@/lib/site-identity';
 import Image from 'next/image';
 import { Mail, ArrowUpRight } from 'lucide-react';
+import Link from 'next/link';
+import { profileHrefFromAnchor } from '@/lib/member-profile';
 
 import PageHeader from '@/components/PageHeader';
 import { Button } from '@/components/ui/button';
@@ -110,7 +112,16 @@ function InstrumentDialog({
                     Instrument In-Charge
                   </p>
                   <p className="mt-1 text-sm font-medium text-foreground">
-                    {inCharge.name}
+                    {inCharge.link ? (
+                      <Link
+                        href={profileHrefFromAnchor(inCharge.link)}
+                        className="underline-offset-4 hover:text-primary hover:underline"
+                      >
+                        {inCharge.name}
+                      </Link>
+                    ) : (
+                      inCharge.name
+                    )}
                   </p>
                   <p className="text-xs text-muted-foreground">{inCharge.title}</p>
                 </div>

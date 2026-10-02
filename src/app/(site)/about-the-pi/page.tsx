@@ -7,6 +7,7 @@ import { getAbout, readPublicationsFile } from '@/lib/content';
 import { splitEntries } from '@/lib/bibtex-entries';
 import { fillAboutCounts } from '@/lib/content-types';
 import { absoluteAsset } from '@/lib/site-url';
+import { PI_PERSON_ID } from '@/lib/member-profile';
 import { Button } from '@/components/ui/button';
 
 /**
@@ -35,6 +36,8 @@ export default async function About() {
   const personSchema = {
     '@context': 'https://schema.org',
     '@type': 'Person',
+    // Referenced from the members list, so the two pages describe one person.
+    '@id': PI_PERSON_ID,
     name: 'Prof. Koel Chaudhury',
     givenName: 'Koel',
     familyName: 'Chaudhury',

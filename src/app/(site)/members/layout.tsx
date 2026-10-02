@@ -1,7 +1,4 @@
 import type { Metadata } from 'next';
-import { jsonLd } from '@/lib/json-ld';
-import { getMembers } from '@/lib/content';
-import { generateMembersJsonLd } from './members-data';
 
 export const metadata: Metadata = {
   title: 'Team Members',
@@ -66,24 +63,9 @@ export const metadata: Metadata = {
   }
 };
 
-export default async function MembersLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const jsonLdSchemas = generateMembersJsonLd(await getMembers());
-
-  return (
-    <>
-      {/* Server-rendered JSON-LD for all members - crawlable by search engines */}
-      {jsonLdSchemas.map((schema, index) => (
-        <script
-          key={`jsonld-${index}`}
-          type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: jsonLd(schema) }}
-        />
-      ))}
-      {children}
-    </>
-  );
+// The team list's JSON-LD is emitted by page.tsx, not here: a layout wraps the
+// profile pages under /members/[id] too, and each of those must describe one
+// person, not repeat the whole team as its own subject.
+export default function MembersLayout({ children }: { children: React.ReactNode }) {
+  return <>{children}</>;
 }

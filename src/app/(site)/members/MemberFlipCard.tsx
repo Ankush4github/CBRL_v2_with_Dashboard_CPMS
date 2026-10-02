@@ -2,12 +2,14 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import {
   ExternalLink,
   Globe,
   GraduationCap,
   Linkedin,
   Mail,
+  ArrowRight,
   RefreshCw,
   UserRound,
 } from 'lucide-react';
@@ -16,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import type { Member } from '@/lib/content-types';
+import { memberImage, memberImageAlt } from '@/lib/member-profile';
 
 const PROFILE_META: Record<string, { label: string; Icon: typeof Globe }> = {
   googleScholar: { label: 'Google Scholar', Icon: GraduationCap },
@@ -51,10 +54,13 @@ function parseQualifications(text: string) {
 export default function MemberFlipCard({
   member,
   anchorId,
+  profileHref,
   priority = false,
 }: {
   member: Member;
   anchorId: string;
+  /** The member's own profile page. */
+  profileHref: string;
   priority?: boolean;
 }) {
   const [flipped, setFlipped] = useState(false);
@@ -94,10 +100,10 @@ export default function MemberFlipCard({
         {/* Front: photo + identity */}
         <div className="flip-card-front overflow-hidden transition-colors hover:border-primary/40">
           <div className="relative h-96 w-full shrink-0 overflow-hidden border-b bg-muted">
-            {member.image ? (
+            {memberImage(member) ? (
               <Image
-                src={member.image}
-                alt={`${member.name.trim()}'s photo`}
+                src={memberImage(member)!}
+                alt={memberImageAlt(member)}
                 fill
                 className="object-cover object-center"
                 sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
@@ -258,6 +264,17 @@ export default function MemberFlipCard({
                   })}
                 </ul>
               )}
+              {/* The card is one big flip button; this link must navigate
+                  without also flipping it on the way out. */}
+              <Link
+                href={profileHref}
+                onClick={(event) => event.stopPropagation()}
+                onKeyDown={(event) => event.stopPropagation()}
+                className="mt-3 inline-flex items-center gap-1.5 text-sm font-medium text-primary underline-offset-4 hover:underline"
+              >
+                View full profile of {member.name.trim()}
+                <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+              </Link>
               <p className="mt-3 flex items-center gap-1.5 border-t pt-3 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
                 <RefreshCw className="h-3 w-3" aria-hidden="true" />
                 Click to flip back

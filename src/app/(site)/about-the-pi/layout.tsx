@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     },
     openGraph: {
         title: 'Prof. Koel Chaudhury | Leading Biomarker Research at IIT Kharagpur',
-        description: 'Professor Koel Chaudhury, Principal Investigator at CBRL, IIT Kharagpur. Pioneering research in women\'s health, respiratory disorders, and precision diagnostics. 200+ publications, 23 PhDs guided, multiple awards and patents.',
+        description: 'Professor Koel Chaudhury, Principal Investigator at CBRL, IIT Kharagpur. Pioneering research in women\'s health, respiratory disorders, and precision diagnostics. 180+ publications, 23 PhDs guided, multiple awards and patents.',
         url: 'https://cbrl.iitkgp.ac.in/about-the-pi',
         type: 'profile',
         locale: 'en_US',
@@ -55,7 +55,7 @@ export const metadata: Metadata = {
         site: '@CBRLofficial',
         creator: '@CBRLofficial',
         title: 'Prof. Koel Chaudhury | Biomarker Research Excellence',
-        description: 'Leading research in women\'s health, respiratory disorders, and precision medicine at IIT Kharagpur. 200+ publications, 23 PhDs guided.',
+        description: 'Leading research in women\'s health, respiratory disorders, and precision medicine at IIT Kharagpur. 180+ publications, 23 PhDs guided.',
         images: {
             url: '/images/og/pi.jpg',
             alt: 'Prof. Koel Chaudhury - CBRL Principal Investigator'

@@ -163,12 +163,12 @@ export default async function SiteFooter() {
           <div className="text-center md:text-right">
             <p className="text-sm text-muted-foreground">
               Crafted with💙by{' '}
-              <a
-                href="/members#ankush-das"
+              <Link
+                href="/members/ankush-das"
                 className="font-medium text-primary transition-colors duration-200 hover:underline underline-offset-4"
               >
                 Ankush Das
-              </a>
+              </Link>
               {' '}using React.
             </p>
           </div>

@@ -71,7 +71,7 @@ function MemberForm({
           label="Page anchor"
           value={member.id}
           onChange={(value) => set('id', slugify(value))}
-          hint={`Links point here as /members#${member.id || 'anchor'}. Changing it breaks any link already shared.`}
+          hint={`The profile page is /members/${member.id || 'id'} (and /members#${member.id || 'id'} on the team list). Changing it changes the URL search engines have indexed and breaks any link already shared.`}
         />
 
         <ImageField

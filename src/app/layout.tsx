@@ -20,8 +20,10 @@ export const metadata: Metadata = {
     template: '%s | CBRL, IIT Kharagpur',
     default: 'Clinical Biomarker Research Laboratory | IIT Kharagpur',
   },
+  // Kept under ~155 characters: Google truncates the result snippet past that,
+  // and the cut used to fall mid-list.
   description:
-    "The Clinical Biomarker Research Laboratory (CBRL) at IIT Kharagpur advances omics-driven biomarker discovery in women's and respiratory health through metabolomics, proteomics, lipidomics and mass spectrometry.",
+    "CBRL at IIT Kharagpur: omics-driven biomarker discovery in women's and respiratory health using metabolomics, proteomics and mass spectrometry.",
   authors: [
     { name: 'CBRL Team', url: 'https://cbrl.iitkgp.ac.in' },
     { name: 'Prof. Koel Chaudhury', url: 'https://cbrl.iitkgp.ac.in/members' }
@@ -100,14 +102,16 @@ export const metadata: Metadata = {
     'apple-mobile-web-app-capable': 'yes',
     'apple-mobile-web-app-status-bar-style': 'default',
     'msapplication-TileColor': '#2563eb',
-    'msapplication-config': '/browserconfig.xml',
     'application-name': 'CBRL',
     'apple-mobile-web-app-title': 'CBRL',
-    'referrer': 'origin-when-cross-origin',
-    'rating': 'general',
-    'distribution': 'global',
-    'revisit-after': '7 days',
-    'language': 'English',
+    // Gone, deliberately:
+    //   msapplication-config -- pointed at /browserconfig.xml, which does not
+    //     exist (the server answers 403).
+    //   referrer -- a <meta name="referrer"> overrides the Referrer-Policy
+    //     header, and this one (origin-when-cross-origin) was looser than the
+    //     header's strict-origin-when-cross-origin in next.config.js.
+    //   rating, distribution, revisit-after, language -- read by no search
+    //     engine; the page language is <html lang="en">.
     'geo.region': 'IN-WB',
     'geo.placename': 'Kharagpur',
     'geo.position': '22.3149;87.3105',
@@ -120,16 +124,8 @@ export const metadata: Metadata = {
     ],
     shortcut: '/favicon.ico',
     apple: '/apple-touch-icon.png',
-    other: [
-      {
-        rel: 'android-chrome-192x192',
-        url: '/android-chrome-192x192.png',
-      },
-      {
-        rel: 'android-chrome-512x512',
-        url: '/android-chrome-512x512.png',
-      },
-    ],
+    // The 192px and 512px Android icons belong in manifest.json, not here:
+    // "android-chrome-192x192" is not a link relation browsers recognise.
   },
 }
 
