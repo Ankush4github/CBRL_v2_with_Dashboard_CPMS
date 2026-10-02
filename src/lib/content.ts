@@ -273,6 +273,27 @@ export const getLastUpdated = cache(async (): Promise<Date | null> => {
   }
 });
 
+/**
+ * When each collection was last saved, keyed by collection name — the
+ * sitemap's per-page `lastmod`.
+ *
+ * Every row, not just the newest: a page's date should move when *its*
+ * content changes, not whenever anything on the site does. Empty when the
+ * database cannot be read; the sitemap then falls back to its fixed dates.
+ */
+export const getCollectionUpdatedAt = cache(async (): Promise<Map<string, Date>> => {
+  try {
+    const { data, error } = await publicSupabase.from('site_content').select('collection, updated_at');
+    if (error) throw error;
+    return new Map((data ?? []).map((row) => [row.collection, new Date(row.updated_at)]));
+  } catch (reason) {
+    warnOnce('unreadable:collection-dates', () =>
+      console.warn('[content] Could not read per-collection dates; the sitemap uses its fixed ones. Reason:', reason)
+    );
+    return new Map();
+  }
+});
+
 /* --------------------------------------------------------------- writing */
 
 /**
@@ -338,6 +359,9 @@ async function save(
   // Every public page's footer shows the last-updated date, so a save changes
   // all of them, not just the collection's DEPENDENT_PATHS.
   revalidatePath('/', 'layout');
+  // The sitemap is a route of its own rather than a page under the layout,
+  // and carries each page's lastmod and image list, so it is refreshed too.
+  revalidatePath('/sitemap.xml');
 }
 
 export async function writeContent<K extends ContentCollection>(
