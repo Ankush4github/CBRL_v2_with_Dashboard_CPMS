@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/cpms/ui/button";
 import { Camera, X } from "lucide-react";
 import { toast } from "sonner";
-import { guideRect, guideToFrameCrop, SCAN_ASPECT, type Rect } from "@/lib/cpms/scan-geometry";
+import { guideRect, guideToFrameCrop, type Rect } from "@/lib/cpms/scan-geometry";
 
 // Where the guide sits on screen, and how that maps onto the camera frame, is
 // in lib/cpms/scan-geometry -- one module for both, so the rectangle the
@@ -18,6 +18,29 @@ const CORNERS = [
   "bottom-0 left-0 border-b-4 border-l-4 rounded-bl-2xl",
   "bottom-0 right-0 border-b-4 border-r-4 rounded-br-2xl",
 ] as const;
+
+/**
+ * Put the camera at 1x where the browser exposes zoom (Chrome on Android).
+ *
+ * Some phones open the rear camera slightly zoomed in, or remember the last
+ * app's zoom. 1x is the widest view of the main lens, and the most of the page
+ * the operator can fit in the frame. Clamped to what the device allows -- a
+ * camera whose minimum is above 1 gets its minimum -- and best-effort: a
+ * browser without zoom support, or one that refuses, keeps its own default.
+ */
+async function resetZoom(stream: MediaStream) {
+  const track = stream.getVideoTracks()[0];
+  const caps = track?.getCapabilities?.() as (MediaTrackCapabilities & {
+    zoom?: { min: number; max: number };
+  }) | undefined;
+  if (!track || !caps?.zoom) return;
+  const zoom = Math.min(Math.max(1, caps.zoom.min), caps.zoom.max);
+  try {
+    await track.applyConstraints({ advanced: [{ zoom } as MediaTrackConstraintSet] });
+  } catch {
+    // Not supported on this device after all; leave the camera as it opened.
+  }
+}
 
 interface DocumentCameraProps {
   open: boolean;
@@ -59,7 +82,9 @@ const DocumentCamera = ({
   const onCloseRef = useRef(onClose);
 
   // Where the guide sits on screen, in stage pixels. Null until the stream has
-  // reported a frame size, which is also what enables Capture.
+  // reported a frame size, which is also what enables Capture. The guide
+  // depends on the frame's shape as well as the stage's, since it is laid out
+  // on the visible picture.
   const [guide, setGuide] = useState<Rect | null>(null);
   const [captureCount, setCaptureCount] = useState(0);
 
@@ -93,19 +118,25 @@ const DocumentCamera = ({
         const media = await navigator.mediaDevices.getUserMedia({
           video: {
             facingMode: "environment",
-            // Ask for a portrait frame shaped like the page. All three are
-            // ideal, not exact, so a webcam that only does 16:9 still opens --
-            // the crop below is cut from whatever frame actually arrives.
-            width: { ideal: 1440 },
-            height: { ideal: 2016 },
-            aspectRatio: { ideal: SCAN_ASPECT },
-          },
+            // A large frame in the sensor's own 4:3 shape, and no aspect
+            // ratio. Asking for a page-shaped 5:7 frame made browsers cut it
+            // out of the sensor image -- a digital zoom -- so the operator saw
+            // a narrow, zoomed-in view. The 5:7 crop is taken afterwards, from
+            // the full field of view. Ideal, not exact, so any camera opens.
+            width: { ideal: 2560 },
+            height: { ideal: 1920 },
+            // Chrome: deliver the camera's native frame rather than one
+            // cropped and scaled to the numbers above. Unknown elsewhere,
+            // and harmless.
+            resizeMode: { ideal: "none" },
+          } as MediaTrackConstraints,
         });
         if (cancelled) {
           media.getTracks().forEach((track) => track.stop());
           return;
         }
         streamRef.current = media;
+        await resetZoom(media);
         if (videoRef.current) videoRef.current.srcObject = media;
       } catch (error) {
         // Dismissing the viewfinder before the permission prompt resolves
@@ -141,7 +172,7 @@ const DocumentCamera = ({
     const update = () => {
       const { clientWidth, clientHeight } = stage;
       if (!video.videoWidth || !video.videoHeight || !clientWidth || !clientHeight) return;
-      setGuide(guideRect(clientWidth, clientHeight));
+      setGuide(guideRect(clientWidth, clientHeight, video.videoWidth, video.videoHeight));
     };
 
     update();
@@ -168,11 +199,12 @@ const DocumentCamera = ({
 
     // Measured now rather than taken from state, so a rotation between the
     // last layout and this tap cannot crop a stale rectangle. The guide comes
-    // from the stage size, and the crop from mapping it through the video's
-    // object-fit: cover placement -- see lib/cpms/scan-geometry.
+    // from where the frame shows on the stage, and the crop from mapping it
+    // back through the video's object-fit: contain placement -- see
+    // lib/cpms/scan-geometry.
     const { clientWidth, clientHeight } = stage;
     const crop = guideToFrameCrop(
-      guideRect(clientWidth, clientHeight),
+      guideRect(clientWidth, clientHeight, video.videoWidth, video.videoHeight),
       clientWidth,
       clientHeight,
       video.videoWidth,
@@ -242,9 +274,10 @@ const DocumentCamera = ({
           autoPlay
           playsInline
           muted
-          // cover, not contain: the frame fills the stage at its own aspect
-          // ratio, scaled uniformly and clipped, never stretched.
-          className="absolute inset-0 w-full h-full object-cover"
+          // contain: the whole camera frame -- its full 1x field of view --
+          // at its own aspect ratio, scaled uniformly, never stretched or
+          // clipped. The guide is laid out on the part of the stage it covers.
+          className="absolute inset-0 w-full h-full object-contain"
         />
         {guide && (
           <div

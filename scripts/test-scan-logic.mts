@@ -19,7 +19,7 @@ import { assessGray, qualityWarning } from '../src/lib/cpms/image-quality.ts';
 import { escapeCSVField, formatMedicines } from '../src/lib/cpms/csv.ts';
 import { searchFilter } from '../src/lib/cpms/patient-search.ts';
 import { pdfSafeText, wrapText } from '../supabase/functions/generate-patient-pdf/text.ts';
-import { coverTransform, guideRect, guideToFrameCrop, SCAN_ASPECT } from '../src/lib/cpms/scan-geometry.ts';
+import { containTransform, guideRect, guideToFrameCrop, SCAN_ASPECT, visibleFrame } from '../src/lib/cpms/scan-geometry.ts';
 
 let pass = 0, fail = 0;
 function check(label: string, actual: unknown, expected: unknown) {
@@ -206,9 +206,10 @@ check('pdf unknown becomes ?', pdfSafeText(charset, 'ok 😀'), 'ok ?');
 check('pdf keeps newlines', pdfSafeText(charset, 'a\nb'), 'a\nb');
 
 // ------------------------------------------------------------ scan geometry
-// The viewfinder's guide is laid out in stage (CSS) pixels and the crop is cut
-// in camera-frame pixels. For every screen shape and frame shape, the crop has
-// to land exactly on what the guide showed: map it back through the cover
+// The viewfinder shows the whole camera frame (object-fit: contain, the 1x
+// view) and lays the guide out on it in stage (CSS) pixels; the crop is cut in
+// camera-frame pixels. For every screen shape and frame shape, the crop has to
+// land exactly on what the guide showed: map it back through the contain
 // transform and it must reproduce the guide.
 const near = (a: number, b: number) => Math.abs(a - b) < 1e-6;
 const stages: Array<[string, number, number]> = [
@@ -220,25 +221,31 @@ const stages: Array<[string, number, number]> = [
   ['tablet portrait', 768, 860],
 ];
 const frames: Array<[string, number, number]> = [
-  ['portrait 5:7 frame', 1440, 2016],
+  ['portrait 3:4 frame (phone sensor)', 1920, 2560],
   ['portrait 9:16 frame', 1080, 1920],
+  ['landscape 4:3 frame', 2560, 1920],
   ['landscape 16:9 frame', 1920, 1080],
-  ['landscape 4:3 frame', 1280, 960],
 ];
 for (const [stageName, sw, sh] of stages) {
-  const g = guideRect(sw, sh);
-  check(`guide is 5:7 (${stageName})`, near(g.width / g.height, SCAN_ASPECT), true);
-  check(`guide inside stage (${stageName})`,
-    g.x >= 0 && g.y >= 0 && g.x + g.width <= sw && g.y + g.height <= sh, true);
-  check(`guide centred (${stageName})`,
-    near(g.x, sw - g.x - g.width) && near(g.y, sh - g.y - g.height), true);
-  check(`guide within 86% wide / 90% tall (${stageName})`,
-    g.width <= sw * 0.86 + 1e-9 && g.height <= sh * 0.9 + 1e-9, true);
-
   for (const [frameName, fw, fh] of frames) {
     const label = `${stageName}, ${frameName}`;
+    const area = visibleFrame(sw, sh, fw, fh);
+    const g = guideRect(sw, sh, fw, fh);
+    check(`frame shown whole, unstretched (${label})`,
+      near(area.width / area.height, fw / fh) && area.x >= -1e-9 && area.y >= -1e-9 &&
+      area.x + area.width <= sw + 1e-9 && area.y + area.height <= sh + 1e-9, true);
+    check(`guide is 5:7 (${label})`, near(g.width / g.height, SCAN_ASPECT), true);
+    check(`guide on the picture (${label})`,
+      g.x >= area.x - 1e-9 && g.y >= area.y - 1e-9 &&
+      g.x + g.width <= area.x + area.width + 1e-9 && g.y + g.height <= area.y + area.height + 1e-9, true);
+    check(`guide centred on the picture (${label})`,
+      near(g.x - area.x, area.x + area.width - g.x - g.width) &&
+      near(g.y - area.y, area.y + area.height - g.y - g.height), true);
+    check(`guide within 86% wide / 90% tall of the picture (${label})`,
+      g.width <= area.width * 0.86 + 1e-9 && g.height <= area.height * 0.9 + 1e-9, true);
+
     const crop = guideToFrameCrop(g, sw, sh, fw, fh);
-    const t = coverTransform(sw, sh, fw, fh);
+    const t = containTransform(sw, sh, fw, fh);
     check(`crop inside frame (${label})`,
       crop.x >= 0 && crop.y >= 0 && crop.x + crop.width <= fw + 1e-9 && crop.y + crop.height <= fh + 1e-9, true);
     check(`crop is 5:7, unstretched (${label})`, near(crop.width / crop.height, SCAN_ASPECT), true);
@@ -253,13 +260,20 @@ for (const [stageName, sw, sh] of stages) {
       near(back.x, g.x) && near(back.y, g.y) && near(back.width, g.width) && near(back.height, g.height), true);
   }
 }
-// Portrait phones are limited by width: the guide uses 86% of it.
-check('portrait guide is 86% of the width', near(guideRect(412, 700).width, 412 * 0.86), true);
-// The cover transform fills the stage on both axes and overflows one.
+// A phone's 3:4 portrait frame on a portrait phone: the picture spans the full
+// width, and the guide takes about 86% of it -- the wide view, nothing
+// clipped. (3:4 is a shade squatter than 5:7, so the 90% height cap is what
+// stops it, at 85.7%.)
 {
-  const t = coverTransform(390, 610, 1920, 1080);
-  check('cover fills the stage height', near(1080 * t.scale, 610), true);
-  check('cover overflows the width, centred', near(t.offsetX, (390 - 1920 * t.scale) / 2) && t.offsetX < 0, true);
+  const area = visibleFrame(412, 700, 1920, 2560);
+  check('3:4 frame fills the phone width', near(area.width, 412) && near(area.x, 0), true);
+  check('guide is about 86% of that width', guideRect(412, 700, 1920, 2560).width >= 412 * 0.85, true);
+}
+// contain fits the frame on the tighter axis and leaves bars on the other.
+{
+  const t = containTransform(390, 610, 1920, 1080);
+  check('contain fits the stage width', near(1920 * t.scale, 390), true);
+  check('contain centres it with bars above and below', near(t.offsetY, (610 - 1080 * t.scale) / 2) && t.offsetY > 0, true);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
