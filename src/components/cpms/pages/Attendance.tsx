@@ -26,6 +26,8 @@ interface HospitalGeo {
   radius_meters: number | null;
   work_start_time: string | null;
   work_end_time: string | null;
+  checkin_deadline: string | null;
+  checkout_deadline: string | null;
   work_days: number[] | null;
 }
 
@@ -121,19 +123,37 @@ const Attendance = () => {
     const map: Record<string, number> = { Mon:1, Tue:2, Wed:3, Thu:4, Fri:5, Sat:6, Sun:7 };
     return { hhmm: `${get("hour")}:${get("minute")}`, dow: map[get("weekday")] ?? 0 };
   };
-  const checkWorkingHours = (h: HospitalGeo | undefined) => {
+  // Check-in is open from the start of the working day until the hospital's
+  // check-in deadline; check-out until its check-out deadline, which may be
+  // after working hours end. With no deadline set, both close at work end.
+  const checkWorkingHours = (h: HospitalGeo | undefined, kind: "in" | "out") => {
     if (!h) return { ok: false, reason: "Hospital not found", start: "", end: "", days: [] as number[] };
     const start = (h.work_start_time ?? "09:00:00").slice(0, 5);
-    const end = (h.work_end_time ?? "18:00:00").slice(0, 5);
+    const workEnd = (h.work_end_time ?? "18:00:00").slice(0, 5);
+    const deadline = kind === "in" ? h.checkin_deadline : h.checkout_deadline;
+    const end = deadline ? deadline.slice(0, 5) : workEnd;
+    const hours = `Working hours ${start}–${workEnd} IST`;
+    const windowText = deadline
+      ? `${hours} • check-${kind} by ${end} IST`
+      : hours;
     const days = h.work_days && h.work_days.length ? h.work_days : [1,2,3,4,5];
     const { hhmm, dow } = getIstParts(nowTs);
     if (!days.includes(dow)) {
       return { ok: false, reason: `Closed today. Working days: ${days.map((d) => DAY_LABELS[d-1]).join(", ")}.`, start, end, days };
     }
-    if (hhmm < start || hhmm > end) {
-      return { ok: false, reason: `Outside working hours. Allowed ${start}–${end} IST.`, start, end, days };
+    if (hhmm < start) {
+      return { ok: false, reason: `Check-${kind} opens at ${start} IST. ${windowText}.`, start, end, days };
     }
-    return { ok: true, reason: `${start}–${end} IST`, start, end, days };
+    if (hhmm > end) {
+      return {
+        ok: false,
+        reason: deadline
+          ? `Check-${kind} deadline (${end} IST) has passed. ${windowText}.`
+          : `Outside working hours. Allowed ${start}–${end} IST.`,
+        start, end, days,
+      };
+    }
+    return { ok: true, reason: windowText, start, end, days };
   };
 
   const loadData = useCallback(async () => {
@@ -143,7 +163,7 @@ const Attendance = () => {
       const [{ data: hData, error: hErr }, { data: aData, error: aErr }] = await Promise.all([
         supabase
           .from("hospitals")
-          .select("id, name, latitude, longitude, radius_meters, work_start_time, work_end_time, work_days")
+          .select("id, name, latitude, longitude, radius_meters, work_start_time, work_end_time, checkin_deadline, checkout_deadline, work_days")
           .order("name"),
         supabase
           .from("attendance_records")
@@ -183,7 +203,7 @@ const Attendance = () => {
     if (!user) return;
     const hospital = hospitals.find((h) => h.name === selectedHospital);
     if (!hospital) return;
-    const gate = checkWorkingHours(hospital);
+    const gate = checkWorkingHours(hospital, "in");
     if (!gate.ok) {
       toast({ title: "Attendance not allowed now", description: gate.reason, variant: "destructive" });
       return;
@@ -236,7 +256,7 @@ const Attendance = () => {
   const handleCheckOut = async () => {
     if (!user || !openRecord) return;
     const hospital = hospitals.find((h) => h.name === openRecord.hospital);
-    const gate = checkWorkingHours(hospital);
+    const gate = checkWorkingHours(hospital, "out");
     if (!gate.ok) {
       toast({ title: "Check-out not allowed now", description: gate.reason, variant: "destructive" });
       return;
@@ -347,16 +367,16 @@ const Attendance = () => {
               </CardHeader>
               <CardContent>
                 {(() => {
-                  const gate = checkWorkingHours(hospitals.find((h) => h.name === openRecord.hospital));
+                  const gate = checkWorkingHours(hospitals.find((h) => h.name === openRecord.hospital), "out");
                   return !gate.ok ? (
                     <p className="text-xs text-destructive mb-2">{gate.reason}</p>
                   ) : (
-                    <p className="text-xs text-muted-foreground mb-2">Working hours: {gate.reason}</p>
+                    <p className="text-xs text-muted-foreground mb-2">{gate.reason}</p>
                   );
                 })()}
                 <Button
                   onClick={handleCheckOut}
-                  disabled={submitting || !checkWorkingHours(hospitals.find((h) => h.name === openRecord.hospital)).ok}
+                  disabled={submitting || !checkWorkingHours(hospitals.find((h) => h.name === openRecord.hospital), "out").ok}
                   className="w-full gap-2"
                   size="lg"
                 >
@@ -398,16 +418,16 @@ const Attendance = () => {
                   <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} placeholder="Anything to add..." rows={2} />
                 </div>
                 {(() => {
-                  const gate = checkWorkingHours(hospitals.find((h) => h.name === selectedHospital));
+                  const gate = checkWorkingHours(hospitals.find((h) => h.name === selectedHospital), "in");
                   return !gate.ok ? (
                     <p className="text-xs text-destructive">{gate.reason}</p>
                   ) : (
-                    <p className="text-xs text-muted-foreground">Working hours: {gate.reason}</p>
+                    <p className="text-xs text-muted-foreground">{gate.reason}</p>
                   );
                 })()}
                 <Button
                   onClick={handleCheckIn}
-                  disabled={submitting || !selectedHospital || !checkWorkingHours(hospitals.find((h) => h.name === selectedHospital)).ok}
+                  disabled={submitting || !selectedHospital || !checkWorkingHours(hospitals.find((h) => h.name === selectedHospital), "in").ok}
                   className="w-full gap-2"
                   size="lg"
                 >

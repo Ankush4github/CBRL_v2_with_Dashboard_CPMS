@@ -108,6 +108,8 @@ export type Database = {
       }
       hospitals: {
         Row: {
+          checkin_deadline: string | null
+          checkout_deadline: string | null
           created_at: string
           created_by: string | null
           id: string
@@ -120,6 +122,8 @@ export type Database = {
           work_start_time: string
         }
         Insert: {
+          checkin_deadline?: string | null
+          checkout_deadline?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -132,6 +136,8 @@ export type Database = {
           work_start_time?: string
         }
         Update: {
+          checkin_deadline?: string | null
+          checkout_deadline?: string | null
           created_at?: string
           created_by?: string | null
           id?: string

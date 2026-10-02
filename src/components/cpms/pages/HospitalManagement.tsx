@@ -51,6 +51,8 @@ interface Hospital {
   radius_meters: number | null;
   work_start_time: string | null;
   work_end_time: string | null;
+  checkin_deadline: string | null;
+  checkout_deadline: string | null;
   work_days: number[] | null;
 }
 
@@ -80,6 +82,9 @@ const HospitalManagement = () => {
   const [geoRadius, setGeoRadius] = useState("200");
   const [workStart, setWorkStart] = useState("09:00");
   const [workEnd, setWorkEnd] = useState("18:00");
+  // Empty means "no separate deadline": reminders quote the working hours.
+  const [checkinDeadline, setCheckinDeadline] = useState("");
+  const [checkoutDeadline, setCheckoutDeadline] = useState("");
   const [workDays, setWorkDays] = useState<number[]>([1, 2, 3, 4, 5]);
   const [geoSaving, setGeoSaving] = useState(false);
 
@@ -89,7 +94,7 @@ const HospitalManagement = () => {
       // Get hospitals from hospitals table
       const { data: hospitalsData, error: hospitalsError } = await supabase
         .from("hospitals")
-        .select("id, name, latitude, longitude, radius_meters, work_start_time, work_end_time, work_days")
+        .select("id, name, latitude, longitude, radius_meters, work_start_time, work_end_time, checkin_deadline, checkout_deadline, work_days")
         .order("name");
 
       if (hospitalsError) throw hospitalsError;
@@ -129,6 +134,8 @@ const HospitalManagement = () => {
         radius_meters: (h as any).radius_meters ?? null,
         work_start_time: (h as any).work_start_time ?? null,
         work_end_time: (h as any).work_end_time ?? null,
+        checkin_deadline: (h as any).checkin_deadline ?? null,
+        checkout_deadline: (h as any).checkout_deadline ?? null,
         work_days: (h as any).work_days ?? null,
       }));
 
@@ -151,6 +158,8 @@ const HospitalManagement = () => {
     setGeoRadius(String(h.radius_meters ?? 200));
     setWorkStart((h.work_start_time ?? "09:00:00").slice(0, 5));
     setWorkEnd((h.work_end_time ?? "18:00:00").slice(0, 5));
+    setCheckinDeadline(h.checkin_deadline ? h.checkin_deadline.slice(0, 5) : "");
+    setCheckoutDeadline(h.checkout_deadline ? h.checkout_deadline.slice(0, 5) : "");
     setWorkDays(h.work_days && h.work_days.length ? h.work_days : [1, 2, 3, 4, 5]);
   };
 
@@ -192,6 +201,24 @@ const HospitalManagement = () => {
         setGeoSaving(false);
         return;
       }
+      if (checkinDeadline && (checkinDeadline < workStart || checkinDeadline > workEnd)) {
+        toast({
+          title: "Invalid check-in deadline",
+          description: `It must fall within working hours (${workStart}–${workEnd}).`,
+          variant: "destructive",
+        });
+        setGeoSaving(false);
+        return;
+      }
+      if (checkoutDeadline && checkoutDeadline < workEnd) {
+        toast({
+          title: "Invalid check-out deadline",
+          description: `It cannot be before working hours end (${workEnd}).`,
+          variant: "destructive",
+        });
+        setGeoSaving(false);
+        return;
+      }
       if (workDays.length === 0) {
         toast({ title: "Select at least one working day", variant: "destructive" });
         setGeoSaving(false);
@@ -205,6 +232,8 @@ const HospitalManagement = () => {
           radius_meters: radius,
           work_start_time: workStart,
           work_end_time: workEnd,
+          checkin_deadline: checkinDeadline || null,
+          checkout_deadline: checkoutDeadline || null,
           work_days: [...workDays].sort(),
         })
         .eq("id", geoEditing.id);
@@ -493,13 +522,18 @@ const HospitalManagement = () => {
                             ? `📍 ${hospital.latitude.toFixed(5)}, ${hospital.longitude.toFixed(5)} • ${hospital.radius_meters ?? 200}m`
                             : "📍 No location set"}
                         </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          🕘 {(hospital.work_start_time ?? "09:00").slice(0, 5)}–{(hospital.work_end_time ?? "18:00").slice(0, 5)} IST
+                          {hospital.checkin_deadline && ` • in by ${hospital.checkin_deadline.slice(0, 5)}`}
+                          {hospital.checkout_deadline && ` • out by ${hospital.checkout_deadline.slice(0, 5)}`}
+                        </p>
                       </div>
                       <Button
                         variant="ghost"
                         size="icon"
                         className="h-9 w-9 sm:h-10 sm:w-10 shrink-0"
                         onClick={() => openGeoEditor(hospital)}
-                        title="Set location"
+                        title="Set location, hours & deadlines"
                       >
                         <MapPin className="h-4 w-4" />
                       </Button>
@@ -564,7 +598,7 @@ const HospitalManagement = () => {
           <DialogHeader>
             <DialogTitle>Location & Hours · {geoEditing?.name}</DialogTitle>
             <DialogDescription>
-              Define coordinates, allowed radius, and the working-hour window (IST) for attendance check-in/out.
+              Define coordinates, allowed radius, working hours and attendance deadlines (IST) for check-in/out.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-2">
@@ -597,6 +631,34 @@ const HospitalManagement = () => {
                   <Input type="time" value={workEnd} onChange={(e) => setWorkEnd(e.target.value)} />
                 </div>
               </div>
+            </div>
+            <div className="pt-2 border-t border-border">
+              <p className="text-xs font-semibold mb-2">Attendance deadlines (IST)</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-medium">Check-in deadline</label>
+                  <Input
+                    type="time"
+                    value={checkinDeadline}
+                    min={workStart}
+                    max={workEnd}
+                    onChange={(e) => setCheckinDeadline(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-medium">Check-out deadline</label>
+                  <Input
+                    type="time"
+                    value={checkoutDeadline}
+                    min={workEnd}
+                    onChange={(e) => setCheckoutDeadline(e.target.value)}
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1.5">
+                Check-in closes at its deadline; check-out stays open until its deadline, even after
+                working hours end. Reminder emails quote these times. Leave empty to use the working hours.
+              </p>
             </div>
             <div>
               <p className="text-xs font-semibold mb-2">Working days</p>
