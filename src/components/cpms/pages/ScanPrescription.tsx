@@ -2218,7 +2218,6 @@ const ScanPrescription = () => {
       <DocumentCamera
         open={isCameraOpen}
         title={cameraTarget === 'page' ? `Take Photo · Page ${extraPages.length + 2}` : "Take Photo · Prescription"}
-        hint="Line the prescription up inside the dashed guide."
         fileName={() => `prescription-${Date.now()}.jpg`}
         onCapture={(file) => {
           if (cameraTarget === 'page') {

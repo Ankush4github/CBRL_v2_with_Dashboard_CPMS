@@ -430,6 +430,7 @@ const AdditionalDocumentsUpload = ({ documents, onChange }: AdditionalDocumentsU
         open={isCameraOpen}
         title={`Take Photo · ${DOCUMENT_TYPES.find((dt) => dt.value === selectedDocType)?.label ?? ""}`}
         hint="Each capture is added as another page."
+        instruction="Align the entire document inside the frame."
         multiple
         fileName={(n) => `${selectedDocType}-page-${pageOffsetRef.current + n}.jpg`}
         onCapture={(file) => addFiles([file])}

@@ -4,37 +4,20 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { Button } from "@/components/cpms/ui/button";
 import { Camera, X } from "lucide-react";
 import { toast } from "sonner";
+import { guideRect, guideToFrameCrop, SCAN_ASPECT, type Rect } from "@/lib/cpms/scan-geometry";
 
-// Scan geometry. The paperwork photographed in CPMS is portrait 5:7 -- a sheet
-// a shade wider than A4's 1:1.41 -- so the scan window is a centred 5:7
-// rectangle rather than whatever shape the sensor happens to hand back.
-const CAPTURE_ASPECT = 5 / 7;
-// Hold the window just off the frame edge, so its outline is always visible.
-const CAPTURE_FRAME_INSET = 0.98;
-// The sheet is lined up against a guide drawn inside the window; the gap
-// between the two is the margin that keeps a slightly skewed page from losing
-// a corner to the crop.
-const CAPTURE_GUIDE_INSET = 0.9;
+// Where the guide sits on screen, and how that maps onto the camera frame, is
+// in lib/cpms/scan-geometry -- one module for both, so the rectangle the
+// operator lines a page up against is the rectangle that gets cropped.
 const CAPTURE_QUALITY = 0.9;
 
-/** Largest centred 5:7 rectangle that fits inside w x h, held off the edges. */
-const fitCaptureRect = (w: number, h: number) => {
-  let width = w * CAPTURE_FRAME_INSET;
-  let height = width / CAPTURE_ASPECT;
-  const maxHeight = h * CAPTURE_FRAME_INSET;
-  if (height > maxHeight) {
-    height = maxHeight;
-    width = height * CAPTURE_ASPECT;
-  }
-  return { x: (w - width) / 2, y: (h - height) / 2, width, height };
-};
-
-interface CaptureBox {
-  left: number;
-  top: number;
-  width: number;
-  height: number;
-}
+// The four corner marks, drawn over the dashed outline.
+const CORNERS = [
+  "top-0 left-0 border-t-4 border-l-4 rounded-tl-2xl",
+  "top-0 right-0 border-t-4 border-r-4 rounded-tr-2xl",
+  "bottom-0 left-0 border-b-4 border-l-4 rounded-bl-2xl",
+  "bottom-0 right-0 border-b-4 border-r-4 rounded-br-2xl",
+] as const;
 
 interface DocumentCameraProps {
   open: boolean;
@@ -42,6 +25,8 @@ interface DocumentCameraProps {
   title: string;
   /** Line under the heading, shown until the first capture. */
   hint?: string;
+  /** The instruction over the controls. Names the kind of document. */
+  instruction?: string;
   /** Keep the viewfinder open across captures, for multi-page documents. */
   multiple?: boolean;
   /** Name for the nth capture of this session, 1-based. */
@@ -51,14 +36,17 @@ interface DocumentCameraProps {
 }
 
 /**
- * Full-screen viewfinder that crops to a fixed 5:7 window. Both scan steps use
- * it, so the geometry an operator lines a page up against is the same one in
- * both places -- and there is one copy of it to change.
+ * Full-screen document scanner: the camera fills the stage, a single 5:7
+ * guide is cut out of a dark mask, and Capture crops the frame to exactly what
+ * was inside the guide. Both scan steps use it, so the geometry an operator
+ * lines a page up against is the same one in both places -- and there is one
+ * copy of it to change.
  */
 const DocumentCamera = ({
   open,
   title,
   hint,
+  instruction = "Align the entire prescription inside the frame.",
   multiple = false,
   fileName,
   onCapture,
@@ -70,9 +58,9 @@ const DocumentCamera = ({
   const streamRef = useRef<MediaStream | null>(null);
   const onCloseRef = useRef(onClose);
 
-  // Where the 5:7 window sits on screen, in stage pixels. Null until the
-  // stream has reported a frame size.
-  const [captureBox, setCaptureBox] = useState<CaptureBox | null>(null);
+  // Where the guide sits on screen, in stage pixels. Null until the stream has
+  // reported a frame size, which is also what enables Capture.
+  const [guide, setGuide] = useState<Rect | null>(null);
   const [captureCount, setCaptureCount] = useState(0);
 
   // Callers pass inline handlers; reading onClose through a ref keeps the
@@ -85,7 +73,7 @@ const DocumentCamera = ({
   // call it without listing a value that changes on every parent render.
   const close = useCallback(() => {
     setCaptureCount(0);
-    setCaptureBox(null);
+    setGuide(null);
     onCloseRef.current();
   }, []);
 
@@ -107,10 +95,10 @@ const DocumentCamera = ({
             facingMode: "environment",
             // Ask for a portrait frame shaped like the page. All three are
             // ideal, not exact, so a webcam that only does 16:9 still opens --
-            // the window below adapts to whatever frame actually arrives.
+            // the crop below is cut from whatever frame actually arrives.
             width: { ideal: 1440 },
             height: { ideal: 2016 },
-            aspectRatio: { ideal: CAPTURE_ASPECT },
+            aspectRatio: { ideal: SCAN_ASPECT },
           },
         });
         if (cancelled) {
@@ -127,9 +115,8 @@ const DocumentCamera = ({
         if (cancelled) return;
         console.error("Camera access error:", error);
         toast.error("Unable to access camera. Please check permissions or use file upload instead.");
-        // close(), not onClose(): the counter and the capture window have to be
-        // reset too, or the next session resumes the previous one's page
-        // numbering.
+        // close(), not onClose(): the counter and the guide have to be reset
+        // too, or the next session resumes the previous one's page numbering.
         close();
       }
     };
@@ -143,8 +130,8 @@ const DocumentCamera = ({
     };
   }, [open, close]);
 
-  // Keep the outlined window lined up with the letterboxed video, so the
-  // rectangle on screen is exactly the rectangle capturePhoto crops.
+  // Re-lay the guide whenever the stage or the frame changes shape -- the
+  // first frame arriving, a phone rotating, the browser bar collapsing.
   useEffect(() => {
     if (!open) return;
     const video = videoRef.current;
@@ -152,24 +139,14 @@ const DocumentCamera = ({
     if (!video || !stage) return;
 
     const update = () => {
-      const { videoWidth, videoHeight } = video;
       const { clientWidth, clientHeight } = stage;
-      if (!videoWidth || !videoHeight || !clientWidth || !clientHeight) return;
-      // object-contain centres and letterboxes the frame inside the stage.
-      const scale = Math.min(clientWidth / videoWidth, clientHeight / videoHeight);
-      const shownWidth = videoWidth * scale;
-      const shownHeight = videoHeight * scale;
-      const rect = fitCaptureRect(shownWidth, shownHeight);
-      setCaptureBox({
-        left: (clientWidth - shownWidth) / 2 + rect.x,
-        top: (clientHeight - shownHeight) / 2 + rect.y,
-        width: rect.width,
-        height: rect.height,
-      });
+      if (!video.videoWidth || !video.videoHeight || !clientWidth || !clientHeight) return;
+      setGuide(guideRect(clientWidth, clientHeight));
     };
 
     update();
-    // loadedmetadata for the first frame size, resize for a phone rotating.
+    // loadedmetadata for the first frame size, resize for the camera switching
+    // orientation, the observer for the stage itself changing size.
     video.addEventListener("loadedmetadata", update);
     video.addEventListener("resize", update);
     const observer = new ResizeObserver(update);
@@ -184,13 +161,25 @@ const DocumentCamera = ({
   const capturePhoto = () => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
+    const stage = stageRef.current;
     // videoWidth stays 0 until the first frame arrives; capturing before that
     // writes a blank page.
-    if (!video || !canvas || !video.videoWidth) return;
+    if (!video || !canvas || !stage || !video.videoWidth) return;
 
-    // Crop to the same 5:7 window the page was lined up in, so what gets filed
-    // is the document rather than the desk around it.
-    const crop = fitCaptureRect(video.videoWidth, video.videoHeight);
+    // Measured now rather than taken from state, so a rotation between the
+    // last layout and this tap cannot crop a stale rectangle. The guide comes
+    // from the stage size, and the crop from mapping it through the video's
+    // object-fit: cover placement -- see lib/cpms/scan-geometry.
+    const { clientWidth, clientHeight } = stage;
+    const crop = guideToFrameCrop(
+      guideRect(clientWidth, clientHeight),
+      clientWidth,
+      clientHeight,
+      video.videoWidth,
+      video.videoHeight,
+    );
+    // The cropped region at the camera's own resolution. It is already 5:7,
+    // so this copies pixels across without stretching them.
     canvas.width = Math.round(crop.width);
     canvas.height = Math.round(crop.height);
     const ctx = canvas.getContext("2d");
@@ -234,8 +223,8 @@ const DocumentCamera = ({
       : hint;
 
   return (
-    <div className="fixed inset-0 z-50 bg-background/95 flex flex-col">
-      <div className="flex items-center justify-between gap-3 p-4 border-b border-border">
+    <div className="fixed inset-0 z-50 bg-background flex flex-col">
+      <div className="flex items-center justify-between gap-3 px-4 pb-3 pt-[max(0.75rem,env(safe-area-inset-top))] border-b border-border">
         <div className="min-w-0">
           <h3 className="font-semibold text-lg truncate">{title}</h3>
           {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
@@ -245,46 +234,56 @@ const DocumentCamera = ({
         </Button>
       </div>
 
-      <div ref={stageRef} className="relative flex-1 min-h-0 m-4 overflow-hidden">
+      {/* The stage takes whatever height the header and controls leave, and
+          the guide is laid out inside it -- so it can never reach either. */}
+      <div ref={stageRef} className="relative flex-1 min-h-0 overflow-hidden bg-black">
         <video
           ref={videoRef}
           autoPlay
           playsInline
           muted
-          className="absolute inset-0 w-full h-full object-contain"
+          // cover, not contain: the frame fills the stage at its own aspect
+          // ratio, scaled uniformly and clipped, never stretched.
+          className="absolute inset-0 w-full h-full object-cover"
         />
-        {captureBox && (
+        {guide && (
           <div
-            className="absolute border-2 border-primary pointer-events-none"
+            className="absolute rounded-2xl border-2 border-dashed border-primary pointer-events-none"
             style={{
-              left: captureBox.left,
-              top: captureBox.top,
-              width: captureBox.width,
-              height: captureBox.height,
-              // Dim everything outside the window, so the crop the operator is
-              // given is the crop they were shown.
-              boxShadow: "0 0 0 9999px rgba(0, 0, 0, 0.55)",
+              left: guide.x,
+              top: guide.y,
+              width: guide.width,
+              height: guide.height,
+              // The mask: one shadow spread far past the stage, which clips
+              // it. It darkens everything outside the guide, follows the
+              // rounded corners, and leaves the inside untouched.
+              boxShadow: "0 0 0 100vmax rgba(0, 0, 0, 0.55)",
             }}
           >
-            <div
-              className="absolute border-2 border-dashed border-primary/70"
-              style={{ inset: `${((1 - CAPTURE_GUIDE_INSET) / 2) * 100}%` }}
-            />
+            {CORNERS.map((corner) => (
+              <span
+                key={corner}
+                aria-hidden="true"
+                className={`absolute -m-[2px] h-7 w-7 border-primary ${corner}`}
+              />
+            ))}
           </div>
         )}
         <canvas ref={canvasRef} className="hidden" />
       </div>
 
-      <div className="p-4 border-t border-border space-y-3">
-        <p className="text-xs text-center text-muted-foreground">
-          Lay the whole document inside the dashed guide. The photo is cropped to the 5:7
-          window, so anything outside it is discarded.
-        </p>
+      <div className="px-4 pt-3 pb-[max(1rem,env(safe-area-inset-bottom))] border-t border-border space-y-3">
+        <div className="text-center">
+          <p className="text-sm font-medium">{instruction}</p>
+          <p className="text-xs text-muted-foreground">
+            Keep the document flat and fully visible for the best OCR result.
+          </p>
+        </div>
         <div className="flex justify-center gap-4">
           <Button variant="outline" onClick={close}>
             {multiple && captureCount > 0 ? "Done" : "Cancel"}
           </Button>
-          <Button onClick={capturePhoto} className="gap-2" disabled={!captureBox}>
+          <Button onClick={capturePhoto} className="gap-2" disabled={!guide}>
             <Camera className="h-4 w-4" />
             Capture
           </Button>

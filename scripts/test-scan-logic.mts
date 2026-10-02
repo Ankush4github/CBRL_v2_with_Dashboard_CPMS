@@ -19,6 +19,7 @@ import { assessGray, qualityWarning } from '../src/lib/cpms/image-quality.ts';
 import { escapeCSVField, formatMedicines } from '../src/lib/cpms/csv.ts';
 import { searchFilter } from '../src/lib/cpms/patient-search.ts';
 import { pdfSafeText, wrapText } from '../supabase/functions/generate-patient-pdf/text.ts';
+import { coverTransform, guideRect, guideToFrameCrop, SCAN_ASPECT } from '../src/lib/cpms/scan-geometry.ts';
 
 let pass = 0, fail = 0;
 function check(label: string, actual: unknown, expected: unknown) {
@@ -203,6 +204,63 @@ check('pdf Devanagari becomes a note', pdfSafeText(charset, 'राजेश'), 
 check('pdf arrow fallback', pdfSafeText(charset, 'A → B ≥ C'), 'A -> B >= C');
 check('pdf unknown becomes ?', pdfSafeText(charset, 'ok 😀'), 'ok ?');
 check('pdf keeps newlines', pdfSafeText(charset, 'a\nb'), 'a\nb');
+
+// ------------------------------------------------------------ scan geometry
+// The viewfinder's guide is laid out in stage (CSS) pixels and the crop is cut
+// in camera-frame pixels. For every screen shape and frame shape, the crop has
+// to land exactly on what the guide showed: map it back through the cover
+// transform and it must reproduce the guide.
+const near = (a: number, b: number) => Math.abs(a - b) < 1e-6;
+const stages: Array<[string, number, number]> = [
+  ['small Android portrait', 360, 520],
+  ['large Android portrait', 412, 700],
+  ['iPhone portrait', 390, 610],
+  ['short viewport (browser bar shown)', 390, 420],
+  ['landscape phone', 780, 250],
+  ['tablet portrait', 768, 860],
+];
+const frames: Array<[string, number, number]> = [
+  ['portrait 5:7 frame', 1440, 2016],
+  ['portrait 9:16 frame', 1080, 1920],
+  ['landscape 16:9 frame', 1920, 1080],
+  ['landscape 4:3 frame', 1280, 960],
+];
+for (const [stageName, sw, sh] of stages) {
+  const g = guideRect(sw, sh);
+  check(`guide is 5:7 (${stageName})`, near(g.width / g.height, SCAN_ASPECT), true);
+  check(`guide inside stage (${stageName})`,
+    g.x >= 0 && g.y >= 0 && g.x + g.width <= sw && g.y + g.height <= sh, true);
+  check(`guide centred (${stageName})`,
+    near(g.x, sw - g.x - g.width) && near(g.y, sh - g.y - g.height), true);
+  check(`guide within 86% wide / 90% tall (${stageName})`,
+    g.width <= sw * 0.86 + 1e-9 && g.height <= sh * 0.9 + 1e-9, true);
+
+  for (const [frameName, fw, fh] of frames) {
+    const label = `${stageName}, ${frameName}`;
+    const crop = guideToFrameCrop(g, sw, sh, fw, fh);
+    const t = coverTransform(sw, sh, fw, fh);
+    check(`crop inside frame (${label})`,
+      crop.x >= 0 && crop.y >= 0 && crop.x + crop.width <= fw + 1e-9 && crop.y + crop.height <= fh + 1e-9, true);
+    check(`crop is 5:7, unstretched (${label})`, near(crop.width / crop.height, SCAN_ASPECT), true);
+    // Back to the screen: frame px * scale + offset.
+    const back = {
+      x: crop.x * t.scale + t.offsetX,
+      y: crop.y * t.scale + t.offsetY,
+      width: crop.width * t.scale,
+      height: crop.height * t.scale,
+    };
+    check(`crop maps back onto the guide (${label})`,
+      near(back.x, g.x) && near(back.y, g.y) && near(back.width, g.width) && near(back.height, g.height), true);
+  }
+}
+// Portrait phones are limited by width: the guide uses 86% of it.
+check('portrait guide is 86% of the width', near(guideRect(412, 700).width, 412 * 0.86), true);
+// The cover transform fills the stage on both axes and overflows one.
+{
+  const t = coverTransform(390, 610, 1920, 1080);
+  check('cover fills the stage height', near(1080 * t.scale, 610), true);
+  check('cover overflows the width, centred', near(t.offsetX, (390 - 1920 * t.scale) / 2) && t.offsetX < 0, true);
+}
 
 console.log(`\n${pass} passed, ${fail} failed`);
 if (fail > 0) process.exit(1);
