@@ -7,7 +7,13 @@ import {
   refreshSessionToken,
   sessionCookie,
 } from '@/lib/admin-auth';
-import { clientIp, expectedOrigin, isAllowedIp } from '@/lib/admin-network';
+import {
+  RESTRICTED_IP_HEADER,
+  RESTRICTED_PAGE_PATH,
+  clientIp,
+  expectedOrigin,
+  isAllowedIp,
+} from '@/lib/admin-network';
 import { isSiteEditor } from '@/lib/site-editor';
 import { createRequestClient } from '@/lib/supabase/request';
 
@@ -68,18 +74,42 @@ export async function proxy(request: NextRequest) {
   //    applies to the sign-in flow too — that is the point of it.
   const ip = clientIp(request);
   if (!isAllowedIp(ip)) {
-    // Naming the address turns a misconfigured allowlist into something the
-    // administrator can diagnose and fix, and tells the caller only their own
-    // address — which they already know.
+    // API callers are code: they get JSON, with the reason machine-readable.
+    // The address is included because it turns a misconfigured allowlist into
+    // something the administrator can diagnose, and it tells the caller only
+    // their own address, which they already know.
+    if (isApi) {
+      return noStore(
+        NextResponse.json(
+          {
+            error: 'The dashboard is not available from your network.',
+            reason: 'network',
+            ip: ip ?? 'unknown',
+          },
+          { status: 403 }
+        )
+      );
+    }
+
+    // People get a page. A rewrite rather than a redirect: the browser keeps
+    // the URL it asked for, so the page's "Try again" is a reload of that same
+    // request through this same check. Still a 403, and still decided here --
+    // the page only renders the outcome, from the address passed below.
+    const forwarded = new Headers(request.headers);
+    forwarded.set(RESTRICTED_IP_HEADER, ip ?? 'unknown');
     return noStore(
-      NextResponse.json(
-        {
-          error: `The dashboard is not available from your network (${ip ?? 'unknown address'}).`,
-        },
-        { status: 403 }
-      )
+      NextResponse.rewrite(new URL(RESTRICTED_PAGE_PATH, request.url), {
+        status: 403,
+        request: { headers: forwarded },
+      })
     );
   }
+
+  // Every request allowed past this point has the restricted-page header
+  // removed, so only the branch above can set it.
+  const passHeaders = new Headers(request.headers);
+  passHeaders.delete(RESTRICTED_IP_HEADER);
+  const pass = () => NextResponse.next({ request: { headers: passHeaders } });
 
   // 2. Origin check on anything that writes. `SameSite=Lax` alone is not enough
   //    here: it treats every *.iitkgp.ac.in host as same-site, so a compromised
@@ -103,12 +133,12 @@ export async function proxy(request: NextRequest) {
   //    callback is what creates one, and sign-out has to work on a session that
   //    has already lapsed.
   if (pathname === '/admin/auth/callback' || pathname === '/api/admin/logout') {
-    return noStore(NextResponse.next());
+    return noStore(pass());
   }
 
   // Everything below consults Supabase, so the response has to exist before the
   // client does — it is where refreshed auth cookies get written.
-  const response = NextResponse.next();
+  const response = pass();
   const supabase = createRequestClient(request, response);
 
   // getUser(), not getSession(): the latter decodes the cookie and believes it.

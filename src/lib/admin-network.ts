@@ -151,6 +151,17 @@ export function clientIp(request: Request): string | null {
   return null;
 }
 
+/**
+ * Request header the proxy uses to hand the refused address to the
+ * "Network Access Restricted" page it rewrites to. Set only by the proxy, and
+ * stripped from every request it lets through, so the page cannot be made to
+ * appear -- or to show a chosen address -- by a caller supplying it.
+ */
+export const RESTRICTED_IP_HEADER = 'x-cbrl-restricted-ip';
+
+/** Where the proxy sends a dashboard page request from outside the allowlist. */
+export const RESTRICTED_PAGE_PATH = '/admin/network-restricted';
+
 /* --------------------------------------------------------------- allowlist */
 
 interface Rule {
