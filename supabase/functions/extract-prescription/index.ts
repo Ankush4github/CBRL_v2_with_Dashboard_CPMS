@@ -20,6 +20,47 @@ const corsHeaders = {
  *   error    -- anything else that reached the catch-all
  */
 /**
+ * The models to try, in order of preference.
+ *
+ * GEMINI_MODELS is a comma-separated list, so a third model can be added or
+ * the order changed without a code change. Without it, the older
+ * GEMINI_MODEL / GEMINI_FALLBACK_MODEL pair is used, and without those, the
+ * defaults below. Google retires Flash models for new keys (2.5 went this way),
+ * which is why none of this is fixed in code.
+ */
+function configuredModels(): string[] {
+  const list = (Deno.env.get("GEMINI_MODELS") ?? "")
+    .split(",")
+    .map((m) => m.trim())
+    .filter(Boolean);
+  if (list.length) return [...new Set(list)];
+  return [...new Set([
+    Deno.env.get("GEMINI_MODEL") || "gemini-3.8-flash",
+    Deno.env.get("GEMINI_FALLBACK_MODEL") || "gemini-3.7-flash",
+  ])];
+}
+
+/**
+ * When each model last answered "busy", in this function instance.
+ *
+ * Overload comes in bursts lasting minutes, so a model that was busy a moment
+ * ago will probably still be busy for the next scan. Starting that scan on a
+ * model that is not saves it a failed attempt and a pause. This lives only as
+ * long as the instance does; a cold start simply begins from the preferred
+ * order again, which is the right default.
+ */
+const busySince = new Map<string, number>();
+const BUSY_MEMORY_MS = 2 * 60 * 1000;
+
+/** The configured models, the ones not recently busy first, order otherwise kept. */
+function modelsInTryOrder(): string[] {
+  const now = Date.now();
+  const recentlyBusy = (m: string) => now - (busySince.get(m) ?? -Infinity) < BUSY_MEMORY_MS;
+  const models = configuredModels();
+  return [...models.filter((m) => !recentlyBusy(m)), ...models.filter(recentlyBusy)];
+}
+
+/**
  * What to keep of a provider error body: its machine-readable code and status
  * (Gemini's OpenAI-compatible endpoint answers with {error: {code, status,
  * message}} or a list of those), never the free-text message. That text goes
@@ -365,16 +406,21 @@ Deno.serve(async (req) => {
 
     console.log("[SERVER] Sending request to AI service");
 
-    // Google retires Flash models for new keys (2.5 went this way), so the
-    // GEMINI_MODEL / GEMINI_FALLBACK_MODEL secrets can swap them without a
-    // code change.
-    const primaryModel = Deno.env.get("GEMINI_MODEL") || "gemini-3.8-flash";
-    const fallbackModel = Deno.env.get("GEMINI_FALLBACK_MODEL") || "gemini-3.7-flash";
+    // Healthy models first: one that answered "busy" in the last couple of
+    // minutes goes to the back of the line (see modelsInTryOrder).
+    const models = modelsInTryOrder();
 
-    // The newest model regularly answers 503 "high demand". Retry it once,
-    // then drop to the previous generation, before giving up.
-    const attempts = [primaryModel, primaryModel, fallbackModel];
+    // Models answer 503 "high demand" in bursts -- on 2026-10-01 six scans in
+    // five minutes failed on all three of the old attempts (primary, primary,
+    // fallback, 1.5s apart), which together gave Google about ten seconds to
+    // recover. Overload is per model, so a busy answer switches straight to
+    // the next model, cycling through the list and backing off further each
+    // full round, until one succeeds or the time budget runs out. The budget keeps the operator's wait bounded:
+    // past it, "busy, try again" is a better answer than a longer spinner.
     const transient = new Set([429, 500, 503]);
+    const RETRY_BUDGET_MS = 40_000;
+    const MAX_ATTEMPTS = 6;
+    const startedAt = Date.now();
     let response!: Response;
     let errorText = "";
     // JSON mode stops the model wrapping its answer in prose, which is what
@@ -383,8 +429,9 @@ Deno.serve(async (req) => {
     // same attempt is repeated rather than letting the option fail every scan.
     let jsonMode = true;
 
-    for (let i = 0; i < attempts.length; i++) {
-      if (i > 0) await new Promise((r) => setTimeout(r, 1500));
+    for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
+      // Cycle through the models: a busy answer moves straight to the next.
+      const model = models[attempt % models.length];
 
       // Gemini's OpenAI-compatible endpoint, so the messages above (including
       // the image_url data URI) are sent as-is.
@@ -395,24 +442,48 @@ Deno.serve(async (req) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          model: attempts[i],
+          model,
           messages,
           ...(jsonMode ? { response_format: { type: "json_object" } } : {}),
         }),
       });
 
-      if (response.ok) break;
+      if (response.ok) {
+        // Answering again: new scans may start on it.
+        busySince.delete(model);
+        break;
+      }
 
       errorText = await response.text();
       console.error(
-        "[SERVER] AI service error:", attempts[i], response.status, summarizeProviderError(errorText),
+        "[SERVER] AI service error:", model, response.status, summarizeProviderError(errorText),
       );
       if (response.status === 400 && jsonMode && !errorText.includes("API_KEY_INVALID")) {
         jsonMode = false;
-        i--;
+        attempt--;
         continue;
       }
       if (!transient.has(response.status)) break;
+      busySince.set(model, Date.now());
+      if (attempt === MAX_ATTEMPTS - 1) break;
+
+      // Moving to another model needs only a short pause; coming back round to
+      // the first one after every model was busy waits longer each round --
+      // about 2.5s, then 5s. Jitter keeps a burst of operators from retrying
+      // in lockstep, and a Retry-After from Google wins when it asks for
+      // longer, up to 8s. Worst case, six busy answers take ~30s in all.
+      const round = Math.floor(attempt / models.length);
+      const nextStartsRound = (attempt + 1) % models.length === 0;
+      const base = nextStartsRound ? [2500, 5000][Math.min(round, 1)] : 500;
+      let delay = base * (0.75 + Math.random() * 0.5);
+      const retryAfter = Number(response.headers.get("retry-after"));
+      if (Number.isFinite(retryAfter) && retryAfter > 0) {
+        delay = Math.max(delay, Math.min(retryAfter * 1000, 8000));
+      }
+      // Stop rather than start an attempt that would end past the budget; a
+      // vision call itself takes several seconds.
+      if (Date.now() - startedAt + delay > RETRY_BUDGET_MS - 8000) break;
+      await new Promise((r) => setTimeout(r, delay));
     }
 
     if (!response.ok) {

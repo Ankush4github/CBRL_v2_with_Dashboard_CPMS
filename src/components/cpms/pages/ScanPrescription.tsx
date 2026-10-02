@@ -204,7 +204,7 @@ const ScanPrescription = () => {
   const [referenceNumber, setReferenceNumber] = useState("");
   const [isProcessing, setIsProcessing] = useState(false);
   // Extraction has been running long enough to say why: with the busy-model
-  // retries in extract-prescription it can take 10-20s, and a bare spinner for
+  // retries in extract-prescription it can take up to ~30s, and a bare spinner for
   // that long looks like a hang.
   const [extractSlow, setExtractSlow] = useState(false);
   const [extractedData, setExtractedData] = useState<ExtractedData | null>(null);
