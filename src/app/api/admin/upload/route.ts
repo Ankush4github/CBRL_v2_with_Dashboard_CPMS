@@ -112,10 +112,30 @@ export async function POST(request: NextRequest) {
   // caller-chosen extension and be served back from this origin.
   // The dimensions come back with the buffer so callers that have to reserve
   // space for the image (the collaborator logos) do not have to measure it.
+  // Loading sharp is its own step. It is a native module, and on a server
+  // whose node_modules were installed for another platform (or with optional
+  // dependencies skipped) the import itself throws. That used to land in the
+  // decode catch below and tell the editor their perfectly good photo "could
+  // not be read as an image" -- every upload, every file. A failure here is
+  // the server's, and says so.
+  let sharp: typeof import('sharp').default;
+  try {
+    sharp = (await import('sharp')).default;
+  } catch (error) {
+    console.error('Image processing is unavailable: sharp failed to load.', error);
+    return NextResponse.json(
+      {
+        error:
+          'Image processing is not working on the server, so no upload can be accepted right now. ' +
+          'This is not a problem with your file — please tell the site administrator.',
+      },
+      { status: 500 }
+    );
+  }
+
   let output: Uint8Array;
   let dimensions: { width: number; height: number };
   try {
-    const { default: sharp } = await import('sharp');
     const { data, info } = await sharp(input)
       .rotate()
       .resize({ width: target.width, withoutEnlargement: true })
@@ -124,7 +144,9 @@ export async function POST(request: NextRequest) {
     output = data;
     dimensions = { width: info.width, height: info.height };
   } catch (error) {
-    console.warn('Rejected an upload sharp could not decode:', error);
+    // The declared type and size travel with the reason, so the log says
+    // which file it was without anyone having to reproduce the upload.
+    console.warn('Rejected an upload sharp could not decode:', file.type, file.size, error);
     return NextResponse.json(
       { error: 'That file could not be read as an image. Try a JPEG, PNG or WebP.' },
       { status: 422 }
