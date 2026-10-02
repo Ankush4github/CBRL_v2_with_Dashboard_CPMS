@@ -15,6 +15,7 @@ import path from 'node:path';
 import sharp from 'sharp';
 
 import { POST } from '../src/app/api/admin/upload/route.ts';
+import { createRequire } from 'node:module';
 import { slugify } from '../src/lib/content-types.ts';
 
 let pass = 0, fail = 0;
@@ -54,6 +55,21 @@ async function upload(
 
 const status = (o: Outcome) => ('body' in o ? o.status : 'accepted');
 const error = (o: Outcome) => ('body' in o ? o.body.error : '(accepted)');
+
+// --------------------------------------------------------- the editor check
+// The route repeats the proxy's sign-in check before reading the body. Outside
+// a request there is no session, so the real check refuses — which is what the
+// first case confirms. Every case after that stands in a signed-in editor, so
+// what they exercise is the validation behind the check.
+{
+  const refused = await upload({ file: 'x', destination: 'members' });
+  check('no session is refused before validation', status(refused), 401);
+}
+// Through require, not import: tsx loads src/ as CommonJS, and an ESM import
+// of the same file here gets a second module instance — reassigning that one
+// would leave the route's copy untouched.
+const { editorGuard } = createRequire(import.meta.url)('../src/lib/admin-guard.ts');
+editorGuard.refuse = async () => null;
 
 // ---------------------------------------------------------------- payloads
 const png = await sharp({ create: { width: 40, height: 40, channels: 3, background: '#c00' } }).png().toBuffer();

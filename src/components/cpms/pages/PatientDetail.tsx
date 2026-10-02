@@ -44,6 +44,7 @@ import { useToast } from "@/hooks/cpms/use-toast";
 import { describeError, describeInvokeError } from "@/lib/cpms/errors";
 import { useRole } from "@/hooks/cpms/useRole";
 import DocumentPreviewModal from "@/components/cpms/DocumentPreviewModal";
+import { toPreviewableBlob, type DocumentKind } from "@/lib/cpms/document-type";
 import { asset } from "@/lib/cpms/base-path";
 
 interface AdditionalDocument {
@@ -87,6 +88,8 @@ interface PreviewState {
   // Kept alongside the object URL so the viewer's Download button can save the
   // bytes already on the client instead of fetching them a second time.
   blob: Blob | null;
+  // From the file's bytes, never its name: see lib/cpms/document-type.
+  kind: DocumentKind | null;
 }
 
 interface AuditLogEntry {
@@ -123,6 +126,7 @@ const PatientDetail = () => {
     name: "",
     filePath: "",
     blob: null,
+    kind: null,
   });
   // The object URL currently handed to the preview. Mirrored in a ref so it can
   // be revoked from cleanup without depending on render timing.
@@ -294,7 +298,7 @@ const PatientDetail = () => {
 
     // Open immediately so the click has visible feedback while bytes arrive,
     // instead of appearing to do nothing until the download finishes.
-    setPreview({ isOpen: true, url: null, name: fileName, filePath, blob: null });
+    setPreview({ isOpen: true, url: null, name: fileName, filePath, blob: null, kind: null });
 
     try {
       const { data, error } = await supabase.storage
@@ -303,7 +307,18 @@ const PatientDetail = () => {
 
       if (error) throw error;
 
-      const objectUrl = URL.createObjectURL(data);
+      const previewable = await toPreviewableBlob(data);
+      if (!previewable) {
+        setPreview({ isOpen: false, url: null, name: "", filePath: "", blob: null, kind: null });
+        toast({
+          title: "Preview not available",
+          description: "This file is not a PDF, JPEG or PNG, so it can only be downloaded.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const objectUrl = URL.createObjectURL(previewable.blob);
       previewUrlRef.current = objectUrl;
 
       setPreview({
@@ -311,10 +326,11 @@ const PatientDetail = () => {
         url: objectUrl,
         name: fileName,
         filePath: filePath,
-        blob: data,
+        blob: previewable.blob,
+        kind: previewable.kind,
       });
     } catch (error: any) {
-      setPreview({ isOpen: false, url: null, name: "", filePath: "", blob: null });
+      setPreview({ isOpen: false, url: null, name: "", filePath: "", blob: null, kind: null });
       toast({
         title: "Failed to open document",
         description: describeError(error, 'Could not open that document. Please try again.'),
@@ -331,6 +347,7 @@ const PatientDetail = () => {
       name: "",
       filePath: "",
       blob: null,
+      kind: null,
     });
   };
 
@@ -1090,6 +1107,7 @@ const PatientDetail = () => {
         onClose={closePreview}
         documentUrl={preview.url}
         documentName={preview.name}
+        documentKind={preview.kind}
         onDownload={downloadPreviewDoc}
         isDownloading={downloadingDoc === preview.filePath}
       />

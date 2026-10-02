@@ -10,12 +10,18 @@ import {
 import { Button } from "@/components/cpms/ui/button";
 import { Download, ExternalLink, Loader2, X, Maximize2, Minimize2 } from "lucide-react";
 import ImagePreviewViewer from "@/components/cpms/ImagePreviewViewer";
+import type { DocumentKind } from "@/lib/cpms/document-type";
 
 interface DocumentPreviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   documentUrl: string | null;
   documentName: string;
+  /**
+   * What the bytes are, from toPreviewableBlob. This decides iframe or img —
+   * the name is the uploader's to choose, so it only labels the dialog.
+   */
+  documentKind: DocumentKind | null;
   onDownload: () => void;
   isDownloading?: boolean;
 }
@@ -25,6 +31,7 @@ const DocumentPreviewModal = ({
   onClose,
   documentUrl,
   documentName,
+  documentKind,
   onDownload,
   isDownloading = false,
 }: DocumentPreviewModalProps) => {
@@ -32,8 +39,8 @@ const DocumentPreviewModal = ({
   const [error, setError] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  const isPdf = documentName.toLowerCase().endsWith(".pdf");
-  const isImage = /\.(jpg|jpeg|png|gif|webp)$/i.test(documentName);
+  const isPdf = documentKind === "pdf";
+  const isImage = documentKind === "jpeg" || documentKind === "png";
   // Android Chrome has no built-in PDF viewer: the iframe below renders blank
   // there, and still fires onLoad, so no error ever showed. Browsers report
   // this as navigator.pdfViewerEnabled; where they don't say, assume inline

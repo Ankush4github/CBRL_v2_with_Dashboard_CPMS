@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 
+import { refuseUnlessEditor } from '@/lib/admin-guard';
 import { splitEntries } from '@/lib/bibtex-entries';
 
 export const runtime = 'nodejs';
@@ -10,7 +11,76 @@ export const dynamic = 'force-dynamic';
  * any registered DOI. Runs server-side, so the page's `connect-src` CSP does
  * not apply and the browser never talks to a third party.
  */
+
+/**
+ * Where doi.org's content negotiation hands off to. It answers with a redirect
+ * to the registration agency's metadata service, and for a DOI whose agency
+ * does not negotiate it redirects to the publisher's landing page instead —
+ * whatever URL the registrant set, which can be anything, including an
+ * address on the campus network. Following only these hosts keeps the server
+ * from fetching arbitrary URLs on an editor's behalf; a landing page would
+ * never have returned BibTeX anyway.
+ */
+const METADATA_HOSTS = new Set([
+  'doi.org',
+  'api.crossref.org',
+  'data.crossref.org',
+  'api.datacite.org',
+  'data.datacite.org',
+  'data.medra.org',
+]);
+const MAX_REDIRECTS = 5;
+/** BibTeX for one entry is a few KB; anything this size is not that. */
+const MAX_BODY_BYTES = 1024 * 1024;
+
+async function fetchMetadata(url: string): Promise<Response | 'refused'> {
+  let next = url;
+  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
+    const target = new URL(next);
+    if (target.protocol !== 'https:' || !METADATA_HOSTS.has(target.hostname)) return 'refused';
+
+    const response = await fetch(target, {
+      headers: {
+        Accept: 'application/x-bibtex; charset=utf-8',
+        'User-Agent': 'CBRL-Dashboard (https://cbrl.iitkgp.ac.in; mailto:contact.cbrl@smst.iitkgp.ac.in)',
+      },
+      redirect: 'manual',
+      signal: AbortSignal.timeout(12_000),
+    });
+
+    const location = response.headers.get('location');
+    if (response.status >= 300 && response.status < 400 && location) {
+      next = new URL(location, target).toString();
+      continue;
+    }
+    return response;
+  }
+  return 'refused';
+}
+
+/** The body as text, or null once it passes MAX_BODY_BYTES. */
+async function readCapped(response: Response): Promise<string | null> {
+  if (!response.body) return '';
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let total = 0;
+  for (;;) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    total += value.byteLength;
+    if (total > MAX_BODY_BYTES) {
+      await reader.cancel();
+      return null;
+    }
+    chunks.push(value);
+  }
+  return new TextDecoder().decode(Buffer.concat(chunks));
+}
+
 export async function POST(request: NextRequest) {
+  const refused = await refuseUnlessEditor();
+  if (refused) return refused;
+
   let doi = '';
   try {
     const body = await request.json();
@@ -27,19 +97,19 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  let response: Response;
+  let response: Response | 'refused';
   try {
-    response = await fetch(`https://doi.org/${encodeURI(doi)}`, {
-      headers: {
-        Accept: 'application/x-bibtex; charset=utf-8',
-        'User-Agent': 'CBRL-Dashboard (https://cbrl.iitkgp.ac.in; mailto:contact.cbrl@smst.iitkgp.ac.in)',
-      },
-      redirect: 'follow',
-      signal: AbortSignal.timeout(12_000),
-    });
+    response = await fetchMetadata(`https://doi.org/${encodeURI(doi)}`);
   } catch {
     return NextResponse.json(
       { error: 'Could not reach doi.org. Check the server’s internet access, or paste the BibTeX instead.' },
+      { status: 502 }
+    );
+  }
+
+  if (response === 'refused') {
+    return NextResponse.json(
+      { error: 'doi.org has no BibTeX for that DOI. Paste the BibTeX instead.' },
       { status: 502 }
     );
   }
@@ -54,8 +124,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const bibtex = await response.text();
-  const parsed = splitEntries(bibtex);
+  const bibtex = await readCapped(response);
+  const parsed = bibtex === null ? [] : splitEntries(bibtex);
   if (parsed.length === 0) {
     return NextResponse.json(
       { error: 'doi.org returned something that is not BibTeX.' },

@@ -1,11 +1,11 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { QueryClient, QueryClientProvider, useQueryClient } from "@tanstack/react-query";
 import { Toaster } from "@/components/cpms/ui/toaster";
 import { Toaster as Sonner } from "@/components/cpms/ui/sonner";
 import { TooltipProvider } from "@/components/cpms/ui/tooltip";
-import { AuthProvider } from "@/hooks/cpms/useAuth";
+import { AuthProvider, useAuth } from "@/hooks/cpms/useAuth";
 import { RoleProvider } from "@/hooks/cpms/useRole";
 import { useInactivityTimeout } from "@/hooks/cpms/useInactivityTimeout";
 
@@ -13,6 +13,25 @@ import { useInactivityTimeout } from "@/hooks/cpms/useInactivityTimeout";
 // <InactivityHandler /> was in the Vite App.tsx.
 const InactivityHandler = () => {
   useInactivityTimeout();
+  return null;
+};
+
+// Drops every cached query when the signed-in account changes or signs out.
+// The query keys are not per-user, so without this the next account to sign
+// in on the same tab would briefly be shown the previous one's patient data.
+const QueryCacheReset = () => {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+  const previousUserId = useRef<string | null>(null);
+  const userId = user?.id ?? null;
+
+  useEffect(() => {
+    if (previousUserId.current !== null && previousUserId.current !== userId) {
+      queryClient.clear();
+    }
+    previousUserId.current = userId;
+  }, [userId, queryClient]);
+
   return null;
 };
 
@@ -33,6 +52,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
         <AuthProvider>
           <RoleProvider>
             <InactivityHandler />
+            <QueryCacheReset />
             {children}
           </RoleProvider>
         </AuthProvider>

@@ -8,8 +8,15 @@
 //
 // Leading slashes are stripped first: a root-absolute "/attendance" would
 // resolve against the origin and send the user to the main CBRL site.
+//
+// An absolute URL in a payload would still win over the scope, so anything
+// that resolves off this origin falls back to the attendance screen: a click
+// on a CPMS notification only ever opens CPMS.
 function appUrl(path) {
-  return new URL(String(path).replace(/^\/+/, ''), self.registration.scope).href;
+  const scope = self.registration.scope;
+  const url = new URL(String(path).replace(/^\/+/, ''), scope);
+  if (url.origin !== new URL(scope).origin) return new URL('attendance', scope).href;
+  return url.href;
 }
 
 self.addEventListener('install', (e) => self.skipWaiting());

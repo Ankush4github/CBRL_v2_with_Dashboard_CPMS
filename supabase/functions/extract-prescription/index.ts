@@ -1,5 +1,4 @@
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.111.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -10,7 +9,8 @@ const corsHeaders = {
  * Note a failure for ops-alerts, which emails the masters when scanning keeps
  * failing (migration 20260927100000). Best-effort: a missing table or a
  * network blip must never turn into a failed scan, so errors are swallowed.
- * `detail` is a status code and the provider's message -- never patient data.
+ * `detail` is a status code and the provider's error code -- never its free
+ * text, and never patient data.
  *
  *   config   -- a required secret is missing; every scan fails
  *   model    -- Gemini refused the key or the model (401/403/404); every scan fails
@@ -19,6 +19,27 @@ const corsHeaders = {
  *   parse    -- the reply was not usable JSON
  *   error    -- anything else that reached the catch-all
  */
+/**
+ * What to keep of a provider error body: its machine-readable code and status
+ * (Gemini's OpenAI-compatible endpoint answers with {error: {code, status,
+ * message}} or a list of those), never the free-text message. That text goes
+ * to the function log, to service_failures and on to the masters' alert email,
+ * and a provider is free to echo parts of the request back in it.
+ */
+function summarizeProviderError(text: string): string {
+  try {
+    const parsed = JSON.parse(text);
+    const err = (Array.isArray(parsed) ? parsed[0] : parsed)?.error ?? {};
+    const parts = [err.code, err.status, err.type].filter(
+      (v) => typeof v === "string" || typeof v === "number",
+    );
+    if (parts.length) return parts.join(" ").slice(0, 80);
+  } catch {
+    // Not JSON: fall through to the length only.
+  }
+  return `unparsed body (${text.length} chars)`;
+}
+
 async function recordFailure(kind: string, detail: string): Promise<void> {
   try {
     const url = Deno.env.get("SUPABASE_URL");
@@ -115,7 +136,7 @@ Return ONLY valid JSON. No explanations or markdown.
   "confidence_score": 85
 }`;
 
-serve(async (req) => {
+Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -383,7 +404,9 @@ serve(async (req) => {
       if (response.ok) break;
 
       errorText = await response.text();
-      console.error("[SERVER] AI service error:", attempts[i], response.status, errorText);
+      console.error(
+        "[SERVER] AI service error:", attempts[i], response.status, summarizeProviderError(errorText),
+      );
       if (response.status === 400 && jsonMode && !errorText.includes("API_KEY_INVALID")) {
         jsonMode = false;
         i--;
@@ -398,7 +421,7 @@ serve(async (req) => {
         transient.has(status) ? "busy"
           : status === 401 || status === 403 || status === 404 || errorText.includes("API_KEY_INVALID") ? "model"
           : "rejected",
-        `${status} ${errorText.replace(/\s+/g, " ")}`,
+        `${status} ${summarizeProviderError(errorText)}`,
       );
 
       // Return generic error messages to client

@@ -14,6 +14,7 @@ import { describeError } from "@/lib/cpms/errors";
 import { useRole } from "@/hooks/cpms/useRole";
 import { useHospitals } from "@/hooks/cpms/useHospitals";
 import { asset } from "@/lib/cpms/base-path";
+import { escapeCSVField } from "@/lib/cpms/csv";
 
 interface Row {
   id: string;
@@ -117,7 +118,9 @@ const AttendanceReports = () => {
         r.check_in_distance_meters?.toFixed(0) || "",
         r.check_out_distance_meters?.toFixed(0) || "",
         (r.notes || "").replace(/\n/g, " "),
-      ].map((c) => `"${String(c).replace(/"/g, '""')}"`);
+      // Notes and names are typed by staff, so a cell starting with = + - @
+      // must not reach Excel as a formula.
+      ].map((c) => escapeCSVField(String(c)));
       lines.push(cells.join(","));
     });
     const blob = new Blob([lines.join("\n")], { type: "text/csv" });

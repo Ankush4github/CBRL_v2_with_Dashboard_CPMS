@@ -3,6 +3,7 @@ import path from 'node:path';
 
 import { NextResponse, type NextRequest } from 'next/server';
 
+import { refuseUnlessEditor } from '@/lib/admin-guard';
 import { slugify } from '@/lib/content-types';
 import { createClient } from '@/lib/supabase/server';
 
@@ -52,6 +53,11 @@ const isDestination = (value: unknown): value is DestinationKey =>
   typeof value === 'string' && Object.hasOwn(DESTINATIONS, value);
 
 export async function POST(request: NextRequest) {
+  // Before the body is read: buffering 12 MB and decoding it costs the server
+  // real work, and storage RLS only refuses a non-editor after that.
+  const refused = await refuseUnlessEditor();
+  if (refused) return refused;
+
   // `formData()` reads the whole body into memory, so refuse an oversized one
   // on its declared length before doing that rather than after.
   const declared = Number(request.headers.get('content-length') ?? 0);

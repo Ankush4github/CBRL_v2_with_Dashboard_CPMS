@@ -1,4 +1,4 @@
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient } from "npm:@supabase/supabase-js@2.111.0";
 import { PDFDocument, rgb, StandardFonts } from "https://esm.sh/pdf-lib@1.17.1";
 import fontkit from "https://esm.sh/@pdf-lib/fontkit@1.1.1";
 import { CBRL_LOGO_PNG_BASE64 } from "./cbrl-logo.ts";
@@ -196,10 +196,9 @@ Deno.serve(async (req) => {
     // then reported to the caller. Naming the failure here keeps the response
     // generic and puts the real reason in the logs.
     const supabaseUrl = Deno.env.get("SUPABASE_URL");
-    const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
     const supabaseAnonKey = Deno.env.get("SUPABASE_ANON_KEY");
 
-    if (!supabaseUrl || !supabaseServiceKey || !supabaseAnonKey) {
+    if (!supabaseUrl || !supabaseAnonKey) {
       console.error("[SERVER] Missing Supabase configuration");
       return new Response(JSON.stringify({ error: "Service configuration error" }), {
         status: 500,
@@ -251,9 +250,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Use service role client for accessing storage
-    const supabaseAdmin = createClient(supabaseUrl, supabaseServiceKey);
-
+    // Everything below runs as the caller — the record and its files alike.
+    // Files used to be fetched with the service role, which ignores storage
+    // RLS: a record saved before create_patient_record checked file ownership
+    // could point at another hospital's document, and the export would have
+    // embedded it. The caller's own "read at assigned hospitals" policy is
+    // exactly the right test, so there is no service-role client at all.
+    //
     // Fetch patient record (using user's client to respect RLS)
     const { data: patient, error: patientError } = await supabaseUser
       .from("patient_records")
@@ -552,7 +555,7 @@ Deno.serve(async (req) => {
     // Add prescription image if exists
     if (patient.prescription_image_url) {
       console.log("Adding prescription image:", patient.prescription_image_url);
-      const imageBytes = await fetchImageAsBytes(supabaseAdmin, patient.prescription_image_url);
+      const imageBytes = await fetchImageAsBytes(supabaseUser, patient.prescription_image_url);
 
       if (imageBytes) {
         try {
@@ -595,7 +598,7 @@ Deno.serve(async (req) => {
       const docLabel = getDocTypeLabel(doc.docType);
 
       console.log("Adding additional document:", docLabel);
-      const docBytes = await fetchImageAsBytes(supabaseAdmin, doc.url);
+      const docBytes = await fetchImageAsBytes(supabaseUser, doc.url);
 
       if (!docBytes) continue;
 

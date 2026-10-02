@@ -20,5 +20,10 @@ export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_PUBLISHABL
     storage: typeof window !== 'undefined' ? window.localStorage : undefined,
     persistSession: true,
     autoRefreshToken: true,
+    // PKCE rather than supabase-js's default implicit flow: Google sign-in
+    // comes back with a one-time ?code= that is useless without the verifier
+    // this browser stored when sign-in began, instead of the access and
+    // refresh tokens themselves riding in the URL fragment of /cpms/dashboard.
+    flowType: 'pkce',
   },
 });

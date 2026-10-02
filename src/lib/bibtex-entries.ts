@@ -307,7 +307,9 @@ export function parseEntryPayload(
   let key = String(body.key ?? '').trim();
   // One entry in the file has no citation key at all, so its parsed "key" is a
   // stray `doi = …` fragment. Rather than write that back, mint a real one.
-  if (!key || /[,{}=]/.test(key)) {
+  // Whitespace and `@` are refused too: a key carrying a newline and `@misc{`
+  // would end this entry early and start another in the .bib file.
+  if (!key || /[,{}=@\s]/.test(key)) {
     key = makeCitationKey(source, author, year, title);
   }
 

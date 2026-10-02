@@ -512,9 +512,12 @@ Deno.serve(async (req) => {
 
     // Checked before anything else runs. An unset CRON_SECRET closes the
     // function rather than opening it — this endpoint holds service role.
-    const provided = req.headers.get("x-cron-secret") ??
-      req.headers.get("authorization")?.replace(/^Bearer\s+/i, "") ??
-      "";
+    // x-cron-secret only, as ops-alerts and sweep-orphan-uploads take it.
+    // Accepting it as a Bearer token too invited callers to put the secret
+    // in Authorization, which gateways and tooling are far likelier to log.
+    // The pg_cron caller (private.invoke_attendance_notifications) sends
+    // x-cron-secret.
+    const provided = req.headers.get("x-cron-secret") ?? "";
     if (!config.cronSecret || !secretsMatch(provided, config.cronSecret)) {
       if (!config.cronSecret) {
         console.error(
@@ -553,6 +556,8 @@ Deno.serve(async (req) => {
     return json(await dispatch(config, admin, event));
   } catch (e: any) {
     console.error("[attendance-notifications] Unhandled error:", e);
-    return json({ error: e?.message ?? "error" }, 500);
+    // The real reason is in the log line above; the response, which lands
+    // in net._http_response, does not need Postgres's wording.
+    return json({ error: "Internal error" }, 500);
   }
 });
