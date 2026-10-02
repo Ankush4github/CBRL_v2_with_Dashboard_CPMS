@@ -14,6 +14,7 @@ import {
   CONTENT_COLLECTIONS,
   MEMBER_GROUPS,
   PROFILE_KEYS,
+  PROFILES_WIRE_KEY,
   slugify,
   type AboutContent,
   type AboutEntry,
@@ -240,7 +241,9 @@ function validateMembers(input: unknown, c: Ctx): MembersContent {
       }
       seen.add(id);
 
-      const profilesInput = asRecord(r.profiles);
+      // The dashboard sends the links as `academicLinks` (PROFILES_WIRE_KEY);
+      // older clients and direct callers may still send `profiles`.
+      const profilesInput = asRecord(r[PROFILES_WIRE_KEY] ?? r.profiles);
       const profiles: Record<string, string> = {};
       for (const key of PROFILE_KEYS) {
         const url = c.link(profilesInput[key], `${p}.profiles.${key}`);

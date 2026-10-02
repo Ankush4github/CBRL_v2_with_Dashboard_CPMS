@@ -53,6 +53,29 @@ export const MEMBER_GROUP_LABELS: Record<MemberGroup, string> = {
 export const PROFILE_KEYS = ['googleScholar', 'orcid', 'linkedin', 'researchgate', 'github'] as const;
 export type ProfileKey = (typeof PROFILE_KEYS)[number];
 
+/**
+ * What a member's `profiles` object is called on its way to the save route.
+ *
+ * CIC's Apache in front of the site runs a firewall (ModSecurity) that refuses,
+ * with a bare 403, any request whose JSON carries a URL under a key containing
+ * "profile" below the top level -- json.students[0].profiles.linkedin, say. So
+ * no members save with a single academic link could reach the app. The links
+ * travel under this name instead and the save route maps them back, so stored
+ * content, the public site and the editor all keep calling them `profiles`.
+ */
+export const PROFILES_WIRE_KEY = 'academicLinks';
+
+/** The members document as the dashboard sends it: `profiles` renamed. */
+export function membersToWire(members: MembersContent): unknown {
+  const out: Record<string, unknown[]> = {};
+  for (const [group, list] of Object.entries(members)) {
+    out[group] = (list as Member[]).map(({ profiles, ...rest }) =>
+      profiles ? { ...rest, [PROFILES_WIRE_KEY]: profiles } : rest
+    );
+  }
+  return out;
+}
+
 export interface Member {
   /** Stable slug — also the `#anchor` the members page links to. */
   id: string;

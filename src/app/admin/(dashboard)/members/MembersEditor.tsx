@@ -11,6 +11,7 @@ import {
   MEMBER_GROUPS,
   MEMBER_GROUP_LABELS,
   PROFILE_KEYS,
+  membersToWire,
   slugify,
   type Member,
   type MemberGroup,
@@ -182,7 +183,12 @@ function MemberForm({
 }
 
 export default function MembersEditor({ initial }: { initial: MembersContent }) {
-  const editor = useContentEditor<MembersContent>(initial, '/api/admin/content/members');
+  // membersToWire: CIC's firewall refuses links under a "profiles" key.
+  const editor = useContentEditor<MembersContent>(
+    initial,
+    '/api/admin/content/members',
+    membersToWire
+  );
   const { draft, setDraft } = editor;
 
   const [group, setGroup] = useState<MemberGroup>('faculty');
