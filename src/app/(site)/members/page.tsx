@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { Mail, Phone, UserRound } from 'lucide-react';
+import { ArrowRight, Mail, Phone, UserRound } from 'lucide-react';
 
 import PageHeader from '@/components/PageHeader';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -277,6 +277,11 @@ function StaffCard({ member }: { member: Member }) {
 
           <div className="mt-auto pt-5">
             <Separator className="mb-3" />
+            {/* The same academic-profile links as the postdoc and scholar
+                cards; ProfileLinks renders nothing when none are set. */}
+            {member.profiles && (
+              <ProfileLinks profiles={member.profiles} className="mb-3" />
+            )}
             <a
               href={`mailto:${member.email.trim()}`}
               className="inline-flex items-center gap-1.5 break-all text-sm text-muted-foreground underline-offset-4 transition-colors hover:text-foreground hover:underline"
@@ -284,6 +289,14 @@ function StaffCard({ member }: { member: Member }) {
               <Mail className="h-3.5 w-3.5 shrink-0" aria-hidden="true" />
               {member.email.trim()}
             </a>
+            {/* The same call to action the postdoc and scholar cards carry. */}
+            <Link
+              href={profilePath(member, 'staff')}
+              className="mt-3 flex items-center gap-1.5 text-sm font-medium text-primary underline-offset-4 hover:underline"
+            >
+              View full profile of {member.name.trim()}
+              <ArrowRight className="h-3.5 w-3.5" aria-hidden="true" />
+            </Link>
           </div>
         </div>
       </div>

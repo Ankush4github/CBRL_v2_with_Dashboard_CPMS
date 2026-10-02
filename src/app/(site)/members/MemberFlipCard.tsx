@@ -3,29 +3,14 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
-import {
-  ExternalLink,
-  Globe,
-  GraduationCap,
-  Linkedin,
-  Mail,
-  ArrowRight,
-  RefreshCw,
-  UserRound,
-} from 'lucide-react';
+import { ArrowRight, ExternalLink, Mail, RefreshCw, UserRound } from 'lucide-react';
 
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { cn } from '@/lib/utils';
 import type { Member } from '@/lib/content-types';
 import { memberImage, memberImageAlt } from '@/lib/member-profile';
-
-const PROFILE_META: Record<string, { label: string; Icon: typeof Globe }> = {
-  googleScholar: { label: 'Google Scholar', Icon: GraduationCap },
-  orcid: { label: 'ORCID', Icon: Globe },
-  linkedin: { label: 'LinkedIn', Icon: Linkedin },
-  researchgate: { label: 'ResearchGate', Icon: ExternalLink },
-};
+import { PROFILE_META } from './member-links';
 
 function formatDate(dateString: string) {
   return new Date(dateString).toLocaleDateString('en-US', {

@@ -26,7 +26,7 @@ const GROUP_LABELS: Record<MemberGroup, string> = {
   faculty: 'Faculty',
   postdocs: 'Postdoctoral Fellow',
   students: 'Research Scholar',
-  staff: 'Lab Staff',
+  staff: 'Lab Staff / Project Fellow',
   alumni: 'Alumni',
 };
 

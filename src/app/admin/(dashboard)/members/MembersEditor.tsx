@@ -26,6 +26,7 @@ const PROFILE_LABELS: Record<(typeof PROFILE_KEYS)[number], string> = {
   orcid: 'ORCID',
   linkedin: 'LinkedIn',
   researchgate: 'ResearchGate',
+  github: 'GitHub',
 };
 
 /** Alumni photos live in a different folder from current members. */

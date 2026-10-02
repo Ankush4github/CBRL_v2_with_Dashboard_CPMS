@@ -50,7 +50,7 @@ export const MEMBER_GROUP_LABELS: Record<MemberGroup, string> = {
 };
 
 /** Profile links rendered as icons on the member cards. */
-export const PROFILE_KEYS = ['googleScholar', 'orcid', 'linkedin', 'researchgate'] as const;
+export const PROFILE_KEYS = ['googleScholar', 'orcid', 'linkedin', 'researchgate', 'github'] as const;
 export type ProfileKey = (typeof PROFILE_KEYS)[number];
 
 export interface Member {

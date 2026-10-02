@@ -3,16 +3,22 @@
  * (page.tsx) and each member's own profile page ([id]/page.tsx).
  */
 
-import { ExternalLink, Globe, GraduationCap, Linkedin, Mail } from 'lucide-react';
+import { ExternalLink, Github, Globe, GraduationCap, Linkedin, Mail } from 'lucide-react';
 
 import { cn } from '@/lib/utils';
 import type { Member } from '@/lib/content-types';
 
-const PROFILE_META: Record<string, { label: string; Icon: typeof Globe }> = {
+/**
+ * Label and icon for each academic-profile key, in PROFILE_KEYS order. The
+ * one copy for every card and the profile page; the dashboard's field labels
+ * are in MembersEditor.tsx.
+ */
+export const PROFILE_META: Record<string, { label: string; Icon: typeof Globe }> = {
   googleScholar: { label: 'Google Scholar', Icon: GraduationCap },
   orcid: { label: 'ORCID', Icon: Globe },
   linkedin: { label: 'LinkedIn', Icon: Linkedin },
   researchgate: { label: 'ResearchGate', Icon: ExternalLink },
+  github: { label: 'GitHub', Icon: Github },
 };
 
 export function ProfileLinks({
