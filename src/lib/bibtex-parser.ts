@@ -48,6 +48,16 @@ function cleanValue(value: string): string {
     .trim();
 }
 
+/**
+ * Exports of articles still "ahead of print" (ACS, PLOS via Crossref) fill
+ * fields they do not have yet with `{null}` or `{0}`, which would otherwise
+ * render as "Vol. 0, No. 0, pp. null".
+ */
+function isPlaceholder(name: string, value: string): boolean {
+  if (/^(null|undefined|nan|none|n\/?a)$/i.test(value)) return true;
+  return ['volume', 'number', 'pages'].includes(name.toLowerCase()) && /^0+$/.test(value);
+}
+
 export function parseBibTeX(bibtex: string): Publication[] {
   const publications: Publication[] = [];
 
@@ -60,7 +70,7 @@ export function parseBibTeX(bibtex: string): Publication[] {
     const fields: Record<string, string> = {};
     for (const field of entry.fields) {
       const value = cleanValue(field.value);
-      if (value) fields[field.name] = value;
+      if (value && !isPlaceholder(field.name, value)) fields[field.name] = value;
     }
 
     // Create publication object with all possible fields
