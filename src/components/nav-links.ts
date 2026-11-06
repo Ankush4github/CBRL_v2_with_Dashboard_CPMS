@@ -1,4 +1,4 @@
-import { Camera, FlaskConical, Microscope, UserRound } from 'lucide-react'
+import { Camera, UserRound } from 'lucide-react'
 
 /**
  * Shared by the desktop nav and the lazily-loaded mobile menu, so the two can
@@ -6,36 +6,28 @@ import { Camera, FlaskConical, Microscope, UserRound } from 'lucide-react'
  */
 export const aboutItems = [
   {
-    name: 'About The PI',
+    name: 'About the PI',
     href: '/about-the-pi',
     icon: UserRound,
-    description: 'Learn about our PI Prof. Koel Chaudhury',
-  },
-  {
-    name: 'Research',
-    href: '/research',
-    icon: Microscope,
-    description: 'Explore our research initiatives',
-  },
-  {
-    name: 'Projects',
-    href: '/projects',
-    icon: FlaskConical,
-    description: 'Explore our projects',
+    description: 'Prof. Koel Chaudhury, Principal Investigator',
   },
   {
     name: 'Gallery',
     href: '/gallery',
     icon: Camera,
-    description: 'View lab activities and events',
+    description: 'Lab activities, conferences and events',
   },
 ]
 
 export const primaryLinks = [{ name: 'Home', href: '/' }]
 
+/* After the About menu, in the CBRL_V2 order: Research and Projects sit in
+   the bar rather than under About. */
 export const secondaryLinks = [
-  { name: 'Publications', href: '/publications' },
+  { name: 'Research', href: '/research' },
   { name: 'Facilities', href: '/facilities' },
+  { name: 'Projects', href: '/projects' },
+  { name: 'Publications', href: '/publications' },
   { name: 'Members', href: '/members' },
   { name: 'Contact', href: '/contact' },
 ]

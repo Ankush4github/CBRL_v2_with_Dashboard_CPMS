@@ -27,6 +27,7 @@ import {
   type MetricsContent,
   type ProjectsContent,
   type ResearchContent,
+  COMPLETED_PROJECTS_FALLBACK,
 } from './content-types';
 import { SUPABASE_URL } from './supabase/config';
 
@@ -323,6 +324,10 @@ function validateProjects(input: unknown, c: Ctx): ProjectsContent {
   return {
     ongoing,
     completedPdf: c.assetPath(root.completedPdf, 'completedPdf'),
+    completedCount: c.int(root.completedCount ?? COMPLETED_PROJECTS_FALLBACK, 'completedCount', {
+      min: 0,
+      max: 1000,
+    }),
     sponsors,
   };
 }

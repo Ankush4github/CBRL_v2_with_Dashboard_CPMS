@@ -1,23 +1,31 @@
 import Image from 'next/image';
 import { jsonLd } from '@/lib/json-ld';
 import { organizationRef } from '@/lib/site-identity';
-import { MapPin, Phone, Mail } from 'lucide-react';
+import { ArrowUpRight, ExternalLink, MapPin, Phone, Mail } from 'lucide-react';
 
-import { getAbout, readPublicationsFile } from '@/lib/content';
+import { getAbout, getMembers, readPublicationsFile } from '@/lib/content';
 import { splitEntries } from '@/lib/bibtex-entries';
 import { fillAboutCounts } from '@/lib/content-types';
 import { absoluteAsset } from '@/lib/site-url';
 import { PI_PERSON_ID } from '@/lib/member-profile';
 import { Button } from '@/components/ui/button';
+import { PROFILE_META } from '../members/member-links';
 
 /**
  * Everything on this page comes from the `about` collection, edited under
  * /admin/about — except the publication count, which is derived from the
  * BibTeX record so it cannot drift from the publications page. Copy written in
  * the dashboard can ask for that figure with the `{publications}` token.
+ *
+ * The academic-profile links are the PI's entry in the members collection
+ * (Faculty, under /admin/members), the same links the Team page shows, so
+ * they are edited in one place.
  */
 export default async function About() {
-  const [about, bibtex] = await Promise.all([getAbout(), readPublicationsFile()]);
+  const [about, bibtex, members] = await Promise.all([getAbout(), readPublicationsFile(), getMembers()]);
+  const academicProfiles = Object.entries(members.faculty?.[0]?.profiles ?? {}).filter(
+    (entry): entry is [string, string] => Boolean(entry[1])
+  );
   const publicationsCount = splitEntries(bibtex).length;
 
   /** Resolve `{publications}` in a piece of editor-written copy. */
@@ -87,8 +95,8 @@ export default async function About() {
         dangerouslySetInnerHTML={{ __html: jsonLd(personSchema) }}
       />
 
-      {/* Hero Section with Background Image */}
-      <section className="relative flex min-h-[40vh] items-end overflow-hidden sm:min-h-[45vh]">
+      {/* Hero: the photograph as a backdrop, the identity on a glass card */}
+      <section className="relative overflow-hidden">
         <div className="absolute inset-0 z-0">
           <Image
             src={hero.image}
@@ -98,130 +106,144 @@ export default async function About() {
             className="object-cover"
             sizes="100vw"
           />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/85 via-black/70 to-black/50" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[hsl(211_62%_8%/0.88)] via-[hsl(211_62%_8%/0.65)] to-[hsl(211_62%_8%/0.25)]" />
         </div>
 
-        <div className="container relative z-10 mx-auto px-4 py-16 sm:px-6 sm:py-20">
+        <div className="container relative z-10 mx-auto px-4 py-12 sm:px-6 sm:py-16 lg:py-20">
           <div className="max-w-3xl">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-white/80">
-              {hero.eyebrow}
-            </p>
-            <h1 className="mt-4 text-3xl font-bold tracking-tight text-white sm:text-4xl lg:text-5xl">
-              {hero.title}
-            </h1>
-            <p className="mt-4 max-w-2xl leading-relaxed text-white/90">{hero.lead}</p>
+            <p className="eyebrow text-[hsl(199_90%_75%)]">{hero.eyebrow}</p>
+            <h1 className="display-1 mt-3 text-balance text-white">{hero.title}</h1>
+            <p className="mt-4 max-w-2xl text-base leading-relaxed text-white/85 sm:text-lg">{hero.lead}</p>
           </div>
         </div>
       </section>
 
-      <div className="container mx-auto px-4 py-16 sm:px-6 sm:py-20">
-        <div className="mx-auto max-w-5xl">
-          {/* Profile: editorial split */}
-          <section className="grid gap-10 lg:grid-cols-12">
-            {/* Portrait with hairline frame */}
-            <div className="lg:col-span-5">
-              <div className="relative aspect-[4/5] w-full overflow-hidden rounded-lg border bg-muted/40 p-2">
-                <div className="relative h-full w-full overflow-hidden rounded-md">
-                  <Image
-                    src={profile.image}
-                    alt={profile.imageAlt}
-                    fill
-                    className="object-cover"
-                    sizes="(max-width: 1024px) 100vw, 400px"
-                    priority
-                  />
+      <div className="container mx-auto px-4 py-10 sm:px-6 sm:py-12">
+        <div className="mx-auto max-w-6xl space-y-6">
+          {/* Profile */}
+          <section className="panel overflow-hidden" aria-labelledby="pi-name">
+            <div className="grid lg:grid-cols-12">
+              <div className="relative aspect-[4/5] bg-muted sm:aspect-[16/11] lg:col-span-5 lg:aspect-[4/5]">
+                <Image
+                  src={profile.image}
+                  alt={profile.imageAlt}
+                  fill
+                  className="object-cover object-[50%_70%]"
+                  sizes="(max-width: 1024px) 100vw, 480px"
+                  priority
+                />
+              </div>
+
+              <div className="flex flex-col p-6 sm:p-10 lg:col-span-7">
+                <p className="eyebrow">{profile.eyebrow}</p>
+                <h2 id="pi-name" className="display-2 mt-3">{profile.name}</h2>
+                <div className="mt-3 space-y-1.5 text-muted-foreground">
+                  <p className="font-medium text-foreground">{profile.position}</p>
+                  <p className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4 shrink-0 text-primary" aria-hidden="true" />
+                    {profile.institution}
+                  </p>
                 </div>
-              </div>
-            </div>
 
-            {/* Identity + bio */}
-            <div className="lg:col-span-7">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-                {profile.eyebrow}
-              </p>
-              <h2 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">
-                {profile.name}
-              </h2>
-              <div className="mt-4 space-y-1.5 text-muted-foreground">
-                <p className="font-medium text-foreground">{profile.position}</p>
-                <p className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 shrink-0 text-primary" />
-                  {profile.institution}
-                </p>
-              </div>
-
-              {/* Quick contact */}
-              <div className="mt-6 flex flex-wrap gap-3">
-                <Button asChild>
-                  <a href={`mailto:${profile.email}`}>
-                    <Mail className="h-4 w-4" />
-                    Email
-                  </a>
-                </Button>
-                {profile.phone && (
-                  <Button asChild variant="outline">
-                    <a href={telHref}>
-                      <Phone className="h-4 w-4" />
-                      Call
+                <div className="mt-6 flex flex-wrap gap-3">
+                  <Button asChild className="rounded-full">
+                    <a href={`mailto:${profile.email}`}>
+                      <Mail className="h-4 w-4" aria-hidden="true" />
+                      Email
                     </a>
                   </Button>
-                )}
-              </div>
+                  {profile.phone && (
+                    <Button asChild variant="outline" className="rounded-full">
+                      <a href={telHref}>
+                        <Phone className="h-4 w-4" aria-hidden="true" />
+                        Call
+                      </a>
+                    </Button>
+                  )}
+                </div>
 
-              {/* Stats strip: hairline-divided */}
-              <div className="mt-8 grid grid-cols-2 divide-x divide-y border-t sm:grid-cols-4 sm:divide-y-0">
-                {stats.map((stat) => (
-                  <div key={stat.label} className="px-4 py-4 first:pl-0">
-                    <div className="text-2xl font-semibold tabular-nums sm:text-3xl">
-                      {stat.value}
-                    </div>
-                    <div className="mt-1 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                      {stat.label}
-                    </div>
+                {stats.length > 0 && (
+                  <dl className="mt-8 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border bg-border sm:grid-cols-4">
+                    {stats.map((stat) => (
+                      <div key={stat.label} className="bg-card p-4">
+                        <dt className="meta">{stat.label}</dt>
+                        <dd className="mt-1.5 text-2xl font-semibold tabular-nums tracking-tight sm:text-3xl">
+                          {stat.value}
+                        </dd>
+                      </div>
+                    ))}
+                  </dl>
+                )}
+
+                {academicProfiles.length > 0 && (
+                  <div className="mt-8">
+                    <h3 className="eyebrow-plain">Academic profiles</h3>
+                    <ul className="mt-3 grid gap-2 sm:grid-cols-2">
+                      {academicProfiles.map(([key, url]) => {
+                        const { label, Icon } = PROFILE_META[key] ?? { label: key, Icon: ExternalLink };
+                        return (
+                          <li key={key}>
+                            <a
+                              href={url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="pressable group flex min-h-[48px] items-center gap-3 rounded-2xl border bg-background/60 px-4 py-2.5 text-sm font-medium text-foreground transition-colors hover:border-primary/40 hover:text-primary"
+                            >
+                              <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-accent text-primary">
+                                <Icon className="h-4 w-4" aria-hidden="true" />
+                              </span>
+                              <span className="flex-1">{label}</span>
+                              <ArrowUpRight
+                                className="h-4 w-4 text-muted-foreground transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5 group-hover:text-primary"
+                                aria-hidden="true"
+                              />
+                              <span className="sr-only">(opens in a new tab)</span>
+                            </a>
+                          </li>
+                        );
+                      })}
+                    </ul>
                   </div>
-                ))}
+                )}
               </div>
             </div>
           </section>
 
           {/* Biography */}
-          <section className="mt-16 border-t pt-12">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-              {biography.eyebrow}
-            </p>
-            <h2 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">
-              {biography.heading}
-            </h2>
-            <div className="mt-6 space-y-5 leading-relaxed text-muted-foreground">
-              {biography.paragraphs.map((paragraph, index) => (
-                <p key={index} className="text-justify">
-                  {fill(paragraph)}
-                </p>
-              ))}
+          <section className="panel p-6 sm:p-10" aria-labelledby="pi-bio">
+            <div className="grid gap-6 lg:grid-cols-12">
+              <div className="lg:col-span-4">
+                <p className="eyebrow">{biography.eyebrow}</p>
+                <h2 id="pi-bio" className="display-2 mt-3">{biography.heading}</h2>
+              </div>
+              <div className="space-y-4 text-[15.5px] leading-[1.75] text-foreground/85 lg:col-span-8">
+                {biography.paragraphs.map((paragraph, index) => (
+                  <p key={index}>{fill(paragraph)}</p>
+                ))}
+              </div>
             </div>
           </section>
 
-          {/* Awards & Research Impact: left-rule timeline lists */}
-          <div className="mt-16 grid gap-12 border-t pt-12 md:grid-cols-2">
+          {/* Awards & research impact */}
+          <div className="grid gap-6 md:grid-cols-2">
             {([['awards', awards], ['impact', impact]] as const).map(([key, section]) => (
-              <section key={key}>
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-                  {section.eyebrow}
-                </p>
-                <h2 className="mt-3 text-2xl font-semibold tracking-tight">{section.heading}</h2>
-                <ul className="mt-6 space-y-6 border-l-2 border-primary/30 pl-6">
+              <section key={key} className="panel p-6 sm:p-8" aria-labelledby={`pi-${key}`}>
+                <p className="eyebrow">{section.eyebrow}</p>
+                <h2 id={`pi-${key}`} className="mt-3 text-xl font-semibold tracking-tight sm:text-2xl">
+                  {section.heading}
+                </h2>
+                <ul className="mt-5 space-y-4">
                   {section.items.map((item, index) => (
-                    <li key={index} className="relative">
-                      <span
-                        className="absolute -left-[1.72rem] top-1.5 h-1.5 w-1.5 rounded-full bg-primary/50"
-                        aria-hidden="true"
-                      />
-                      <p className="font-medium text-foreground">{fill(item.title)}</p>
-                      {item.description && (
-                        <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
-                          {fill(item.description)}
-                        </p>
-                      )}
+                    <li key={index} className="flex gap-3">
+                      <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[hsl(var(--coral))]" aria-hidden="true" />
+                      <div>
+                        <p className="font-medium leading-snug text-foreground">{fill(item.title)}</p>
+                        {item.description && (
+                          <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                            {fill(item.description)}
+                          </p>
+                        )}
+                      </div>
                     </li>
                   ))}
                 </ul>
@@ -229,56 +251,44 @@ export default async function About() {
             ))}
           </div>
 
-          {/* Contact: definition-list rows */}
-          <section className="mt-16 border-t pt-12">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-              {contact.eyebrow}
-            </p>
-            <h2 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">
-              {contact.heading}
-            </h2>
-            <dl className="mt-8 divide-y border-t">
-              <div className="grid grid-cols-1 gap-1 py-4 sm:grid-cols-4">
-                <dt className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                  Email
-                </dt>
-                <dd className="sm:col-span-3">
-                  <a
-                    href={`mailto:${profile.email}`}
-                    className="break-all text-primary underline-offset-4 hover:underline"
-                  >
-                    {profile.email}
-                  </a>
-                </dd>
+          {/* Contact */}
+          <section className="panel p-6 sm:p-8" aria-labelledby="pi-contact">
+            <div className="grid gap-6 lg:grid-cols-12">
+              <div className="lg:col-span-4">
+                <p className="eyebrow">{contact.eyebrow}</p>
+                <h2 id="pi-contact" className="mt-3 text-xl font-semibold tracking-tight sm:text-2xl">
+                  {contact.heading}
+                </h2>
               </div>
-              {profile.phone && (
-                <div className="grid grid-cols-1 gap-1 py-4 sm:grid-cols-4">
-                  <dt className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                    Phone
-                  </dt>
-                  <dd className="sm:col-span-3">
-                    <a
-                      href={telHref}
-                      className="text-foreground underline-offset-4 hover:underline"
-                    >
-                      {profile.phone}
+              <dl className="grid gap-5 sm:grid-cols-3 lg:col-span-8">
+                <div>
+                  <dt className="meta">Email</dt>
+                  <dd className="mt-1.5">
+                    <a href={`mailto:${profile.email}`} className="break-all text-primary underline-offset-4 hover:underline">
+                      {profile.email}
                     </a>
                   </dd>
                 </div>
-              )}
-              {contact.office && (
-                <div className="grid grid-cols-1 gap-1 py-4 sm:grid-cols-4">
-                  <dt className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
-                    Office
-                  </dt>
-                  {/* The address is one textarea in the dashboard, so its line
-                      breaks are what separates the lines here. */}
-                  <dd className="whitespace-pre-line text-muted-foreground sm:col-span-3">
-                    {contact.office}
-                  </dd>
-                </div>
-              )}
-            </dl>
+                {profile.phone && (
+                  <div>
+                    <dt className="meta">Phone</dt>
+                    <dd className="mt-1.5">
+                      <a href={telHref} className="text-foreground underline-offset-4 hover:underline">
+                        {profile.phone}
+                      </a>
+                    </dd>
+                  </div>
+                )}
+                {contact.office && (
+                  <div>
+                    <dt className="meta">Office</dt>
+                    {/* The address is one textarea in the dashboard, so its line
+                        breaks are what separates the lines here. */}
+                    <dd className="mt-1.5 whitespace-pre-line text-sm text-muted-foreground">{contact.office}</dd>
+                  </div>
+                )}
+              </dl>
+            </div>
           </section>
         </div>
       </div>

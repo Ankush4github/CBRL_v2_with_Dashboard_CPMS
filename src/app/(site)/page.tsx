@@ -4,110 +4,24 @@ import { HOME_URL, SITE_TITLE, websiteRef } from '@/lib/site-identity';
 import Link from 'next/link';
 import {
   ArrowRight,
-  BookOpen,
-  ClipboardList,
-  Coins,
   FileText,
+  GraduationCap,
+  Handshake,
+  Mail,
+  MapPin,
+  Microscope,
+  Phone,
   Puzzle,
-  ShieldCheck,
 } from 'lucide-react';
 import HeroCarousel from '@/components/HeroCarousel';
 import { Button } from '@/components/ui/button';
+import MolecularLattice from '@/components/science/MolecularLattice';
+import CountUp from '@/components/site/CountUp';
+import SectionHeading from '@/components/site/SectionHeading';
 import { splitEntries } from '@/lib/bibtex-entries';
 import { getHome, readPublicationsFile } from '@/lib/content';
 import type { Collaborator } from '@/lib/content-types';
-
-function SectionHeading({
-  number,
-  eyebrow,
-  title,
-}: {
-  number: string;
-  eyebrow: string;
-  title: string;
-}) {
-  return (
-    <div>
-      <div className="flex items-baseline gap-4">
-        <span className="text-sm font-medium tabular-nums text-muted-foreground">
-          {number}
-        </span>
-        <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-          {eyebrow}
-        </p>
-      </div>
-      <h2 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">
-        {title}
-      </h2>
-    </div>
-  );
-}
-
-const cardClass =
-  'group w-40 flex-shrink-0 rounded-lg border bg-card shadow-none transition-colors hover:border-primary/40 hover:shadow-sm sm:w-52 md:w-64';
-
-function CollabCard({ logo }: { logo: Collaborator }) {
-  const body = (
-    <div className="flex flex-col items-center p-3 sm:p-4 md:p-6">
-      <div className="mb-2 flex h-16 w-full items-center justify-center sm:mb-3 sm:h-20 md:h-24">
-        {/* width/height are the rendered size, not the source's. A `sizes`
-            value with no vw unit gives Next nothing to narrow the candidate
-            list with, so it falls back to emitting every device size — a
-            130px-wide logo was shipping a srcset up to 3840w with w=3840 as
-            the fallback src. Without `sizes`, Next generates just 1x and 2x.
-            `intrinsic` still supplies the aspect ratio. */}
-        <Image
-          src={logo.src}
-          alt={logo.alt}
-          width={logo.width}
-          height={Math.round((logo.width * logo.intrinsic[1]) / logo.intrinsic[0])}
-          quality={60}
-          style={{ width: logo.width, height: 'auto' }}
-          className="object-contain dark:brightness-90"
-        />
-      </div>
-      <span className="line-clamp-2 text-center text-[11px] font-medium uppercase tracking-wider text-muted-foreground sm:text-xs">
-        {logo.name}
-      </span>
-    </div>
-  );
-
-  return logo.href ? (
-    <a href={logo.href} target="_blank" rel="noopener noreferrer" className={cardClass}>
-      {body}
-    </a>
-  ) : (
-    <div className={cardClass}>{body}</div>
-  );
-}
-
-function CollabRow({ logos, direction }: { logos: Collaborator[]; direction: 'left' | 'right' }) {
-  if (logos.length === 0) return null;
-
-  // The keyframes translate the track by exactly -50%, which only lines back up
-  // when the second half repeats the first — so the number of copies has to be
-  // *even*. Two covers the rows as they stand; a row cut down to one or two
-  // logos in the dashboard would leave the track narrower than the viewport and
-  // show a gap, so widen it in pairs.
-  const copies = Math.ceil(10 / logos.length / 2) * 2;
-  const track = Array.from({ length: copies }, () => logos).flat();
-
-  return (
-    <div className="relative">
-      <div className="flex overflow-hidden">
-        <div
-          className={`flex gap-3 sm:gap-5 md:gap-8 py-2 sm:py-4 ${
-            direction === 'left' ? 'animate-scroll-left' : 'animate-scroll-right'
-          }`}
-        >
-          {track.map((logo, index) => (
-            <CollabCard key={`${logo.src}-${index}`} logo={logo} />
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
+import { cn } from '@/lib/utils';
 
 const researchAreas = [
   {
@@ -126,41 +40,231 @@ const researchAreas = [
   },
 ];
 
-// The publication count is read at render time from the same source as
-// /publications, and counted the way /about-the-pi counts it. Publication saves
-// revalidate '/', so it stays current without a client-side fetch.
-const achievementsFor = (publications: number) => [
-  {
-    icon: BookOpen,
-    value: String(publications),
-    label: 'Publications',
-    description: 'High-impact research papers in leading journals',
-  },
-  {
-    icon: ShieldCheck,
-    value: '4',
-    label: 'Patents',
-    description: 'Related to cost-effective healthcare',
-  },
-  {
-    icon: ClipboardList,
-    value: '1',
-    label: 'Clinical Trial',
-    description: 'Successful validation studies',
-  },
-  {
-    icon: Coins,
-    value: '10Cr+',
-    label: 'Research Funding',
-    description: 'In competitive grants',
-  },
-];
+/* The publication count is read at render time from the same source as
+   /publications; the other figures are fixed. */
+const LAB_HIGHLIGHTS = [
+  { value: '4', label: 'Patents', description: 'Related to cost-effective healthcare' },
+  { value: '1', label: 'Clinical trial', description: 'Successful validation studies' },
+  { value: '10Cr+', label: 'Research funding', description: 'In competitive grants' },
+] as const;
+
+/* The sections below are ported from the CBRL_V2 home page. */
+
+function Statistics({ publications }: { publications: number }) {
+  const stats = [
+    { value: String(publications), label: 'Publications', description: 'High-impact research papers in leading journals' },
+    ...LAB_HIGHLIGHTS,
+  ];
+
+  return (
+    <section className="border-y bg-card" aria-labelledby="stats-heading">
+      <h2 id="stats-heading" className="sr-only">The lab in numbers</h2>
+      <div className="container mx-auto px-4 sm:px-6">
+        <dl className="grid grid-cols-2 lg:grid-cols-4">
+          {stats.map((s, i) => (
+            <div
+              key={s.label}
+              className={cn(
+                'py-7 sm:py-10',
+                i % 2 === 1 && 'border-l pl-6 sm:pl-10',
+                i >= 2 && 'border-t lg:border-t-0',
+                i > 0 && 'lg:border-l lg:pl-10',
+                i === 2 && 'lg:pl-10'
+              )}
+            >
+              <dt className="meta">{s.label}</dt>
+              <dd className="mt-3 text-4xl font-semibold tracking-[-0.03em] text-foreground sm:text-5xl">
+                <CountUp value={s.value} />
+              </dd>
+              <dd className="mt-2 max-w-[16rem] text-sm leading-relaxed text-muted-foreground">
+                <span className="mb-2 block h-0.5 w-8 rounded-full bg-[hsl(var(--coral))]" aria-hidden="true" />
+                {s.description}
+              </dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+    </section>
+  );
+}
+
+function CollabLogo({ logo }: { logo: Collaborator }) {
+  // Fit the logo in a 96×64 box at its own ratio (`intrinsic`), never wider
+  // than the editor-set width. Working the size out here, rather than
+  // squeezing it with CSS max-height, keeps width and height in proportion.
+  const ratio = logo.intrinsic[1] / logo.intrinsic[0];
+  let width = Math.min(logo.width, 96);
+  let height = width * ratio;
+  if (height > 64) {
+    height = 64;
+    width = height / ratio;
+  }
+
+  const body = (
+    <>
+      <span className="flex h-16 items-center justify-center">
+        <Image
+          src={logo.src}
+          alt={logo.alt}
+          width={Math.round(width)}
+          height={Math.round(height)}
+          quality={60}
+          className="object-contain dark:brightness-90"
+        />
+      </span>
+      <span className="mt-3 block text-center text-xs font-medium leading-snug text-muted-foreground">{logo.name}</span>
+    </>
+  );
+  const cls = 'panel flex h-full flex-col items-center justify-center p-5';
+  return logo.href ? (
+    <a href={logo.href} target="_blank" rel="noopener noreferrer" className={cn(cls, 'panel-hover')}>
+      {body}
+    </a>
+  ) : (
+    <div className={cls}>{body}</div>
+  );
+}
+
+function Collaborators({ collaborators }: { collaborators: Collaborator[] }) {
+  if (collaborators.length === 0) return null;
+  const ordered = [...collaborators].sort((a, b) => a.row - b.row);
+  return (
+    <section className="section section-tint border-t" aria-labelledby="collab-heading">
+      <div className="container mx-auto px-4 sm:px-6">
+        <SectionHeading
+          id="collab-heading"
+          eyebrow="Collaborations"
+          title="Clinical and institutional collaborators"
+          intro="We collaborate with public and private hospitals and national institutes for clinical samples, expertise and validation."
+          align="center"
+        />
+        <ul className="mt-8 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6">
+          {ordered.map((logo) => (
+            <li key={logo.src} data-reveal>
+              <CollabLogo logo={logo} />
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  );
+}
+
+function JoinUs() {
+  const paths = [
+    {
+      icon: GraduationCap,
+      title: 'Students and researchers',
+      body: 'Passionate about advancing healthcare through biomarker research? Write to us about your interests.',
+      href: '/contact?subject=Research%20opportunities%20at%20CBRL',
+      cta: 'Get in touch',
+    },
+    {
+      icon: Handshake,
+      title: 'Clinical and academic collaborators',
+      body: 'We welcome collaborations with researchers, clinicians and industry partners.',
+      href: '/contact?subject=Collaboration%20enquiry',
+      cta: 'Propose a collaboration',
+    },
+    {
+      icon: Microscope,
+      title: 'Facility users',
+      body: 'Use our instrumentation on published slot charges for internal, academic and industry users.',
+      href: '/facilities#enquiry',
+      cta: 'Facility enquiry',
+    },
+  ];
+
+  return (
+    <section className="section" aria-labelledby="join-heading">
+      <div className="container mx-auto px-4 sm:px-6">
+        <div className="relative overflow-hidden rounded-[2rem] border bg-gradient-to-br from-accent via-card to-[hsl(var(--coral-soft))] p-6 sm:p-10 lg:p-14">
+          <MolecularLattice className="pointer-events-none absolute -right-16 -top-10 h-80 w-96 text-primary/10" />
+          <div className="relative grid gap-7 lg:grid-cols-12 lg:items-end">
+            <div className="lg:col-span-5">
+              <p className="eyebrow">Opportunities</p>
+              <h2 id="join-heading" className="display-2 mt-4 text-balance">
+                Collaborate with us to advance biomedical research
+              </h2>
+              <p className="lead mt-4">
+                Researchers, students, clinicians and facility users — find the right way to work with CBRL.
+              </p>
+              <Link href="/members" className="link-arrow mt-6">
+                Meet the team <ArrowRight className="h-4 w-4" aria-hidden="true" />
+              </Link>
+            </div>
+            <ul className="grid gap-4 sm:grid-cols-3 lg:col-span-7">
+              {paths.map((p) => (
+                <li key={p.title}>
+                  <Link href={p.href} className="glass panel-hover group flex h-full flex-col p-5">
+                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary text-primary-foreground">
+                      <p.icon className="h-5 w-5" aria-hidden="true" />
+                    </span>
+                    <span className="mt-4 font-semibold leading-snug text-foreground">{p.title}</span>
+                    <span className="mt-2 text-sm leading-relaxed text-muted-foreground">{p.body}</span>
+                    <span className="link-arrow mt-auto pt-5">
+                      {p.cta} <ArrowRight className="h-4 w-4" aria-hidden="true" />
+                    </span>
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function ContactStrip() {
+  const items = [
+    {
+      icon: MapPin,
+      label: 'Visit',
+      value: 'Rooms 329–330, Life Science Building, IIT Kharagpur 721302',
+      href: 'https://maps.google.com/?q=Life+Science+Building,+IIT+Kharagpur',
+      external: true,
+    },
+    { icon: Mail, label: 'Email', value: 'contact.cbrl@smst.iitkgp.ac.in', href: 'mailto:contact.cbrl@smst.iitkgp.ac.in' },
+    { icon: Phone, label: 'Phone', value: '+91 03222 282221', href: 'tel:+9103222282221' },
+  ];
+  return (
+    <section className="border-t bg-card" aria-labelledby="contact-heading">
+      <div className="container mx-auto grid gap-8 px-4 py-8 sm:px-6 lg:grid-cols-12 lg:items-center">
+        <div className="lg:col-span-3">
+          <h2 id="contact-heading" className="text-xl font-semibold tracking-tight">Contact the lab</h2>
+          <Link href="/contact" className="link-arrow mt-2">
+            Send a message <ArrowRight className="h-4 w-4" aria-hidden="true" />
+          </Link>
+        </div>
+        <ul className="grid gap-4 sm:grid-cols-3 lg:col-span-9">
+          {items.map((it) => (
+            <li key={it.label}>
+              <a
+                href={it.href}
+                {...(it.external ? { target: '_blank', rel: 'noopener noreferrer' } : {})}
+                className="group flex h-full items-start gap-3 rounded-2xl p-3 transition-colors hover:bg-accent/60"
+              >
+                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-accent text-primary">
+                  <it.icon className="h-4 w-4" aria-hidden="true" />
+                </span>
+                <span>
+                  <span className="meta block">{it.label}</span>
+                  <span className="mt-1 block break-words text-sm font-medium text-foreground">{it.value}</span>
+                </span>
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    </section>
+  );
+}
 
 export default async function Home() {
   const [{ hero, collaborators }, bibtex] = await Promise.all([getHome(), readPublicationsFile()]);
-  const achievements = achievementsFor(splitEntries(bibtex).length);
-  const collabRowOne = collaborators.filter((logo) => logo.row === 1);
-  const collabRowTwo = collaborators.filter((logo) => logo.row === 2);
+  // Counted the way /about-the-pi counts it, so the two pages always agree.
+  const publicationCount = splitEntries(bibtex).length;
 
   const homeJsonLd = {
     '@context': 'https://schema.org',
@@ -234,7 +338,7 @@ export default async function Home() {
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-12 lg:gap-12">
             <div className="lg:col-span-4">
               <div className="lg:sticky lg:top-28">
-                <SectionHeading number="01" eyebrow="About CBRL" title="Our Mission" />
+                <SectionHeading eyebrow="About CBRL" title="Our Mission" />
               </div>
             </div>
             <div className="lg:col-span-8">
@@ -259,13 +363,10 @@ export default async function Home() {
         <div className="container mx-auto px-4 sm:px-6">
           <div className="max-w-3xl">
             <SectionHeading
-              number="02"
               eyebrow="Research Programmes"
               title="Featured Research Areas"
+              intro="Discover our cutting-edge research initiatives that are transforming healthcare"
             />
-            <p className="mt-3 text-sm text-muted-foreground sm:text-base">
-              Discover our cutting-edge research initiatives that are transforming healthcare
-            </p>
           </div>
 
           <div className="mt-10 grid grid-cols-1 gap-4 sm:mt-12 sm:gap-6 md:grid-cols-2">
@@ -290,89 +391,10 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Key Achievements */}
-      <section className="border-t py-14 sm:py-16 md:py-24">
-        <div className="container mx-auto px-4 sm:px-6">
-          <div className="max-w-3xl">
-            <SectionHeading number="03" eyebrow="By the Numbers" title="Key Achievements" />
-            <p className="mt-3 text-sm text-muted-foreground sm:text-base">
-              Our dedication to excellence has led to remarkable outcomes in biomarker research
-            </p>
-          </div>
-
-          <div className="mt-10 grid grid-cols-2 border-t sm:mt-12 lg:grid-cols-4">
-            {achievements.map((achievement, index) => (
-              <div
-                key={achievement.label}
-                className={`py-6 pr-4 sm:py-8 ${
-                  index % 2 === 1 ? 'border-l pl-6 sm:pl-8' : ''
-                } ${index >= 2 ? 'border-t lg:border-t-0' : ''} ${
-                  index > 0 ? 'lg:border-l lg:pl-8' : 'lg:border-l-0 lg:pl-0'
-                }`}
-              >
-                <achievement.icon className="h-5 w-5 text-primary" aria-hidden="true" />
-                <div className="mt-4 text-3xl font-bold tracking-tight text-primary tabular-nums sm:text-4xl">
-                  {achievement.value}
-                </div>
-                <div className="mt-2 text-[11px] font-medium uppercase tracking-wider text-foreground sm:text-xs">
-                  {achievement.label}
-                </div>
-                <p className="mt-2 hidden text-xs leading-relaxed text-muted-foreground sm:block sm:text-sm">
-                  {achievement.description}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Collaborations */}
-      <section className="overflow-hidden border-t py-14 sm:py-16 md:py-24">
-        <div className="container mx-auto px-4 sm:px-6">
-          <div className="mb-8 max-w-3xl sm:mb-10 md:mb-12">
-            <SectionHeading number="04" eyebrow="Partnerships" title="Our Collaborators" />
-            <p className="mt-3 text-sm text-muted-foreground sm:text-base">
-              Partnering with leading institutions to advance biomarker research and clinical diagnostics
-            </p>
-          </div>
-
-          {/* First Row - Scrolling Left to Right */}
-          {collabRowOne.length > 0 && (
-            <div className="mb-4 sm:mb-6 md:mb-8">
-              <CollabRow logos={collabRowOne} direction="left" />
-            </div>
-          )}
-
-          {/* Second Row - Scrolling Right to Left */}
-          <CollabRow logos={collabRowTwo} direction="right" />
-        </div>
-      </section>
-
-      {/* Join Us / Contact */}
-      <section className="border-y bg-muted/40 py-14 sm:py-16 md:py-24">
-        <div className="container mx-auto px-4 sm:px-6">
-          <div className="mx-auto max-w-3xl text-center">
-            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-              Opportunities
-            </p>
-            <h2 className="mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">
-              Join Our Research Team
-            </h2>
-            <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-muted-foreground sm:mt-6 sm:text-lg">
-              We&#39;re always looking for talented researchers and students who are passionate
-              about advancing healthcare through biomarker research.
-            </p>
-            <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row sm:gap-4">
-              <Button asChild size="lg" className="px-8">
-                <Link href="/contact">Contact Us</Link>
-              </Button>
-              <Button asChild size="lg" variant="outline" className="px-8">
-                <Link href="/members">Meet Our Team</Link>
-              </Button>
-            </div>
-          </div>
-        </div>
-      </section>
+      <Statistics publications={publicationCount} />
+      <Collaborators collaborators={collaborators} />
+      <JoinUs />
+      <ContactStrip />
     </div>
   );
 }

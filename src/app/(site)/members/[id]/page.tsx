@@ -5,7 +5,6 @@ import { notFound, permanentRedirect } from 'next/navigation';
 import { ArrowLeft, Phone, UserRound } from 'lucide-react';
 
 import PageHeader from '@/components/PageHeader';
-import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { getMembers } from '@/lib/content';
 import { jsonLd } from '@/lib/json-ld';
@@ -105,7 +104,7 @@ function qualifications(text: string) {
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="grid gap-1.5 sm:grid-cols-[10rem_1fr] sm:gap-6">
-      <dt className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground sm:pt-0.5">
+      <dt className="meta sm:pt-0.5">
         {label}
       </dt>
       <dd className="text-sm leading-relaxed text-muted-foreground">{children}</dd>
@@ -166,7 +165,7 @@ export default async function MemberProfile({ params }: { params: Params }) {
         lead={`${member.title.trim()}, Clinical Biomarker Research Laboratory (CBRL), IIT Kharagpur`}
       />
 
-      <div className="container mx-auto px-4 py-12 sm:px-6 sm:py-16">
+      <div className="container mx-auto px-4 py-8 sm:px-6 sm:py-10">
         <nav aria-label="Breadcrumb" className="mb-8 text-sm text-muted-foreground">
           <ol className="flex flex-wrap items-center gap-1.5">
             <li>
@@ -177,7 +176,7 @@ export default async function MemberProfile({ params }: { params: Params }) {
             <li aria-hidden="true">/</li>
             <li>
               <Link href={`/members#${member.id}`} className="hover:text-foreground hover:underline">
-                Team Members
+                Team
               </Link>
             </li>
             <li aria-hidden="true">/</li>
@@ -187,19 +186,19 @@ export default async function MemberProfile({ params }: { params: Params }) {
           </ol>
         </nav>
 
-        <article className="overflow-hidden rounded-lg border bg-card">
-          <div className="grid lg:grid-cols-5">
-            <div className="border-b lg:col-span-2 lg:border-b-0 lg:border-r">
-              <div className="relative aspect-[4/5] w-full bg-muted lg:h-full lg:min-h-[28rem] lg:aspect-auto">
+        <article className="panel overflow-hidden">
+          <div className="grid lg:grid-cols-3">
+            <div className="overflow-hidden border-b lg:col-span-1 lg:self-start lg:border-b-0">
+              <div className="relative aspect-[4/5] w-full bg-muted">
                 {image ? (
                   <Image
                     src={image}
                     alt={memberImageAlt(member)}
                     fill
                     priority
-                    sizes="(max-width: 1024px) 100vw, 40vw"
-                    className="object-cover object-center"
-                    quality={80}
+                    sizes="(max-width: 1024px) 100vw, 34vw"
+                    className="object-cover object-[50%_25%]"
+                    quality={75}
                   />
                 ) : (
                   <div className="absolute inset-0 flex items-center justify-center text-muted-foreground">
@@ -209,9 +208,9 @@ export default async function MemberProfile({ params }: { params: Params }) {
               </div>
             </div>
 
-            <div className="flex flex-col gap-6 p-6 sm:p-10 lg:col-span-3">
+            <div className="flex flex-col gap-6 p-6 sm:p-10 lg:col-span-2">
               <div className="space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                <p className="eyebrow">
                   {member.title.trim()}
                   {member.joinedDate && group !== 'alumni' && (
                     <span className="font-medium text-muted-foreground">
@@ -229,14 +228,14 @@ export default async function MemberProfile({ params }: { params: Params }) {
 
               {areas.length > 0 && (
                 <div className="space-y-2.5">
-                  <h3 className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                  <h2 className="meta">
                     Research Areas
-                  </h3>
+                  </h2>
                   <div className="flex flex-wrap gap-1.5">
                     {areas.map((area) => (
-                      <Badge key={area} variant="outline" className="rounded-full font-normal text-muted-foreground">
+                      <span key={area} className="chip">
                         {area}
-                      </Badge>
+                      </span>
                     ))}
                   </div>
                 </div>
@@ -294,7 +293,7 @@ export default async function MemberProfile({ params }: { params: Params }) {
           </div>
         </article>
 
-        <p className="mt-10 text-sm text-muted-foreground">
+        <p className="mt-7 text-sm text-muted-foreground">
           {name} {group === 'alumni' ? 'was' : 'is'} part of the{' '}
           <Link href="/" className="text-primary underline-offset-4 hover:underline">
             Clinical Biomarker Research Laboratory
@@ -319,7 +318,7 @@ export default async function MemberProfile({ params }: { params: Params }) {
           className="mt-6 inline-flex items-center gap-1.5 text-sm font-medium text-primary underline-offset-4 hover:underline"
         >
           <ArrowLeft className="h-4 w-4" aria-hidden="true" />
-          All team members
+          Back to the team
         </Link>
       </div>
     </div>

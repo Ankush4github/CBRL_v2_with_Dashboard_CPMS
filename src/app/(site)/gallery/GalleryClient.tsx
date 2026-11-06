@@ -154,17 +154,19 @@ export default function GalleryClient({ categories, albums }: GalleryContent) {
     <div className="min-h-screen bg-background">
       {/* Editorial header */}
       <PageHeader
-        eyebrow="Archive"
-        title="Lab Gallery"
+        eyebrow="Gallery"
+        title="Lab gallery"
         lead="Moments in science and beyond — capturing the journey of discovery, collaboration, and excellence in biomedical research."
       />
 
-      <div className="container mx-auto px-4 sm:px-6">
-        {/* Filter — understated text chips */}
-        <section className="flex flex-wrap items-center gap-x-5 gap-y-2 border-b py-5">
-          <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">
-            Filter
-          </span>
+      {/* Filter: a floating Liquid Glass capsule, the same as the team directory's */}
+      <div className="pointer-events-none sticky top-[4.5rem] z-30 py-2">
+        <div className="container mx-auto px-3 sm:px-6">
+        <div
+          className="liquid-glass pointer-events-auto flex gap-2 overflow-x-auto rounded-[1.75rem] p-2 sm:flex-wrap sm:overflow-visible"
+          role="group"
+          aria-label="Filter albums by category"
+        >
           {filters.map((category) => {
             const isActive = selectedCategory === category;
             return (
@@ -174,28 +176,38 @@ export default function GalleryClient({ categories, albums }: GalleryContent) {
                 aria-pressed={isActive}
                 onClick={() => setSelectedCategory(category)}
                 className={cn(
-                  'text-[11px] font-medium uppercase tracking-wider underline-offset-4 transition-colors',
+                  'pressable inline-flex min-h-[38px] shrink-0 items-center rounded-full border px-3.5 text-xs font-semibold transition-colors',
                   isActive
-                    ? 'text-primary underline'
-                    : 'text-muted-foreground hover:text-foreground hover:underline'
+                    ? 'glass-prominent border-transparent bg-primary text-primary-foreground'
+                    : 'border-transparent text-foreground/85 hover:bg-foreground/[0.06]'
                 )}
               >
                 {category}
               </button>
             );
           })}
-        </section>
+        </div>
+        </div>
+      </div>
+
+      <div className="container mx-auto px-4 sm:px-6">
 
         {/* Gallery grid */}
-        <section className="py-12 sm:py-16">
+        <section className="py-8 sm:py-10" aria-labelledby="albums-heading">
+          <h2 id="albums-heading" className="sr-only">
+            Albums
+          </h2>
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
             {filteredImages.map((item, index) => (
-              <figure
-                key={item.id}
-                className="group cursor-pointer overflow-hidden rounded-lg border bg-card shadow-none transition-colors hover:border-primary/40 hover:shadow-sm"
-                onClick={() => openModal(item)}
-              >
-                <div className="relative aspect-[4/3] overflow-hidden border-b bg-muted/40">
+              <figure key={item.id} className="panel panel-hover group relative overflow-hidden">
+                {/* One real button opens the album; the like buttons sit above it. */}
+                <button
+                  type="button"
+                  onClick={() => openModal(item)}
+                  className="absolute inset-0 z-0 rounded-2xl"
+                  aria-label={`Open album: ${item.title}`}
+                />
+                <div className="pointer-events-none relative aspect-[4/3] overflow-hidden border-b bg-muted/40">
                   <Image
                     src={item.image}
                     alt={item.title}
@@ -211,10 +223,10 @@ export default function GalleryClient({ categories, albums }: GalleryContent) {
                     type="button"
                     onClick={(e) => toggleLike(item.id, e)}
                     className={cn(
-                      'absolute right-3 top-3 rounded-full border p-1.5 backdrop-blur-sm transition-colors',
+                      'liquid-glass glass-dark pressable pointer-events-auto absolute right-3 top-3 z-10 rounded-full p-2 transition-colors',
                       item.isLiked
-                        ? 'border-transparent bg-black/80 text-white'
-                        : 'border-white/40 bg-black/30 text-white hover:bg-black/50'
+                        ? 'text-[hsl(var(--coral))]'
+                        : 'text-white'
                     )}
                     aria-label={item.isLiked ? 'Unlike' : 'Like'}
                   >
@@ -222,8 +234,8 @@ export default function GalleryClient({ categories, albums }: GalleryContent) {
                   </button>
                 </div>
 
-                <figcaption className="p-4">
-                  <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                <figcaption className="pointer-events-none relative p-4">
+                  <div className="flex items-center gap-2 meta">
                     <span className="text-primary">{item.category}</span>
                     <span>·</span>
                     <span>{item.date}</span>
@@ -239,7 +251,7 @@ export default function GalleryClient({ categories, albums }: GalleryContent) {
                       type="button"
                       onClick={(e) => toggleLike(item.id, e)}
                       className={cn(
-                        'flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider underline-offset-4 transition-colors hover:underline',
+                        'pressable pointer-events-auto relative z-10 flex min-h-[32px] items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider underline-offset-4 transition-colors hover:underline',
                         item.isLiked
                           ? 'text-primary'
                           : 'text-muted-foreground hover:text-foreground'
@@ -248,7 +260,7 @@ export default function GalleryClient({ categories, albums }: GalleryContent) {
                       <Heart className={cn('h-3.5 w-3.5', item.isLiked && 'fill-current')} />
                       {item.likes}
                     </button>
-                    <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground/70">
+                    <span className="meta/70">
                       View
                     </span>
                   </div>
@@ -258,7 +270,7 @@ export default function GalleryClient({ categories, albums }: GalleryContent) {
           </div>
 
           {filteredImages.length === 0 && (
-            <div className="border-y py-20 text-center">
+            <div className="rounded-2xl border border-dashed py-12 text-center">
               <h3 className="text-lg font-semibold tracking-tight text-foreground">
                 No images found
               </h3>
@@ -277,7 +289,7 @@ export default function GalleryClient({ categories, albums }: GalleryContent) {
           if (!open) closeModal();
         }}
       >
-        <DialogContent className="max-w-5xl gap-0 overflow-hidden p-0">
+        <DialogContent className="max-w-5xl gap-0 overflow-hidden rounded-3xl p-0 sm:rounded-3xl">
           {selectedImage && (
             <>
               <DialogTitle className="sr-only">{selectedImage.title}</DialogTitle>
@@ -345,7 +357,7 @@ export default function GalleryClient({ categories, albums }: GalleryContent) {
 
               {/* Content Area */}
               <div className="max-h-[40vh] overflow-y-auto overscroll-contain p-6 sm:p-8">
-                <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                <div className="flex items-center gap-2 meta">
                   <span className="text-primary">{selectedImage.category}</span>
                   <span>·</span>
                   <span>{selectedImage.date}</span>
@@ -361,7 +373,7 @@ export default function GalleryClient({ categories, albums }: GalleryContent) {
                   </p>
                 )}
 
-                <h3 className="mt-6 text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+                <h3 className="eyebrow-plain mt-6">
                   Description
                 </h3>
                 <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
@@ -380,7 +392,7 @@ export default function GalleryClient({ categories, albums }: GalleryContent) {
                   <Heart className={cn('h-4 w-4', selectedImage.isLiked && 'fill-current')} />
                   <span>{selectedImage.isLiked ? 'Liked' : 'Like'} ({selectedImage.likes})</span>
                 </Button>
-                <div className="hidden items-center gap-1.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground sm:flex">
+                <div className="hidden items-center gap-1.5 meta sm:flex">
                   <kbd className="rounded border bg-muted/40 px-1.5 py-0.5 font-mono text-[10px] text-foreground">
                     ESC
                   </kbd>

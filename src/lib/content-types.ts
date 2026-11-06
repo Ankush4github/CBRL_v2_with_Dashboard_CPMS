@@ -125,8 +125,17 @@ export interface Sponsor {
 export interface ProjectsContent {
   ongoing: Project[];
   completedPdf: string;
+  /**
+   * How many projects the completed-projects PDF lists, shown in the page
+   * header. Optional: content stored before the field existed has none, and
+   * reads are not validated, so readers fall back to COMPLETED_PROJECTS_FALLBACK.
+   */
+  completedCount?: number;
   sponsors: Sponsor[];
 }
+
+/** The number of projects in the completed-projects PDF when the count was added. */
+export const COMPLETED_PROJECTS_FALLBACK = 26;
 
 /* ----------------------------------------------------------------- research */
 

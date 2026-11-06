@@ -3,7 +3,7 @@
 import { Plus } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import type { Project, ProjectsContent, Sponsor } from '@/lib/content-types';
+import { COMPLETED_PROJECTS_FALLBACK, type Project, type ProjectsContent, type Sponsor } from '@/lib/content-types';
 import { AdminPageHeader, EmptyState, ItemCard, SaveBar } from '@/components/admin/EditorChrome';
 import {
   FieldSection,
@@ -221,6 +221,15 @@ export default function ProjectsEditor({ initial }: { initial: ProjectsContent }
             placeholder="/data/completed-projects.pdf"
             hint="A file in public/. Replace the PDF on the server to update the list."
           />
+          <div className="mt-4 max-w-xs">
+            <TextField
+              label="Number of completed projects"
+              type="number"
+              value={String(draft.completedCount ?? COMPLETED_PROJECTS_FALLBACK)}
+              onChange={(value) => setDraft({ ...draft, completedCount: Number(value) || 0 })}
+              hint="Shown in the projects page header. Update it when the PDF changes."
+            />
+          </div>
         </div>
       </section>
 

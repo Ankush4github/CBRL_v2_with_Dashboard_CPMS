@@ -38,6 +38,17 @@ export default function Contact() {
   const [errorMessage, setErrorMessage] = useState('');
   const [cooldown, setCooldown] = useState(false);
 
+  // Links elsewhere on the site prefill the subject: /contact?subject=Facility%20enquiry.
+  // Read once on mount rather than through useSearchParams, which would need a
+  // Suspense boundary around this whole statically rendered page.
+  useEffect(() => {
+    const subject = new URLSearchParams(window.location.search).get('subject');
+    if (!subject) return;
+    // A one-time copy from the URL, which the static render cannot see.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setFormData((prev) => ({ ...prev, subject: subject.slice(0, 150) }));
+  }, []);
+
   // Auto-dismiss success/error messages after 6 seconds
   useEffect(() => {
     if (submitStatus === 'success' || submitStatus === 'error') {
@@ -99,20 +110,20 @@ export default function Contact() {
     <div className="min-h-screen">
       {/* Editorial page header */}
       <PageHeader
-        eyebrow="Correspondence"
-        title="Contact Us"
-        lead={<>Reach out to the Clinical Biomarker Research Laboratory — we&apos;d love to hear from you.</>}
+        eyebrow="Contact"
+        title="Contact us"
+        lead={<>Reach out to the Clinical Biomarker Research Laboratory about research, collaboration or facility access — we&apos;d love to hear from you.</>}
       />
 
-      <div className="container mx-auto px-4 py-16 sm:px-6 sm:py-20">
-        <div className="grid gap-12 lg:grid-cols-5 lg:gap-16">
+      <div className="container mx-auto px-4 py-10 sm:px-6 sm:py-12">
+        <div className="grid gap-8 lg:grid-cols-5 lg:gap-10">
           {/* Contact details — structured definition list */}
           <div className="lg:col-span-2">
             <h2 className="text-2xl sm:text-3xl font-semibold tracking-tight">Lab Location</h2>
 
             <dl className="mt-8 space-y-8">
               <div>
-                <dt className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                <dt className="flex items-center gap-2 meta">
                   <MapPin className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
                   Address
                 </dt>
@@ -127,7 +138,7 @@ export default function Contact() {
               </div>
 
               <div>
-                <dt className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                <dt className="flex items-center gap-2 meta">
                   <Mail className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
                   Email
                 </dt>
@@ -142,7 +153,7 @@ export default function Contact() {
               </div>
 
               <div>
-                <dt className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                <dt className="flex items-center gap-2 meta">
                   <Phone className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
                   Phone
                 </dt>
@@ -158,7 +169,7 @@ export default function Contact() {
 
             <dl className="mt-8 space-y-8">
               <div>
-                <dt className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                <dt className="flex items-center gap-2 meta">
                   <User className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
                   Office
                 </dt>
@@ -173,7 +184,7 @@ export default function Contact() {
               </div>
 
               <div>
-                <dt className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+                <dt className="flex items-center gap-2 meta">
                   <Mail className="h-3.5 w-3.5 text-primary" aria-hidden="true" />
                   Email
                 </dt>
@@ -191,9 +202,9 @@ export default function Contact() {
 
           {/* Inquiry form — flat bordered card */}
           <div className="lg:col-span-3">
-            <div className="rounded-lg border bg-card p-6 shadow-none sm:p-8">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
-                Inquiry
+            <div className="panel p-6 sm:p-10">
+              <p className="eyebrow">
+                Enquiry
               </p>
               <h2 className="mt-3 text-2xl sm:text-3xl font-semibold tracking-tight">
                 Send us a Message
@@ -206,7 +217,7 @@ export default function Contact() {
 
               {/* Success notification */}
               {submitStatus === 'success' && (
-                <div className="mb-6 flex items-start gap-3 rounded-lg border p-4">
+                <div role="status" className="mb-6 flex items-start gap-3 rounded-xl border border-emerald-600/30 bg-emerald-50 p-4 dark:bg-emerald-950/30">
                   <CheckCircle2
                     className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600 dark:text-emerald-400"
                     aria-hidden="true"
@@ -224,7 +235,7 @@ export default function Contact() {
 
               {/* Error notification */}
               {submitStatus === 'error' && (
-                <div className="mb-6 flex items-start gap-3 rounded-lg border border-destructive/50 p-4">
+                <div role="alert" className="mb-6 flex items-start gap-3 rounded-xl border border-destructive/40 bg-destructive/5 p-4">
                   <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-destructive" aria-hidden="true" />
                   <div>
                     <p className="font-medium text-destructive">Failed to send message</p>
@@ -240,6 +251,27 @@ export default function Contact() {
                   </div>
                 </div>
               )}
+
+              <div className="mb-6 flex flex-wrap items-center gap-2" role="group" aria-label="Common topics">
+                <span className="meta mr-1">Topic</span>
+                {['General enquiry', 'Facility enquiry', 'Collaboration enquiry', 'Research opportunities at CBRL'].map((topic) => (
+                  <button
+                    key={topic}
+                    type="button"
+                    aria-pressed={formData.subject === topic}
+                    onClick={() => setFormData((prev) => ({ ...prev, subject: topic }))}
+                    disabled={isSubmitting}
+                    className={
+                      'pressable min-h-[36px] rounded-full border px-3.5 text-xs font-semibold transition-colors ' +
+                      (formData.subject === topic
+                        ? 'border-primary bg-primary text-primary-foreground'
+                        : 'bg-background text-foreground/80 hover:border-primary/40')
+                    }
+                  >
+                    {topic.replace(' at CBRL', '').replace(' enquiry', '')}
+                  </button>
+                ))}
+              </div>
 
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid gap-6 sm:grid-cols-2">
@@ -311,8 +343,9 @@ export default function Contact() {
 
                 <Button
                   type="submit"
+                  size="lg"
                   disabled={isSubmitting || cooldown}
-                  className="w-full"
+                  className="h-12 w-full rounded-full"
                 >
                   {isSubmitting ? (
                     <>
@@ -334,10 +367,10 @@ export default function Contact() {
         </div>
 
         {/* Map section */}
-        <section className="mt-20 border-t pt-12">
+        <section className="mt-12 border-t pt-8">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-primary">
+              <p className="eyebrow">
                 Location
               </p>
               <h2 className="mt-3 text-2xl sm:text-3xl font-semibold tracking-tight">
@@ -359,7 +392,7 @@ export default function Contact() {
             </Button>
           </div>
 
-          <div className="mt-8 h-96 w-full overflow-hidden rounded-lg border md:h-[500px]">
+          <div className="mt-8 h-96 w-full overflow-hidden rounded-2xl border md:h-[500px]">
             <iframe
               src="https://www.google.com/maps?q=Life+Science+Building,+IIT+Kharagpur&z=17&output=embed"
               width="100%"
@@ -375,7 +408,7 @@ export default function Contact() {
           {/* Location metadata */}
           <dl className="mt-6 grid gap-6 border-t pt-6 sm:grid-cols-3">
             <div>
-              <dt className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              <dt className="meta">
                 Coordinates
               </dt>
               <dd className="mt-1 text-sm text-foreground">
@@ -383,13 +416,13 @@ export default function Contact() {
               </dd>
             </div>
             <div>
-              <dt className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              <dt className="meta">
                 Campus
               </dt>
               <dd className="mt-1 text-sm text-foreground">IIT Kharagpur Main Campus</dd>
             </div>
             <div>
-              <dt className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">
+              <dt className="meta">
                 Building
               </dt>
               <dd className="mt-1 text-sm text-foreground">Life Science Building</dd>

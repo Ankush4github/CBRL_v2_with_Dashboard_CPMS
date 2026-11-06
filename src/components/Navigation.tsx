@@ -131,7 +131,7 @@ export default function Navigation() {
               className="h-10 w-auto sm:h-11"
               priority
             />
-            <span className="hidden min-w-0 flex-col leading-tight lg:flex">
+            <span className="hidden min-w-0 flex-col leading-tight xl:flex">
               <span className="truncate text-[15px] font-bold tracking-tight text-foreground">
                 Clinical Biomarker Research Laboratory
               </span>
@@ -139,13 +139,13 @@ export default function Navigation() {
                 IIT Kharagpur
               </span>
             </span>
-            <span className="text-xl font-bold tracking-tight text-foreground lg:hidden">
+            <span className="text-xl font-bold tracking-tight text-foreground xl:hidden">
               CBRL
             </span>
           </Link>
 
           {/* Desktop navigation */}
-          <div className="hidden items-center gap-1 md:flex">
+          <div className="hidden items-center gap-1 lg:flex">
             <NavigationMenu>
               <NavigationMenuList className="gap-0">
                 {primaryLinks.map((item) => (
@@ -228,7 +228,7 @@ export default function Navigation() {
           </div>
 
           {/* Mobile controls */}
-          <div className="flex items-center gap-1 md:hidden">
+          <div className="flex items-center gap-1 lg:hidden">
             <ThemeToggle />
             <Button
               variant="ghost"
