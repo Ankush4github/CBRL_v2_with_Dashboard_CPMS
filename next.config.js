@@ -37,9 +37,6 @@ const nextConfig = {
     // particular. That bucket is private and would 401 anyway; pinning means it
     // is never even requested.
     //
-    // This is also why dangerouslyAllowSVG below stays safe: the bucket accepts
-    // image/webp only, and the upload route re-encodes through sharp, so no SVG
-    // can reach it. The allowance remains for local committed logos.
     remotePatterns: SUPABASE_HOST
       ? [
           {
@@ -49,7 +46,12 @@ const nextConfig = {
           },
         ]
       : [],
-    dangerouslyAllowSVG: true,
+    // Off: SVGs never go through /_next/image. Next 16.0–16.4.0 had an
+    // unauthenticated RCE in the optimizer's SVG path (GHSA-2464-fhr4-w9xw),
+    // and nothing here needs SVGs resized. With this false, next/image serves
+    // any `.svg` src as-is (get-img-props sets `unoptimized` for it), so the
+    // committed collaborator and sponsor logos render unchanged.
+    dangerouslyAllowSVG: false,
     contentSecurityPolicy:
       "default-src 'self'; script-src 'none'; style-src 'unsafe-inline'; sandbox;",
   },

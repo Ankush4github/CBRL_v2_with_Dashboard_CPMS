@@ -5,6 +5,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 import { refuseUnlessEditor } from '@/lib/admin-guard';
 import { slugify } from '@/lib/content-types';
+import { sniffRasterFormat } from '@/lib/image-format';
 import { createClient } from '@/lib/supabase/server';
 
 /**
@@ -103,6 +104,18 @@ export async function POST(request: NextRequest) {
   const objectDir = path.posix.join('images', target.dir, subfolder);
 
   const input = Buffer.from(await file.arrayBuffer());
+
+  // The declared type is only what the caller typed, and sharp picks its
+  // decoder from the bytes — so an SVG labelled image/png would otherwise reach
+  // librsvg, whose parser has had memory-safety bugs (GHSA-wq5f-xc86-pv6w).
+  // Only the five raster formats above are ever handed to sharp.
+  if (!sniffRasterFormat(input)) {
+    console.warn('Rejected an upload that is not a raster image:', file.type, file.size);
+    return NextResponse.json(
+      { error: 'That file could not be read as an image. Try a JPEG, PNG or WebP.' },
+      { status: 422 }
+    );
+  }
 
   // Re-encoding through sharp *is* the validation that these bytes are an
   // image — far stronger than the `Content-Type` the caller claimed, which is

@@ -93,12 +93,21 @@ const svgBytes = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg"><script>al
 const htmlBytes = Buffer.from('<html><script>fetch("/api/admin/whoami").then(r=>r.text()).then(alert)</script></html>');
 /** A real PNG with a webshell appended — valid image, hostile tail. */
 const polyglot = Buffer.concat([png, phpBytes]);
+/** An SVG sharp is able to rasterise (it has a size), so only the sniff stops it. */
+const renderableSvg = Buffer.from('<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40"><rect width="40" height="40" fill="red"/></svg>');
+const tiff = await sharp({ create: { width: 40, height: 40, channels: 3, background: '#0cc' } }).tiff().toBuffer();
+const avif = await sharp({ create: { width: 40, height: 40, channels: 3, background: '#c0c' } }).avif().toBuffer();
+
+// Precondition for the svg case: if sharp could not decode it, refusing it
+// would prove nothing about the sniff.
+check('sharp itself can decode the renderable svg', (await sharp(renderableSvg).metadata()).format, 'svg');
 
 console.log('--- valid images are accepted (all five declared types) ---');
 check('png',  status(await upload({ file: asFile(png,  'a.png',  'image/png'),  destination: 'members' })), 'accepted');
 check('jpeg', status(await upload({ file: asFile(jpeg, 'a.jpg',  'image/jpeg'), destination: 'members' })), 'accepted');
 check('webp', status(await upload({ file: asFile(webp, 'a.webp', 'image/webp'), destination: 'facilities' })), 'accepted');
 check('gif',  status(await upload({ file: asFile(gif,  'a.gif',  'image/gif'),  destination: 'sponsors' })), 'accepted');
+check('avif', status(await upload({ file: asFile(avif, 'a.avif', 'image/avif'), destination: 'gallery' })), 'accepted');
 check('large but legal (4000x3000)', status(await upload({ file: asFile(big, 'a.png', 'image/png'), destination: 'hero' })), 'accepted');
 check('every allowed destination', await Promise.all(
   ['members', 'alumni', 'facilities', 'gallery', 'sponsors', 'hero', 'collab'].map(async (d) =>
@@ -146,6 +155,11 @@ for (const [label, bytes, name] of [
   ['empty file',           Buffer.alloc(0), 'empty.png'],
   ['random bytes',         Buffer.from([1, 2, 3, 4, 5, 6, 7, 8]), 'x.png'],
   ['truncated png header', png.subarray(0, 8), 'trunc.png'],
+  // Unlike svgBytes above, sharp *can* render these, so before the magic-number
+  // check they were accepted and went through librsvg / libtiff.
+  ['renderable svg',       renderableSvg, 'logo.png'],
+  ['svg with xml prolog',  Buffer.concat([Buffer.from('<?xml version="1.0"?>\n'), renderableSvg]), 'logo.png'],
+  ['tiff',                 tiff, 'scan.png'],
 ] as const) {
   const outcome = await upload({ file: asFile(bytes as Buffer, name, 'image/png'), destination: 'members' });
   check(`refused: ${label}`, status(outcome), 422);
